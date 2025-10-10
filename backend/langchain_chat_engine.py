@@ -24,11 +24,16 @@ from backend.models import ChatRequest, ChatResponse
 
 class EmotionalChatEngine:
     def __init__(self):
+        # 检查 OpenAI API Key 是否设置
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is not set")
+        
         # 初始化OpenAI模型
         self.llm = ChatOpenAI(
             model="gpt-5-chat",
             temperature=0.7,
-            api_key=os.getenv("OPENAI_API_KEY", "***REMOVED***")
+            api_key=api_key
         )
         
         # 创建数据库表
@@ -37,7 +42,7 @@ class EmotionalChatEngine:
         # 初始化向量数据库（长期记忆）
         self.vectorstore = Chroma(
             persist_directory="./memory_db",
-            embedding_function=OpenAIEmbeddings(api_key=os.getenv("OPENAI_API_KEY", "***REMOVED***"))
+            embedding_function=OpenAIEmbeddings(api_key=api_key)
         )
         
         # 会话级别的短期记忆管理器（字典：session_id -> ConversationBufferMemory）
