@@ -16,7 +16,9 @@ from backend.models import ChatRequest, ChatResponse
 class SimpleEmotionalChatEngine:
     def __init__(self):
         # 初始化OpenAI API
-        self.api_key = os.getenv("OPENAI_API_KEY", "REMOVED_API_KEY")
+        self.api_key = os.getenv("OPENAI_API_KEY")
+        if not self.api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is not set")
         
         # 创建数据库表
         create_tables()
