@@ -418,8 +418,7 @@ emotional_chat/
 │
 ├── frontend/                         # 前端代码目录
 │   ├── public/                      # 静态资源
-│   │   ├── index.html               # HTML模板
-│   │   └── manifest.json            # PWA配置
+│   │   └── index.html               # HTML模板
 │   ├── src/                         # 源代码
 │   │   ├── App.js                   # 主应用组件
 │   │   ├── index.js                 # 入口文件
@@ -434,7 +433,6 @@ emotional_chat/
 ├── env_example.txt                   # 环境变量模板（参考）
 ├── setup_database.py                 # 数据库初始化脚本
 ├── run_backend.py                    # 后端启动脚本（主入口）
-├── simple_backend_8008.py            # 独立Flask后端（备用方案）
 ├── start.sh                          # 一键启动脚本
 ├── requirements.txt                  # Python依赖列表
 ├── LICENSE                           # 开源许可证
@@ -454,14 +452,12 @@ emotional_chat/
 | `setup_database.py` | 数据库初始化 | 创建表结构 |
 | `run_backend.py` | 启动脚本 | 启动后端服务 |
 
-#### 📚 参考文件
+#### 📚 辅助文件
 
 | 文件 | 说明 |
 |------|------|
-| `backend/langchain_chat_engine.py` | 完整版LangChain实现（待集成向量数据库） |
-| `backend/chat_engine.py` | 原始设计参考 |
-| `backend/emotion_analyzer.py` | 独立情感分析模块（可选） |
-| `simple_backend_8008.py` | Flask独立后端（可独立运行） |
+| `backend/emotion_analyzer.py` | 独立情感分析模块 |
+| `backend/vector_store.py` | 向量数据库操作封装 |
 
 #### ⚙️ 配置文件
 
