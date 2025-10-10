@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-简化版LangChain聊天引擎（兼容Python 3.6）
+简化版LangChain聊天引擎（支持LCEL表达式，兼容Python 3.6+）
 """
 import os
 import json
@@ -9,20 +9,91 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import requests
 
+# 尝试导入 LangChain（如果可用）
+try:
+    from langchain_openai import ChatOpenAI
+    from langchain_core.prompts import ChatPromptTemplate
+    from langchain_core.output_parsers import StrOutputParser
+    LANGCHAIN_AVAILABLE = True
+except ImportError:
+    LANGCHAIN_AVAILABLE = False
+    print("提示: LangChain 模块未安装，将使用传统 HTTP 请求方式")
+
 # 数据库和模型
 from backend.database import DatabaseManager, create_tables
 from backend.models import ChatRequest, ChatResponse
 
+# 尝试导入向量数据库（可选）
+try:
+    from backend.vector_store import VectorStore
+    VECTOR_STORE_AVAILABLE = True
+except ImportError as e:
+    VECTOR_STORE_AVAILABLE = False
+    print("提示: 向量数据库模块未安装 ({}), 将仅使用MySQL短期记忆".format(e))
+
+
 class SimpleEmotionalChatEngine:
     def __init__(self):
-        # 初始化OpenAI API
-        self.api_key = os.getenv("OPENAI_API_KEY")
+        # 初始化API配置 - 优先使用Qwen API
+        self.api_key = os.getenv("DASHSCOPE_API_KEY") or os.getenv("OPENAI_API_KEY")
+        self.api_base_url = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
+        self.model = os.getenv("DEFAULT_MODEL", "qwen-plus")
+        
         if not self.api_key:
-            print("警告: OPENAI_API_KEY 未设置，将使用本地fallback模式")
+            print("警告: API_KEY 未设置，将使用本地fallback模式")
             self.api_key = None
         
         # 创建数据库表
         create_tables()
+        
+        # 初始化向量数据库（长期记忆）
+        if VECTOR_STORE_AVAILABLE:
+            try:
+                self.vector_store = VectorStore()
+                print("✓ 向量数据库 (Chroma) 初始化成功")
+            except Exception as e:
+                print("警告: 向量数据库初始化失败: {}，将仅使用MySQL".format(e))
+                self.vector_store = None
+        else:
+            self.vector_store = None
+            print("⚠ 向量数据库未安装，仅使用MySQL短期记忆")
+        
+        # 初始化 LangChain 组件（LCEL 表达式）- 如果可用
+        if self.api_key and LANGCHAIN_AVAILABLE:
+            try:
+                # 1. 初始化 OpenAI 模型
+                self.llm = ChatOpenAI(
+                    model=self.model,
+                    temperature=0.7,
+                    api_key=self.api_key,
+                    base_url=self.api_base_url
+                )
+                
+                # 2. 定义 AI 人格与行为准则（提示模板）
+                self.template = """你是一位温暖、耐心的心理健康陪伴助手，名叫"心语"。
+你的任务是倾听用户的情绪，给予共情和支持，避免说教或直接给建议。
+请用中文回复，语气柔和，适当使用表情符号（如😊）。
+
+{long_term_memory}
+对话历史：
+{history}
+
+用户：{input}
+心语："""
+                
+                # 3. 创建提示模板和链（LCEL表达式）
+                self.prompt = ChatPromptTemplate.from_template(self.template)
+                self.output_parser = StrOutputParser()
+                # 构建链：chain = prompt | model | output_parser
+                self.chain = self.prompt | self.llm | self.output_parser
+                print("✓ LangChain LCEL 链初始化成功")
+            except Exception as e:
+                print("警告: LangChain 初始化失败，将使用传统方式: {}".format(e))
+                self.llm = None
+                self.chain = None
+        else:
+            self.llm = None
+            self.chain = None
         
         # 情感关键词映射
         self.emotion_keywords = {
@@ -130,7 +201,7 @@ class SimpleEmotionalChatEngine:
         return True, ""
     
     def get_openai_response(self, user_input, user_id, session_id):
-        """调用OpenAI API生成回应"""
+        """使用 LangChain LCEL 链生成回应（如果可用），否则使用传统HTTP请求"""
         # 安全检查
         is_safe, warning = self.is_safe_input(user_input)
         if not is_safe:
@@ -141,26 +212,65 @@ class SimpleEmotionalChatEngine:
             emotion_data = self.analyze_emotion(user_input)
             return self._get_fallback_response(user_input, emotion_data)
         
-        # 构建历史对话
+        # 构建历史对话（短期记忆 - MySQL）
         db_manager = DatabaseManager()
         with db_manager as db:
             recent_messages = db.get_session_messages(session_id, limit=10)
-            history = ""
+            history_text = ""
             for msg in reversed(recent_messages[-5:]):  # 最近5条消息
-                history += "{}: {}\n".format('用户' if msg.role == 'user' else '心语', msg.content)
+                history_text += "{}: {}\n".format('用户' if msg.role == 'user' else '心语', msg.content)
         
-        # 构建提示词
+        # 从向量数据库检索相似对话（长期记忆）
+        long_term_context = ""
+        if self.vector_store:
+            try:
+                # 检索相似的历史对话（跨会话）
+                similar_conversations = self.vector_store.search_similar_conversations(
+                    query=user_input,
+                    session_id=None,  # 不限制会话，检索所有历史
+                    n_results=3
+                )
+                
+                if similar_conversations and similar_conversations['documents']:
+                    long_term_context = "\n相关历史对话参考：\n"
+                    for doc in similar_conversations['documents'][0][:2]:  # 取前2个最相似的
+                        long_term_context += "- {}\n".format(doc[:100])  # 限制长度
+                    long_term_context += "\n"
+            except Exception as e:
+                print("向量检索失败: {}".format(e))
+        
+        # 优先使用 LCEL 链（如果可用）
+        if self.chain:
+            try:
+                # 4. 使用链生成回应 (chain.invoke) - 包含长期记忆
+                response = self.chain.invoke({
+                    "long_term_memory": long_term_context,
+                    "history": history_text.strip(),
+                    "input": user_input
+                })
+                return response
+            except Exception as e:
+                print("LangChain调用失败 ({}): {}，尝试传统方式".format(self.model, e))
+                # 继续使用传统方式
+        
+        # 使用传统 HTTP 请求方式（兼容模式）
+        return self._call_api_traditional(user_input, history_text, long_term_context)
+    
+    def _call_api_traditional(self, user_input, history_text, long_term_context=""):
+        """传统HTTP请求方式调用API（兼容旧环境）"""
+        # 构建提示词（包含长期记忆）
         system_prompt = """你是一位温暖、耐心的心理健康陪伴助手，名叫"心语"。
 你的任务是倾听用户的情绪，给予共情和支持，避免说教或直接给建议。
 请用中文回复，语气柔和，适当使用表情符号（如😊）。
 
+{}
 对话历史：
 {}
 
 用户：{}
-心语：""".format(history.strip(), user_input)
+心语：""".format(long_term_context, history_text.strip(), user_input)
         
-        # 调用OpenAI API
+        # 调用API (支持Qwen和OpenAI)
         try:
             headers = {
                 "Authorization": "Bearer {}".format(self.api_key),
@@ -168,7 +278,7 @@ class SimpleEmotionalChatEngine:
             }
             
             data = {
-                "model": "gpt-3.5-turbo",
+                "model": self.model,
                 "messages": [
                     {"role": "system", "content": system_prompt}
                 ],
@@ -176,8 +286,9 @@ class SimpleEmotionalChatEngine:
                 "max_tokens": 500
             }
             
+            api_url = "{}/chat/completions".format(self.api_base_url)
             response = requests.post(
-                "https://api.openai.com/v1/chat/completions",
+                api_url,
                 headers=headers,
                 json=data,
                 timeout=30
@@ -187,13 +298,11 @@ class SimpleEmotionalChatEngine:
                 result = response.json()
                 return result["choices"][0]["message"]["content"].strip()
             else:
-                print(f"OpenAI API错误: {response.status_code} - {response.text}")
-                # 提供备选回应而不是错误消息
+                print("API错误 ({}): {} - {}".format(self.model, response.status_code, response.text))
                 return self._get_fallback_response(user_input)
                 
         except Exception as e:
-            print("OpenAI API调用失败: {}".format(e))
-            # 提供备选回应而不是错误消息
+            print("API调用失败 ({}): {}".format(self.model, e))
             return self._get_fallback_response(user_input)
     
     def _get_fallback_response(self, user_input, emotion_data=None):
@@ -311,6 +420,18 @@ class SimpleEmotionalChatEngine:
                 content=response_text,
                 emotion="empathetic"
             )
+        
+        # 保存对话到向量数据库（长期记忆）
+        if self.vector_store:
+            try:
+                self.vector_store.add_conversation(
+                    session_id=session_id,
+                    message=request.message,
+                    response=response_text,
+                    emotion=emotion_data["emotion"]
+                )
+            except Exception as e:
+                print("保存到向量数据库失败: {}".format(e))
         
         return ChatResponse(
             response=response_text,

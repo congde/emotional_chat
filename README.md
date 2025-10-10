@@ -1,20 +1,61 @@
 # 情感聊天机器人 🤖💝
 
-一个基于 LangChain + OpenAI API + MySQL + 向量数据库的智能情感支持聊天机器人，具有情感识别、共情回应、长期记忆和数据分析能力。
+一个基于 **阿里云通义千问(Qwen)** + MySQL + 向量数据库的智能情感支持聊天机器人，具有情感识别、共情回应、长期记忆和数据分析能力。
 
 > **参考项目**: [emotional_chat](https://github.com/congde/emotional_chat.git)
+
+> **🆕 更新说明**: 本项目已从 OpenAI GPT 迁移至阿里云通义千问(Qwen)，提供更好的中文支持和更稳定的服务。
 
 ## ✨ 功能特点
 
 - 🎭 **情感识别**: 智能分析用户情感状态（开心、难过、焦虑、愤怒等）
 - 💝 **共情回应**: 根据情感状态生成温暖、理解的回应力
-- 🧠 **长期记忆**: 使用Chroma向量数据库存储对话历史和知识
+- 🧠 **长期记忆**: ✅ 已集成 Chroma 向量数据库，支持跨会话语义检索
 - 🗄️ **数据持久化**: MySQL数据库存储所有聊天记录和用户数据
 - 📊 **情感趋势分析**: 分析用户情感变化趋势和模式
 - 🔒 **安全过滤**: 自动检测高风险词汇并提供专业求助信息
 - 🔄 **上下文理解**: 基于对话历史提供连贯的回应
 - 🎨 **美观界面**: 现代化的React前端界面
 - 🚀 **高性能**: 基于FastAPI + LangChain的高性能后端服务
+- 🇨🇳 **中文优化**: 使用通义千问模型，对中文理解和表达更加自然
+
+### 🌟 通义千问模型优势
+
+- **卓越的中文能力**: 针对中文场景深度优化，理解和表达更自然
+- **情感共情出色**: 在心理健康场景表现优异，回复温暖细腻
+- **稳定可靠**: 阿里云基础设施保障，服务稳定性高
+- **成本优化**: 相比国外模型，性价比更高
+
+### 🧠 向量数据库长期记忆（新功能）
+
+**状态**: ✅ 已完成集成
+
+**特性**:
+- 🔍 **语义检索**: 基于语义相似度检索历史对话
+- 🌐 **跨会话记忆**: 不限于当前会话，可访问所有历史对话
+- 📚 **知识库管理**: 支持存储和检索心理健康知识
+- 😊 **情感模式学习**: 学习用户的情感表达模式
+
+**工作原理**:
+```
+短期记忆 (MySQL)    +    长期记忆 (Chroma向量数据库)
+最近5条对话              跨会话语义相似对话
+      ↓                        ↓
+            上下文融合
+                 ↓
+          智能回复生成
+```
+
+**安装向量数据库** (可选，但推荐):
+```bash
+# 安装依赖 (需要 Python 3.8+)
+pip3 install --user chromadb sentence-transformers
+
+# 查看详细指南
+cat VECTOR_DB_GUIDE.md
+```
+
+**注意**: 向量数据库是可选功能，不安装也不影响基本聊天功能，系统会自动降级为仅使用 MySQL 短期记忆。
 
 ## 🏗️ 系统架构
 
@@ -26,7 +67,7 @@
 │   (端口3003)    │◄──►│   (端口8008)    │◄──►│   (端口3306)    │
 │                 │    │                 │    │                 │
 │ • 聊天界面      │    │ • 情感分析      │    │ • 用户数据      │
-│ • 实时交互      │    │ • OpenAI API    │    │ • 对话历史      │
+│ • 实时交互      │    │ • 通义千问API   │    │ • 对话历史      │
 │ • 响应式设计    │    │ • 会话管理      │    │ • 情感记录      │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
@@ -147,8 +188,8 @@ CREATE TABLE system_logs (
 
 ### 后端
 - **Python 3.8+**
-- **LangChain**: 对话流管理和记忆管理
-- **OpenAI API**: 大语言模型
+- **阿里云通义千问 (Qwen)**: 大语言模型 (qwen-plus)
+- **LangChain**: 对话流管理和记忆管理  
 - **MySQL**: 关系型数据库存储
 - **Chroma**: 向量数据库（长期记忆）
 - **FastAPI**: Web框架
@@ -190,8 +231,9 @@ nano .env
 
 配置内容：
 ```bash
-# OpenAI配置
-OPENAI_API_KEY=your_openai_api_key_here
+# API配置 - 使用阿里云通义千问(Qwen)
+DASHSCOPE_API_KEY=your_qwen_api_key_here
+API_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 
 # MySQL数据库配置
 MYSQL_HOST=localhost
@@ -200,11 +242,22 @@ MYSQL_USER=root
 MYSQL_PASSWORD=your_password
 MYSQL_DATABASE=emotional_chat
 
-# 其他配置
+# 模型配置 - 使用通义千问
+DEFAULT_MODEL=qwen-plus
+TEMPERATURE=0.7
+MAX_TOKENS=1000
+
+# 服务器配置
 HOST=0.0.0.0
 PORT=8008
 DEBUG=true
 ```
+
+**获取通义千问 API Key**：
+1. 访问阿里云 DashScope 平台：https://dashscope.console.aliyun.com/
+2. 登录阿里云账号
+3. 创建 API Key
+4. 将 API Key 填入 `config.env` 文件
 
 #### 1.3 安装和配置MySQL
 ```bash
@@ -359,12 +412,9 @@ emotional_chat/
 │   ├── main.py                      # FastAPI主应用（当前使用）
 │   ├── database.py                  # 数据库模型和操作（SQLAlchemy + MySQL）
 │   ├── models.py                    # Pydantic数据模型
-│   ├── simple_langchain_engine.py   # 简化版聊天引擎（当前使用）
-│   ├── langchain_chat_engine.py     # 完整版LangChain引擎（待开发）
-│   ├── chat_engine.py               # 原始聊天引擎（参考）
-│   ├── emotion_analyzer.py          # 情感分析器（参考）
-│   ├── vector_store.py              # 向量数据库操作（参考）
-│   └── simple_chat_engine.py        # 早期简化引擎（参考）
+│   ├── simple_langchain_engine.py   # ✅ 主聊天引擎（Qwen API + 情感分析）
+│   ├── emotion_analyzer.py          # 情感分析器
+│   └── vector_store.py              # 向量数据库操作
 │
 ├── frontend/                         # 前端代码目录
 │   ├── public/                      # 静态资源
@@ -380,7 +430,7 @@ emotional_chat/
 │   └── package-lock.json            # 依赖锁定文件
 │
 ├── config.py                         # 配置文件（包含端口等配置）
-├── config.env                        # 环境变量配置（实际使用）
+├── config.env                        # 环境变量配置（Qwen API Key等）
 ├── env_example.txt                   # 环境变量模板（参考）
 ├── setup_database.py                 # 数据库初始化脚本
 ├── run_backend.py                    # 后端启动脚本（主入口）
@@ -418,7 +468,7 @@ emotional_chat/
 | 文件 | 说明 |
 |------|------|
 | `config.py` | Python配置（端口、主机等） |
-| `config.env` | 环境变量（OpenAI密钥、MySQL配置） |
+| `config.env` | 环境变量（通义千问API密钥、MySQL配置） |
 | `env_example.txt` | 环境变量模板 |
 
 ## 📡 API接口文档
@@ -534,7 +584,7 @@ GET /users/{user_id}/emotion-trends
 ## 🎯 核心功能实现
 
 ### 情感分析
-- 使用OpenAI API进行情感识别
+- 使用通义千问 API 进行智能对话生成
 - 支持多种情感类型：开心、难过、焦虑、愤怒等
 - 提供情感强度评估（0-10分）
 
