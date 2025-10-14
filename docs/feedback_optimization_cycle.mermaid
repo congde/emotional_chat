@@ -1,0 +1,71 @@
+graph TD
+    Start([开始: 收集用户反馈]) --> Collect[收集反馈数据]
+    
+    Collect --> Analyze[分析反馈模式]
+    Analyze --> Stats[统计反馈数据]
+    Stats --> Stats1[📊 各类型反馈数量]
+    Stats --> Stats2[📈 平均评分趋势]
+    Stats --> Stats3[🔍 关键词分析]
+    Stats --> Stats4[😊 情感分析结果]
+    
+    Stats1 --> Identify[识别问题模式]
+    Stats2 --> Identify
+    Stats3 --> Identify
+    Stats4 --> Identify
+    
+    Identify --> Issues[问题分类]
+    Issues --> Issue1[❌ 共情不足<br/>lack_empathy]
+    Issues --> Issue2[❌ 答非所问<br/>irrelevant]
+    Issues --> Issue3[❌ 越界建议<br/>overstepping]
+    Issues --> Issue4[❌ 其他问题<br/>other]
+    
+    Issue1 --> Optimize[Prompt优化]
+    Issue2 --> Optimize
+    Issue3 --> Optimize
+    Issue4 --> Optimize
+    
+    Optimize --> Solutions[生成优化方案]
+    Solutions --> Sol1[💡 增强共情表达]
+    Solutions --> Sol2[💡 提高回应准确性]
+    Solutions --> Sol3[💡 加强安全边界]
+    Solutions --> Sol4[💡 优化回应风格]
+    
+    Sol1 --> Create[创建新Prompt版本]
+    Sol2 --> Create
+    Sol3 --> Create
+    Sol4 --> Create
+    
+    Create --> Test[A/B测试]
+    Test --> Compare[对比测试结果]
+    Compare --> Result{改进效果}
+    
+    Result -->|显著提升| Deploy[部署新版本]
+    Result -->|效果一般| Iterate[继续迭代]
+    Result -->|无改善| Research[深入研究]
+    
+    Deploy --> Monitor[监控新版本]
+    Monitor --> Feedback[收集新反馈]
+    Feedback --> Check{质量是否稳定?}
+    
+    Check -->|是| Maintain[保持当前版本]
+    Check -->|否| Alert[触发告警]
+    
+    Alert --> Analyze
+    Iterate --> Optimize
+    Research --> Analyze
+    Maintain --> Schedule[定期评估]
+    Schedule --> Collect
+    
+    style Start fill:#e1f5ff
+    style Analyze fill:#fff4e1
+    style Issues fill:#ffebee
+    style Optimize fill:#e8f5e9
+    style Deploy fill:#c8e6c9
+    style Alert fill:#ffcdd2
+    style Maintain fill:#dcedc8
+    
+    classDef issueStyle fill:#ffebee,stroke:#f44336,stroke-width:2px
+    class Issue1,Issue2,Issue3,Issue4 issueStyle
+    
+    classDef solutionStyle fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    class Sol1,Sol2,Sol3,Sol4 solutionStyle
