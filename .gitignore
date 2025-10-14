@@ -46,4 +46,5 @@ log/
 # Database
 *.db
 *.sqlite3
+chroma_db/
 
