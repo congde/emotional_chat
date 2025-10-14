@@ -1,5 +1,6 @@
 # Node modules
 frontend/node_modules/
+node_modules/
 
 # Python
 __pycache__/
