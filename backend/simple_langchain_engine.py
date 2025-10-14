@@ -23,6 +23,14 @@ except ImportError:
 from backend.database import DatabaseManager, create_tables
 from backend.models import ChatRequest, ChatResponse
 
+# 导入心语Prompt配置
+from backend.xinyu_prompt import (
+    get_system_prompt,
+    build_full_prompt,
+    validate_and_filter_input,
+    XINYU_SYSTEM_PROMPT
+)
+
 # 尝试导入向量数据库（可选）
 try:
     from backend.vector_store import VectorStore
@@ -69,17 +77,16 @@ class SimpleEmotionalChatEngine:
                     base_url=self.api_base_url
                 )
                 
-                # 2. 定义 AI 人格与行为准则（提示模板）
-                self.template = """你是一位温暖、耐心的心理健康陪伴助手，名叫"心语"。
-你的任务是倾听用户的情绪，给予共情和支持，避免说教或直接给建议。
-请用中文回复，语气柔和，适当使用表情符号（如😊）。
+                # 2. 定义 AI 人格与行为准则（使用完整的心语Prompt）
+                self.template = """{system_prompt}
 
-{long_term_memory}
+{{long_term_memory}}
+
 对话历史：
-{history}
+{{history}}
 
-用户：{input}
-心语："""
+用户：{{input}}
+心语：""".format(system_prompt=XINYU_SYSTEM_PROMPT)
                 
                 # 3. 创建提示模板和链（LCEL表达式）
                 self.prompt = ChatPromptTemplate.from_template(self.template)
@@ -108,8 +115,6 @@ class SimpleEmotionalChatEngine:
             "grateful": ["感谢", "感激", "谢谢", "🙏", "💝", "❤️"]
         }
         
-        # 安全过滤词汇
-        self.blocked_words = ["自杀", "自残", "杀人", "爆炸", "暴力", "伤害"]
     
     def analyze_emotion(self, message):
         """分析用户消息的情感"""
@@ -194,11 +199,11 @@ class SimpleEmotionalChatEngine:
         return suggestions_map.get(emotion, suggestions_map["neutral"])
     
     def is_safe_input(self, text):
-        """安全检查"""
-        for word in self.blocked_words:
-            if word in text:
-                return False, "检测到高风险词汇，请联系专业心理咨询师。紧急求助电话：400-161-9995（希望24热线）"
-        return True, ""
+        """
+        安全检查（使用完整的验证机制）
+        Returns: (is_valid, filtered_response)
+        """
+        return validate_and_filter_input(text)
     
     def get_openai_response(self, user_input, user_id, session_id):
         """使用 LangChain LCEL 链生成回应（如果可用），否则使用传统HTTP请求"""
@@ -258,17 +263,12 @@ class SimpleEmotionalChatEngine:
     
     def _call_api_traditional(self, user_input, history_text, long_term_context=""):
         """传统HTTP请求方式调用API（兼容旧环境）"""
-        # 构建提示词（包含长期记忆）
-        system_prompt = """你是一位温暖、耐心的心理健康陪伴助手，名叫"心语"。
-你的任务是倾听用户的情绪，给予共情和支持，避免说教或直接给建议。
-请用中文回复，语气柔和，适当使用表情符号（如😊）。
-
-{}
-对话历史：
-{}
-
-用户：{}
-心语：""".format(long_term_context, history_text.strip(), user_input)
+        # 使用完整的心语Prompt构建提示词
+        full_prompt = build_full_prompt(
+            user_input=user_input,
+            history_text=history_text,
+            long_term_memory=long_term_context
+        )
         
         # 调用API (支持Qwen和OpenAI)
         try:
@@ -280,10 +280,10 @@ class SimpleEmotionalChatEngine:
             data = {
                 "model": self.model,
                 "messages": [
-                    {"role": "system", "content": system_prompt}
+                    {"role": "system", "content": full_prompt}
                 ],
                 "temperature": 0.7,
-                "max_tokens": 500
+                "max_tokens": 300  # 控制响应长度（3-4句话）
             }
             
             api_url = "{}/chat/completions".format(self.api_base_url)
@@ -313,57 +313,57 @@ class SimpleEmotionalChatEngine:
         emotion = emotion_data.get("emotion", "neutral")
         suggestions = emotion_data.get("suggestions", [])
         
-        # 基于情感类型提供合适的回应
+        # 基于情感类型提供合适的回应（符合心语Prompt：3-4句话，不使用表情符号）
         fallback_responses = {
             "happy": [
-                "我很高兴看到你这么开心！😊 你的快乐感染了我。",
-                "看到你这么高兴，我也跟着开心起来了！有什么特别的事情想要分享吗？",
-                "你的积极情绪很有感染力！让我们一起保持这种美好的状态吧！"
+                "听起来你心情很好。你的快乐让我也感到温暖。有什么特别的事情想要分享吗？",
+                "看到你这么开心，我也替你高兴。这种积极的状态真好。愿意多说说是什么让你这么开心吗？",
+                "你的愉快心情很有感染力。保持这样的状态很重要。想聊聊让你开心的事情吗？"
             ],
             "sad": [
-                "我理解你现在的心情，每个人都会有难过的时刻。💙 我在这里倾听。",
-                "虽然现在很难过，但这些感受都是正常的。你并不孤单，我会陪伴你。",
-                "可以告诉我发生了什么吗？我愿意倾听你的心声。"
+                "听起来你现在很难过。这种感觉确实不好受。我在这里倾听，你愿意说说发生了什么吗？",
+                "我能感受到你的伤心。每个人都会有这样的时刻，这些感受都是正常的。你并不孤单。",
+                "你现在的心情一定很沉重。谢谢你愿意告诉我。想多聊聊吗？"
             ],
             "angry": [
-                "我能感受到你的愤怒。让我们先深呼吸一下，然后一起分析这个问题。😌",
-                "愤怒是正常的情绪，重要的是如何表达和处理它。我在这里支持你。",
-                "是什么事情让你感到愤怒？我们可以一起面对它。"
+                "听起来你很愤怒。这种情绪确实很强烈。是什么事情让你这么生气？",
+                "我能感受到你的愤怒。这确实让人很不舒服。你愿意说说具体发生了什么吗？",
+                "听起来有些事情真的惹恼了你。这种感觉很正常。想聊聊是什么让你这么生气吗？"
             ],
             "anxious": [
-                "焦虑确实让人感到不安，让我们一起面对它。🤗 深呼吸，一步一步来。",
-                "可以告诉我你在担心什么吗？有时候说出来会好很多。",
-                "我理解你的焦虑，我们一起来缓解这种不安的感觉。"
+                "听起来你很焦虑。这种不安的感觉确实让人难受。你在担心什么呢？",
+                "我能感受到你的紧张。焦虑的时候确实很不好受。可以跟我说说你担心的事情吗？",
+                "你现在似乎很不安。这种焦虑感很沉重。想聊聊让你担心的事情吗？"
             ],
             "excited": [
-                "你的兴奋很有感染力！✨ 有什么好事要发生了吗？",
-                "兴奋的感觉真棒！让我们一起期待美好的事情！🎉",
-                "看到你这么兴奋，我也跟着开心起来了！"
+                "听起来你很兴奋。这种期待的感觉真好。有什么好事要发生了吗？",
+                "我能感受到你的激动。这种兴奋很有感染力。是什么让你这么期待呢？",
+                "你似乎对某件事充满期待。这种感觉真棒。愿意分享一下吗？"
             ],
             "confused": [
-                "困惑是学习过程中的正常现象，我们一起理清思路。🤔",
-                "可以具体告诉我哪里让你感到困惑吗？我们慢慢分析。",
-                "慢慢来，我们可以一步步分析，直到你完全理解。"
+                "听起来你感到困惑。这种迷茫的感觉确实让人不安。能说说是什么让你困惑吗？",
+                "我能理解你的迷茫。有些事情确实让人摸不着头脑。想聊聊具体是什么让你困惑吗？",
+                "你现在似乎有些迷茫。这种感觉很正常。愿意说说让你困惑的事情吗？"
             ],
             "frustrated": [
-                "挫败感确实让人沮丧，但这也是成长的一部分。💪",
-                "让我们换个角度思考这个问题，也许能找到新的解决方案。",
-                "你已经很努力了，偶尔的挫折不代表失败。"
+                "听起来你很挫败。这种感觉确实很沮丧。是什么事情让你这么受挫？",
+                "我能感受到你的沮丧。这确实很让人失望。想说说发生了什么吗？",
+                "你现在一定很沮丧。这种挫败感真的不好受。愿意聊聊吗？"
             ],
             "lonely": [
-                "孤独的感觉确实不好受，但你并不孤单，我在这里。💙",
-                "孤独时，我们往往会想到很多，想聊聊你的想法吗？",
-                "有时候我们需要独处，但如果你需要陪伴，我随时在这里。"
+                "听起来你感到孤独。这种感觉确实很难受。我在这里陪着你。你想聊聊吗？",
+                "我能理解你的孤独感。这种时候确实让人难过。你并不孤单，我在这里倾听。",
+                "你现在一定很孤单。这种感觉很沉重。想说说你的想法吗？"
             ],
             "grateful": [
-                "感恩的心很美好，感谢你愿意分享这份美好。🙏",
-                "感恩能让我们更加珍惜身边的一切。",
-                "你的感恩之心让我也很感动，谢谢你的分享。"
+                "听起来你心怀感激。这种感恩的心很美好。是什么让你有这样的感受？",
+                "我能感受到你的感恩之心。这很温暖。愿意分享是什么让你心存感激吗？",
+                "你的感恩之心很动人。这种积极的情绪很珍贵。想多说说吗？"
             ],
             "neutral": [
-                "今天感觉怎么样？有什么想聊的吗？😊",
-                "我在这里倾听，无论你想说什么都可以。",
-                "有时候平淡的日子也很珍贵，不是吗？"
+                "今天感觉怎么样？我在这里倾听。有什么想聊的吗？",
+                "我在这里陪伴你。无论你想说什么，我都愿意倾听。",
+                "你现在的心情如何？想聊聊今天的事情吗？"
             ]
         }
         
@@ -374,7 +374,7 @@ class SimpleEmotionalChatEngine:
         elif suggestions:
             return suggestions[0]
         else:
-            return "我在这里倾听你的心声。无论你想说什么，我都会认真倾听。💙"
+            return "我在这里倾听你的心声。无论你想说什么，我都会认真倾听。你并不孤单。"
     
     def chat(self, request):
         """处理聊天请求"""
@@ -387,6 +387,10 @@ class SimpleEmotionalChatEngine:
         # 保存用户消息到数据库
         db_manager = DatabaseManager()
         with db_manager as db:
+            # 如果是新会话，创建会话记录
+            if not request.session_id:
+                db.create_session(session_id, user_id)
+            
             user_message = db.save_message(
                 session_id=session_id,
                 user_id=user_id,

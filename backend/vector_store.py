@@ -1,29 +1,49 @@
+# 使用 pysqlite3-binary 替换 sqlite3 以支持 ChromaDB
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
 import chromadb
 from chromadb.config import Settings
 import uuid
 from typing import List, Dict, Any, Optional
-from sentence_transformers import SentenceTransformer
-import numpy as np
 from config import Config
 
 class VectorStore:
     def __init__(self):
-        self.client = chromadb.PersistentClient(path=Config.CHROMA_PERSIST_DIRECTORY)
-        self.embedder = SentenceTransformer('all-MiniLM-L6-v2')
+        # 禁用遥测以避免 Python 3.8 兼容性问题
+        settings = Settings(
+            anonymized_telemetry=False,
+            allow_reset=True
+        )
+        self.client = chromadb.PersistentClient(
+            path=Config.CHROMA_PERSIST_DIRECTORY,
+            settings=settings
+        )
+        # 不使用自定义嵌入器，使用ChromaDB默认的嵌入函数
+        self.embedder = None  # ChromaDB会自动使用默认嵌入
         
-        # 创建集合
+        # 使用默认嵌入函数，设置较长的超时时间
+        from chromadb.utils import embedding_functions
+        # 创建默认嵌入函数，增加超时时间
+        default_ef = embedding_functions.DefaultEmbeddingFunction()
+        
+        # 创建集合，使用自定义嵌入函数
         self.conversation_collection = self.client.get_or_create_collection(
             name="conversations",
+            embedding_function=default_ef,
             metadata={"hnsw:space": "cosine"}
         )
         
         self.knowledge_collection = self.client.get_or_create_collection(
             name="knowledge",
+            embedding_function=default_ef,
             metadata={"hnsw:space": "cosine"}
         )
         
         self.emotion_collection = self.client.get_or_create_collection(
             name="emotions",
+            embedding_function=default_ef,
             metadata={"hnsw:space": "cosine"}
         )
     

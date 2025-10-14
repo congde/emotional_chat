@@ -17,5 +17,5 @@ MYSQL_DATABASE=emotional_chat
 
 # 服务器配置
 HOST=0.0.0.0
-PORT=8008
+PORT=8000
 DEBUG=true

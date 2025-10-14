@@ -64,7 +64,7 @@ cat VECTOR_DB_GUIDE.md
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   React前端     │    │   FastAPI后端   │    │   MySQL数据库   │
-│   (端口3003)    │◄──►│   (端口8008)    │◄──►│   (端口3306)    │
+│   (端口3000)    │◄──►│   (端口8000)    │◄──►│   (端口3306)    │
 │                 │    │                 │    │                 │
 │ • 聊天界面      │    │ • 情感分析      │    │ • 用户数据      │
 │ • 实时交互      │    │ • 通义千问API   │    │ • 对话历史      │
@@ -249,7 +249,7 @@ MAX_TOKENS=1000
 
 # 服务器配置
 HOST=0.0.0.0
-PORT=8008
+PORT=8000
 DEBUG=true
 ```
 
@@ -287,25 +287,28 @@ python3 setup_database.py
 
 #### 3.1 启动后端服务
 ```bash
-# 进入项目目录
-cd /home/emotional_chat
-
-# 启动完整版后端服务（端口8008）
+# 方法1：使用启动脚本（推荐，避免文件监视限制问题）
 python3 run_backend.py
+
+# 方法2：直接在backend目录启动
+cd backend
+python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-后端服务将在 `http://localhost:8008` 启动，API文档可在 `http://localhost:8008/docs` 查看。
+> **注意**：启动脚本会自动切换到 backend 目录运行，避免 watchfiles 扫描 frontend/node_modules 导致的文件监视限制问题。
+
+后端服务将在 `http://localhost:8000` 启动，API文档可在 `http://localhost:8000/docs` 查看。
 
 #### 3.2 启动前端服务
 ```bash
 # 新开一个终端窗口
 cd /home/emotional_chat/frontend
 
-# 启动前端服务（端口3003）
+# 启动前端服务（端口3000）
 npm start
 ```
 
-前端应用将在 `http://localhost:3003` 启动。
+前端应用将在 `http://localhost:3000` 启动。
 
 
 ### 4. 验证服务
@@ -313,25 +316,25 @@ npm start
 **检查后端服务**
 ```bash
 # 健康检查
-curl http://localhost:8008/health
+curl http://localhost:8000/health
 
 # 测试聊天接口
-curl -X POST http://localhost:8008/chat \
+curl -X POST http://localhost:8000/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "你好，我今天心情很好！", "user_id": "test_user"}'
 ```
 
 **检查前端服务**
-- 打开浏览器访问 `http://localhost:3003`
+- 打开浏览器访问 `http://localhost:3000`
 - 应该能看到聊天界面
 
 ### 5. 使用说明
 
-1. 打开浏览器访问 `http://localhost:3003`
+1. 打开浏览器访问 `http://localhost:3000`
 2. 在输入框中输入你的想法和感受
 3. 机器人会分析你的情感并给出共情回应
 4. 支持多轮对话，机器人会记住对话历史
-5. 查看API文档：http://localhost:8008/docs
+5. 查看API文档：http://localhost:8000/docs
 
 ### 6. 故障排除
 
@@ -365,8 +368,8 @@ npm install
 **端口冲突**
 ```bash
 # 检查端口占用
-netstat -tulpn | grep :8008
-netstat -tulpn | grep :3003
+netstat -tulpn | grep :8000
+netstat -tulpn | grep :3000
 
 # 杀死占用端口的进程
 sudo kill -9 <PID>
@@ -378,8 +381,12 @@ sudo kill -9 <PID>
 
 **终端1 - 启动后端：**
 ```bash
-cd /home/emotional_chat
+# 在项目根目录运行（推荐）
 python3 run_backend.py
+
+# 或者进入backend目录运行
+cd backend
+python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 **终端2 - 启动前端：**
@@ -389,16 +396,16 @@ npm start
 ```
 
 **访问地址：**
-- 前端界面：http://localhost:3003
-- 后端API：http://localhost:8008
+- 前端界面：http://localhost:3000
+- 后端API：http://localhost:8000
 
 **测试系统：**
 ```bash
 # 测试后端健康状态
-curl http://localhost:8008/health
+curl http://localhost:8000/health
 
 # 测试聊天功能
-curl -X POST http://localhost:8008/chat \
+curl -X POST http://localhost:8000/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "你好", "user_id": "test_user"}'
 ```
@@ -575,7 +582,7 @@ GET /users/{user_id}/emotion-trends
 ```
 
 ### 完整API文档
-访问 http://localhost:8008/docs 查看完整的交互式API文档（Swagger UI）
+访问 http://localhost:8000/docs 查看完整的交互式API文档（Swagger UI）
 
 ## 🎯 核心功能实现
 
@@ -599,7 +606,7 @@ GET /users/{user_id}/emotion-trends
 
 ### 聊天接口
 ```http
-POST http://localhost:8008/chat
+POST http://localhost:8000/chat
 Content-Type: application/json
 
 {
@@ -611,12 +618,12 @@ Content-Type: application/json
 
 ### 会话历史
 ```http
-GET http://localhost:8008/sessions/{session_id}/history?limit=20
+GET http://localhost:8000/sessions/{session_id}/history?limit=20
 ```
 
 ### 会话摘要
 ```http
-GET http://localhost:8008/sessions/{session_id}/summary
+GET http://localhost:8000/sessions/{session_id}/summary
 ```
 
 ## 🎨 界面预览
@@ -657,14 +664,14 @@ server {
 
     # 前端
     location / {
-        proxy_pass http://localhost:3003;
+        proxy_pass http://localhost:3000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }
 
     # 后端API
     location /api/ {
-        proxy_pass http://localhost:8008/;
+        proxy_pass http://localhost:8000/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -691,7 +698,7 @@ mysql -u root -p emotional_chat < backup_20251010.sql
 
 ```bash
 # 检查后端健康状态
-curl http://localhost:8008/health
+curl http://localhost:8000/health
 
 # 查看MySQL连接数
 mysql -u root -p -e "SHOW STATUS LIKE 'Threads_connected';"

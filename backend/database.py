@@ -192,3 +192,22 @@ class DatabaseManager:
         self.db.add(log)
         self.db.commit()
         return log
+    
+    def get_user_sessions(self, user_id, limit=50):
+        """获取用户的所有会话"""
+        return self.db.query(ChatSession)\
+            .filter(ChatSession.user_id == user_id)\
+            .order_by(ChatSession.updated_at.desc())\
+            .limit(limit)\
+            .all()
+    
+    def create_session(self, session_id, user_id):
+        """创建新会话"""
+        session = ChatSession(
+            session_id=session_id,
+            user_id=user_id
+        )
+        self.db.add(session)
+        self.db.commit()
+        self.db.refresh(session)
+        return session
