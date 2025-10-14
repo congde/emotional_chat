@@ -40,6 +40,8 @@ config.env
 
 # Logs
 *.log
+log/
+!log/.gitkeep
 
 # Database
 *.db
