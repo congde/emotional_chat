@@ -34,3 +34,30 @@ class EmotionAnalysis(BaseModel):
     confidence: float
     intensity: float
     suggestions: List[str]
+
+class FeedbackRequest(BaseModel):
+    session_id: str
+    user_id: Optional[str] = None
+    message_id: Optional[int] = None
+    feedback_type: str  # irrelevant, lack_empathy, overstepping, helpful, other
+    rating: int  # 1-5
+    comment: Optional[str] = None
+    user_message: Optional[str] = None
+    bot_response: Optional[str] = None
+
+class FeedbackResponse(BaseModel):
+    feedback_id: int
+    session_id: str
+    feedback_type: str
+    rating: int
+    created_at: datetime
+    message: str = "Feedback received successfully"
+
+class FeedbackStatistics(BaseModel):
+    total_count: int
+    avg_rating: float
+    by_type: List[Dict[str, Any]]
+    
+class FeedbackListResponse(BaseModel):
+    feedbacks: List[Dict[str, Any]]
+    total: int

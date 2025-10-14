@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Heart, MessageCircle, User, Bot, Loader2, Plus, Clock, MessageSquare, Paperclip, X, FileText, Image, Link, ExternalLink } from 'lucide-react';
+import { Send, Heart, MessageCircle, User, Bot, Loader2, Plus, Clock, MessageSquare, Paperclip, X, FileText, Image, Link, ExternalLink, ThumbsUp, ThumbsDown, MessageSquarePlus } from 'lucide-react';
 import ChatAPI from './services/ChatAPI';
 
 const AppContainer = styled.div`
@@ -178,8 +178,13 @@ const Avatar = styled.div`
   flex-shrink: 0;
 `;
 
-const MessageContent = styled.div`
+const MessageWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
   max-width: 70%;
+`;
+
+const MessageContent = styled.div`
   padding: 12px 16px;
   border-radius: 18px;
   background: ${props => props.isUser ? '#667eea' : '#f8f9fa'};
@@ -196,6 +201,183 @@ const MessageContent = styled.div`
     height: 0;
     border: 8px solid transparent;
     border-${props => props.isUser ? 'left' : 'right'}-color: ${props => props.isUser ? '#667eea' : '#f8f9fa'};
+  }
+`;
+
+const FeedbackButtons = styled.div`
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  
+  &:hover {
+    opacity: 1;
+  }
+`;
+
+const FeedbackButton = styled(motion.button)`
+  background: transparent;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #666;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: rgba(102, 126, 234, 0.1);
+    border-color: #667eea;
+    color: #667eea;
+  }
+`;
+
+const ModalOverlay = styled(motion.div)`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+
+const ModalContent = styled(motion.div)`
+  background: white;
+  border-radius: 20px;
+  padding: 30px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  
+  h3 {
+    margin: 0;
+    color: #333;
+    font-size: 1.3rem;
+  }
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #999;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #333;
+  }
+`;
+
+const FeedbackTypeButtons = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+`;
+
+const TypeButton = styled(motion.button)`
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 2px solid ${props => props.active ? '#667eea' : '#ddd'};
+  background: ${props => props.active ? 'rgba(102, 126, 234, 0.1)' : 'white'};
+  color: ${props => props.active ? '#667eea' : '#666'};
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  
+  &:hover {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.05);
+  }
+`;
+
+const RatingContainer = styled.div`
+  margin-bottom: 20px;
+  
+  label {
+    display: block;
+    margin-bottom: 10px;
+    color: #333;
+    font-weight: 500;
+  }
+`;
+
+const RatingStars = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const StarButton = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 2rem;
+  color: ${props => props.active ? '#ffd93d' : '#ddd'};
+  transition: all 0.2s;
+  padding: 0;
+  
+  &:hover {
+    transform: scale(1.1);
+  }
+`;
+
+const TextArea = styled.textarea`
+  width: 100%;
+  min-height: 100px;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+  transition: all 0.2s;
+  
+  &:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+`;
+
+const SubmitButton = styled(motion.button)`
+  width: 100%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-top: 20px;
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 `;
 
@@ -444,6 +626,11 @@ function App() {
   const [attachments, setAttachments] = useState([]);
   const [detectedURLs, setDetectedURLs] = useState([]);
   const [isProcessingURL, setIsProcessingURL] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState(null);
+  const [feedbackType, setFeedbackType] = useState('');
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackComment, setFeedbackComment] = useState('');
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -658,6 +845,56 @@ function App() {
     setDetectedURLs(urls);
   };
 
+  // 打开反馈模态框
+  const openFeedbackModal = (message) => {
+    setFeedbackMessage(message);
+    setShowFeedbackModal(true);
+    setFeedbackType('');
+    setFeedbackRating(0);
+    setFeedbackComment('');
+  };
+
+  // 关闭反馈模态框
+  const closeFeedbackModal = () => {
+    setShowFeedbackModal(false);
+    setFeedbackMessage(null);
+    setFeedbackType('');
+    setFeedbackRating(0);
+    setFeedbackComment('');
+  };
+
+  // 提交反馈
+  const submitFeedback = async () => {
+    if (!feedbackType || feedbackRating === 0) {
+      alert('请选择反馈类型和评分');
+      return;
+    }
+
+    try {
+      // 找到用户消息（与bot回复对应的前一条消息）
+      const messageIndex = messages.findIndex(m => m.id === feedbackMessage.id);
+      const userMessage = messageIndex > 0 ? messages[messageIndex - 1] : null;
+
+      const feedbackData = {
+        session_id: sessionId || 'unknown',
+        user_id: currentUserId,
+        message_id: feedbackMessage.id,
+        feedback_type: feedbackType,
+        rating: feedbackRating,
+        comment: feedbackComment,
+        user_message: userMessage?.content || '',
+        bot_response: feedbackMessage.content
+      };
+
+      await ChatAPI.submitFeedback(feedbackData);
+      alert('感谢您的反馈！');
+      closeFeedbackModal();
+    } catch (error) {
+      console.error('提交反馈失败:', error);
+      alert('提交反馈失败，请稍后重试');
+    }
+  };
+
   return (
     <AppContainer>
       <Sidebar
@@ -749,14 +986,28 @@ function App() {
                   <Avatar isUser={message.role === 'user'}>
                     {message.role === 'user' ? <User size={20} /> : <Bot size={20} />}
                   </Avatar>
-                  <MessageContent isUser={message.role === 'user'}>
-                    {message.content}
-                    {message.emotion && message.emotion !== 'neutral' && (
-                      <EmotionTag emotion={message.emotion}>
-                        {message.emotion}
-                      </EmotionTag>
+                  <MessageWrapper>
+                    <MessageContent isUser={message.role === 'user'}>
+                      {message.content}
+                      {message.emotion && message.emotion !== 'neutral' && (
+                        <EmotionTag emotion={message.emotion}>
+                          {message.emotion}
+                        </EmotionTag>
+                      )}
+                    </MessageContent>
+                    {message.role === 'assistant' && (
+                      <FeedbackButtons>
+                        <FeedbackButton
+                          onClick={() => openFeedbackModal(message)}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          <MessageSquarePlus size={14} />
+                          反馈
+                        </FeedbackButton>
+                      </FeedbackButtons>
                     )}
-                  </MessageContent>
+                  </MessageWrapper>
                 </MessageBubble>
               ))
             )}
@@ -874,6 +1125,115 @@ function App() {
           />
         </InputContainer>
       </ChatContainer>
+
+      {/* 反馈模态框 */}
+      <AnimatePresence>
+        {showFeedbackModal && feedbackMessage && (
+          <ModalOverlay
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={closeFeedbackModal}
+          >
+            <ModalContent
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ModalHeader>
+                <h3>提交反馈</h3>
+                <CloseButton onClick={closeFeedbackModal}>
+                  <X size={20} />
+                </CloseButton>
+              </ModalHeader>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '10px', color: '#333', fontWeight: '500' }}>
+                  反馈类型
+                </label>
+                <FeedbackTypeButtons>
+                  <TypeButton
+                    active={feedbackType === 'helpful'}
+                    onClick={() => setFeedbackType('helpful')}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    ✅ 有帮助
+                  </TypeButton>
+                  <TypeButton
+                    active={feedbackType === 'irrelevant'}
+                    onClick={() => setFeedbackType('irrelevant')}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    ❌ 答非所问
+                  </TypeButton>
+                  <TypeButton
+                    active={feedbackType === 'lack_empathy'}
+                    onClick={() => setFeedbackType('lack_empathy')}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    😐 缺乏共情
+                  </TypeButton>
+                  <TypeButton
+                    active={feedbackType === 'overstepping'}
+                    onClick={() => setFeedbackType('overstepping')}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    ⚠️ 越界建议
+                  </TypeButton>
+                  <TypeButton
+                    active={feedbackType === 'other'}
+                    onClick={() => setFeedbackType('other')}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    📝 其他
+                  </TypeButton>
+                </FeedbackTypeButtons>
+              </div>
+
+              <RatingContainer>
+                <label>评分</label>
+                <RatingStars>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <StarButton
+                      key={star}
+                      active={feedbackRating >= star}
+                      onClick={() => setFeedbackRating(star)}
+                    >
+                      {feedbackRating >= star ? '★' : '☆'}
+                    </StarButton>
+                  ))}
+                </RatingStars>
+              </RatingContainer>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '10px', color: '#333', fontWeight: '500' }}>
+                  详细说明（选填）
+                </label>
+                <TextArea
+                  value={feedbackComment}
+                  onChange={(e) => setFeedbackComment(e.target.value)}
+                  placeholder="请描述您的具体感受或建议..."
+                />
+              </div>
+
+              <SubmitButton
+                onClick={submitFeedback}
+                disabled={!feedbackType || feedbackRating === 0}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                提交反馈
+              </SubmitButton>
+            </ModalContent>
+          </ModalOverlay>
+        )}
+      </AnimatePresence>
     </AppContainer>
   );
 }

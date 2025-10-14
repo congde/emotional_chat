@@ -32,6 +32,30 @@ class ChatAPI {
     }
   }
 
+  static async submitFeedback(feedbackData) {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/feedback`, feedbackData, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('提交反馈失败:', error);
+      throw error;
+    }
+  }
+
+  static async getFeedbackStatistics() {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/feedback/statistics`);
+      return response.data;
+    } catch (error) {
+      console.error('获取反馈统计失败:', error);
+      throw error;
+    }
+  }
+
   static async parseURL(data) {
     try {
       const response = await axios.post(`${API_BASE_URL}/parse-url`, data, {

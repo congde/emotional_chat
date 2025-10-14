@@ -12,5 +12,6 @@ chromadb==0.4.22
 sentence-transformers==2.2.2
 PyMySQL==1.0.2
 sqlalchemy==1.4.53
+alembic==1.12.1
 flask
 flask-cors

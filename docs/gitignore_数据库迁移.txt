@@ -1,0 +1,32 @@
+# 建议添加到 .gitignore 的内容
+
+# 数据库迁移相关
+# 注意：alembic/versions/ 目录下的迁移脚本需要提交到 Git
+# 但以下文件不需要：
+
+# Alembic 临时文件
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+
+# 数据库备份文件
+*.sql
+backup_*.sql
+*.dump
+
+# 本地数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# 环境配置（如果包含敏感信息）
+# config.env  # 如果已在 .gitignore 中，保持不变
+
+# 注意：以下文件应该提交到 Git：
+# - alembic.ini
+# - alembic/env.py
+# - alembic/script.py.mako
+# - alembic/versions/*.py
+# - db_manager.py
+
