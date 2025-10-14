@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Heart, MessageCircle, User, Bot, Loader2, Plus, Clock, MessageSquare, Paperclip, X, FileText, Image, Link, ExternalLink, ThumbsUp, ThumbsDown, MessageSquarePlus } from 'lucide-react';
+import { Send, Heart, MessageCircle, User, Bot, Loader2, Plus, Clock, MessageSquare, Paperclip, X, FileText, Image, Link, ExternalLink, ThumbsUp, ThumbsDown, MessageSquarePlus, Trash2 } from 'lucide-react';
 import ChatAPI from './services/ChatAPI';
 
 const AppContainer = styled.div`
@@ -96,9 +96,47 @@ const HistoryItem = styled(motion.div)`
   transition: all 0.2s ease;
   background: ${props => props.active ? 'rgba(102, 126, 234, 0.1)' : 'transparent'};
   border: 1px solid ${props => props.active ? 'rgba(102, 126, 234, 0.3)' : 'transparent'};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   
   &:hover {
     background: rgba(102, 126, 234, 0.05);
+  }
+`;
+
+const HistoryItemContent = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const HistoryItemActions = styled.div`
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  
+  ${HistoryItem}:hover & {
+    opacity: 1;
+  }
+`;
+
+const DeleteButton = styled(motion.button)`
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(255, 107, 107, 0.1);
+    transform: scale(1.1);
   }
 `;
 
@@ -656,6 +694,31 @@ function App() {
     }
   };
 
+  const deleteConversation = async (targetSessionId, event) => {
+    event.stopPropagation(); // 阻止触发父级的点击事件
+    
+    if (window.confirm('确定要删除这个对话吗？此操作无法撤销。')) {
+      try {
+        await ChatAPI.deleteSession(targetSessionId);
+        
+        // 如果删除的是当前会话，清空消息
+        if (targetSessionId === sessionId) {
+          setMessages([]);
+          setSessionId(null);
+          setSuggestions([]);
+        }
+        
+        // 刷新历史会话列表
+        loadHistorySessions();
+        
+        console.log('对话删除成功');
+      } catch (error) {
+        console.error('删除对话失败:', error);
+        alert('删除对话失败，请稍后重试');
+      }
+    }
+  };
+
   const startNewChat = () => {
     setMessages([]);
     setSessionId(null);
@@ -935,10 +998,22 @@ function App() {
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <HistoryItemTitle>{session.title}</HistoryItemTitle>
-                  <HistoryItemTime>
-                    {new Date(session.updated_at).toLocaleDateString()}
-                  </HistoryItemTime>
+                  <HistoryItemContent>
+                    <HistoryItemTitle>{session.title}</HistoryItemTitle>
+                    <HistoryItemTime>
+                      {new Date(session.updated_at).toLocaleDateString()}
+                    </HistoryItemTime>
+                  </HistoryItemContent>
+                  <HistoryItemActions>
+                    <DeleteButton
+                      onClick={(e) => deleteConversation(session.session_id, e)}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      title="删除对话"
+                    >
+                      <Trash2 size={14} />
+                    </DeleteButton>
+                  </HistoryItemActions>
                 </HistoryItem>
               ))}
             </AnimatePresence>

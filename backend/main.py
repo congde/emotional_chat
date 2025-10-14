@@ -331,6 +331,25 @@ async def get_user_sessions(user_id: str, limit: int = 50):
         logger.error(f"获取用户会话列表错误: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.delete("/sessions/{session_id}")
+async def delete_session(session_id: str):
+    """删除会话"""
+    try:
+        from backend.database import DatabaseManager
+        with DatabaseManager() as db:
+            success = db.delete_session(session_id)
+            
+            if not success:
+                raise HTTPException(status_code=404, detail="会话不存在")
+            
+            return {
+                "message": "会话删除成功",
+                "session_id": session_id
+            }
+    except Exception as e:
+        logger.error(f"删除会话错误: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/users/{user_id}/emotion-trends")
 async def get_user_emotion_trends(user_id: str):
     """获取用户情感趋势"""

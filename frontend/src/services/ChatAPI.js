@@ -131,6 +131,16 @@ class ChatAPI {
     }
   }
 
+  static async deleteSession(sessionId) {
+    try {
+      const response = await axios.delete(`${API_BASE_URL}/sessions/${sessionId}`);
+      return response.data;
+    } catch (error) {
+      console.error('删除会话失败:', error);
+      throw error;
+    }
+  }
+
   static async healthCheck() {
     try {
       const response = await axios.get(`${API_BASE_URL}/health`);

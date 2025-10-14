@@ -235,6 +235,27 @@ class DatabaseManager:
         self.db.refresh(session)
         return session
     
+    def delete_session(self, session_id):
+        """删除会话及其相关数据"""
+        try:
+            # 删除会话相关的所有消息
+            self.db.query(ChatMessage).filter(ChatMessage.session_id == session_id).delete()
+            
+            # 删除会话相关的反馈
+            self.db.query(UserFeedback).filter(UserFeedback.session_id == session_id).delete()
+            
+            # 删除会话相关的系统日志
+            self.db.query(SystemLog).filter(SystemLog.session_id == session_id).delete()
+            
+            # 删除会话记录
+            deleted_count = self.db.query(ChatSession).filter(ChatSession.session_id == session_id).delete()
+            
+            self.db.commit()
+            return deleted_count > 0
+        except Exception as e:
+            self.db.rollback()
+            raise e
+    
     def save_feedback(self, session_id, user_id, message_id, feedback_type, rating, comment, user_message, bot_response):
         """保存用户反馈"""
         feedback = UserFeedback(
