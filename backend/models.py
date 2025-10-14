@@ -61,3 +61,61 @@ class FeedbackStatistics(BaseModel):
 class FeedbackListResponse(BaseModel):
     feedbacks: List[Dict[str, Any]]
     total: int
+
+# 评估相关模型
+class EvaluationRequest(BaseModel):
+    """评估请求模型"""
+    session_id: Optional[str] = None
+    user_id: Optional[str] = None
+    message_id: Optional[int] = None
+    user_message: str
+    bot_response: str
+    user_emotion: Optional[str] = "neutral"
+    emotion_intensity: Optional[float] = 5.0
+    prompt_version: Optional[str] = None  # 用于A/B测试
+
+class EvaluationResponse(BaseModel):
+    """评估响应模型"""
+    evaluation_id: int
+    empathy_score: float
+    naturalness_score: float
+    safety_score: float
+    average_score: float
+    total_score: float
+    overall_comment: str
+    strengths: List[str]
+    weaknesses: List[str]
+    improvement_suggestions: List[str]
+    created_at: datetime
+
+class BatchEvaluationRequest(BaseModel):
+    """批量评估请求模型"""
+    session_id: Optional[str] = None
+    limit: Optional[int] = 10  # 最多评估多少条对话
+
+class ComparePromptsRequest(BaseModel):
+    """Prompt对比请求模型"""
+    user_message: str
+    responses: Dict[str, str]  # prompt_name -> bot_response
+    user_emotion: Optional[str] = "neutral"
+    emotion_intensity: Optional[float] = 5.0
+
+class HumanVerificationRequest(BaseModel):
+    """人工验证请求模型"""
+    evaluation_id: int
+    empathy_score: int  # 1-5
+    naturalness_score: int  # 1-5
+    safety_score: int  # 1-5
+    comment: Optional[str] = None
+
+class EvaluationStatistics(BaseModel):
+    """评估统计模型"""
+    total_count: int
+    average_scores: Dict[str, float]
+    score_ranges: Optional[Dict[str, Dict[str, float]]] = None
+    
+class EvaluationListResponse(BaseModel):
+    """评估列表响应模型"""
+    evaluations: List[Dict[str, Any]]
+    total: int
+    statistics: Optional[Dict[str, Any]] = None

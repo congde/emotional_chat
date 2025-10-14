@@ -106,6 +106,48 @@ class UserFeedback(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     is_resolved = Column(Boolean, default=False)  # 是否已处理优化
 
+class ResponseEvaluation(Base):
+    """回应评估表 - 存储LLM自动评估结果"""
+    __tablename__ = "response_evaluations"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(String(100), index=True)
+    user_id = Column(String(100), index=True)
+    message_id = Column(BigInteger, index=True)  # 关联到chat_messages.id
+    
+    # 评估对象
+    user_message = Column(Text)  # 用户消息（快照）
+    bot_response = Column(Text)  # 机器人回复（快照）
+    user_emotion = Column(String(50))  # 用户情感
+    emotion_intensity = Column(Float)  # 情感强度
+    
+    # 评估维度分数 (1-5)
+    empathy_score = Column(Float)  # 共情程度
+    naturalness_score = Column(Float)  # 自然度
+    safety_score = Column(Float)  # 安全性
+    
+    # 总分和平均分
+    total_score = Column(Float)  # 总分 (三个维度之和)
+    average_score = Column(Float)  # 平均分
+    
+    # 评估详情 (JSON格式)
+    empathy_reasoning = Column(Text)  # 共情评价理由
+    naturalness_reasoning = Column(Text)  # 自然度评价理由
+    safety_reasoning = Column(Text)  # 安全性评价理由
+    overall_comment = Column(Text)  # 总体评价
+    strengths = Column(Text)  # 优点 (JSON数组)
+    weaknesses = Column(Text)  # 缺点 (JSON数组)
+    improvement_suggestions = Column(Text)  # 改进建议 (JSON数组)
+    
+    # 元数据
+    evaluation_model = Column(String(100))  # 使用的评估模型
+    prompt_version = Column(String(50))  # Prompt版本（可选，用于A/B测试）
+    is_human_verified = Column(Boolean, default=False)  # 是否经过人工验证
+    human_rating_diff = Column(Float)  # 人工评分与AI评分的差异（可选）
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 # 创建所有表
 def create_tables():
     """
@@ -322,3 +364,114 @@ class DatabaseManager:
             feedback.is_resolved = True
             self.db.commit()
         return feedback
+    
+    def save_evaluation(self, evaluation_data):
+        """保存评估结果"""
+        import json
+        
+        evaluation = ResponseEvaluation(
+            session_id=evaluation_data.get("session_id"),
+            user_id=evaluation_data.get("user_id", "anonymous"),
+            message_id=evaluation_data.get("message_id"),
+            user_message=evaluation_data.get("user_message"),
+            bot_response=evaluation_data.get("bot_response"),
+            user_emotion=evaluation_data.get("user_emotion"),
+            emotion_intensity=evaluation_data.get("emotion_intensity"),
+            empathy_score=evaluation_data.get("empathy_score"),
+            naturalness_score=evaluation_data.get("naturalness_score"),
+            safety_score=evaluation_data.get("safety_score"),
+            total_score=evaluation_data.get("total_score"),
+            average_score=evaluation_data.get("average_score"),
+            empathy_reasoning=evaluation_data.get("empathy_reasoning"),
+            naturalness_reasoning=evaluation_data.get("naturalness_reasoning"),
+            safety_reasoning=evaluation_data.get("safety_reasoning"),
+            overall_comment=evaluation_data.get("overall_comment"),
+            strengths=json.dumps(evaluation_data.get("strengths", []), ensure_ascii=False),
+            weaknesses=json.dumps(evaluation_data.get("weaknesses", []), ensure_ascii=False),
+            improvement_suggestions=json.dumps(evaluation_data.get("improvement_suggestions", []), ensure_ascii=False),
+            evaluation_model=evaluation_data.get("model"),
+            prompt_version=evaluation_data.get("prompt_version"),
+            is_human_verified=evaluation_data.get("is_human_verified", False),
+            human_rating_diff=evaluation_data.get("human_rating_diff")
+        )
+        self.db.add(evaluation)
+        self.db.commit()
+        self.db.refresh(evaluation)
+        return evaluation
+    
+    def get_evaluations(self, session_id=None, limit=100):
+        """获取评估结果列表"""
+        query = self.db.query(ResponseEvaluation)
+        if session_id:
+            query = query.filter(ResponseEvaluation.session_id == session_id)
+        return query.order_by(ResponseEvaluation.created_at.desc()).limit(limit).all()
+    
+    def get_evaluation_statistics(self, start_date=None, end_date=None):
+        """获取评估统计信息"""
+        from sqlalchemy import func
+        
+        query = self.db.query(ResponseEvaluation)
+        if start_date:
+            query = query.filter(ResponseEvaluation.created_at >= start_date)
+        if end_date:
+            query = query.filter(ResponseEvaluation.created_at <= end_date)
+        
+        evaluations = query.all()
+        
+        if not evaluations:
+            return {
+                "total_count": 0,
+                "average_scores": {
+                    "empathy": 0,
+                    "naturalness": 0,
+                    "safety": 0,
+                    "overall": 0
+                }
+            }
+        
+        total_count = len(evaluations)
+        avg_empathy = sum(e.empathy_score or 0 for e in evaluations) / total_count
+        avg_naturalness = sum(e.naturalness_score or 0 for e in evaluations) / total_count
+        avg_safety = sum(e.safety_score or 0 for e in evaluations) / total_count
+        avg_overall = sum(e.average_score or 0 for e in evaluations) / total_count
+        
+        return {
+            "total_count": total_count,
+            "average_scores": {
+                "empathy": round(avg_empathy, 2),
+                "naturalness": round(avg_naturalness, 2),
+                "safety": round(avg_safety, 2),
+                "overall": round(avg_overall, 2)
+            },
+            "score_ranges": {
+                "empathy": {
+                    "min": min(e.empathy_score or 0 for e in evaluations),
+                    "max": max(e.empathy_score or 0 for e in evaluations)
+                },
+                "naturalness": {
+                    "min": min(e.naturalness_score or 0 for e in evaluations),
+                    "max": max(e.naturalness_score or 0 for e in evaluations)
+                },
+                "safety": {
+                    "min": min(e.safety_score or 0 for e in evaluations),
+                    "max": max(e.safety_score or 0 for e in evaluations)
+                }
+            }
+        }
+    
+    def update_evaluation_human_verification(self, evaluation_id, human_scores):
+        """更新评估的人工验证数据"""
+        evaluation = self.db.query(ResponseEvaluation).filter(ResponseEvaluation.id == evaluation_id).first()
+        if evaluation:
+            evaluation.is_human_verified = True
+            # 计算人工评分与AI评分的差异
+            ai_avg = evaluation.average_score or 0
+            human_avg = (
+                human_scores.get("empathy", 0) +
+                human_scores.get("naturalness", 0) +
+                human_scores.get("safety", 0)
+            ) / 3.0
+            evaluation.human_rating_diff = round(human_avg - ai_avg, 2)
+            self.db.commit()
+            self.db.refresh(evaluation)
+        return evaluation

@@ -1,0 +1,47 @@
+sequenceDiagram
+    participant Client as 客户端
+    participant API as API接口层
+    participant Engine as 评估引擎
+    participant LLM as LLM裁判
+    participant DB as 数据库
+    
+    Note over Client,DB: 评估流程开始
+    
+    Client->>API: POST /evaluation/evaluate<br/>{user_message, bot_response, emotion}
+    activate API
+    
+    API->>Engine: evaluate_response()
+    activate Engine
+    
+    Engine->>Engine: 构建评估提示词模板
+    Note right of Engine: 包含三个评分维度<br/>1.共情程度<br/>2.自然度<br/>3.安全性
+    
+    Engine->>LLM: 调用LLM API<br/>发送完整提示词
+    activate LLM
+    
+    Note over LLM: LLM分析评估<br/>• 理解用户情感<br/>• 评估回应质量<br/>• 生成详细反馈
+    
+    LLM-->>Engine: 返回JSON评估结果<br/>{scores, reasoning, suggestions}
+    deactivate LLM
+    
+    Engine->>Engine: 解析JSON结果
+    Engine->>Engine: 计算总分和平均分
+    
+    Engine->>DB: save_evaluation()
+    activate DB
+    DB->>DB: 存储到response_evaluations表
+    DB-->>Engine: 返回evaluation_id
+    deactivate DB
+    
+    Engine-->>API: 返回完整评估结果
+    deactivate Engine
+    
+    API-->>Client: JSON响应<br/>{evaluation_id, scores, comment, suggestions}
+    deactivate API
+    
+    Note over Client,DB: 评估完成，结果已保存
+    
+    rect rgb(240, 248, 255)
+    Note right of Client: 客户端可以：<br/>1. 查看详细评分<br/>2. 分析改进建议<br/>3. 对比不同版本<br/>4. 生成统计报告
+    end
+

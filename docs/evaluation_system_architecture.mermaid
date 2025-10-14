@@ -1,0 +1,67 @@
+graph TB
+    subgraph "客户端层"
+        A[用户/开发者] --> B[API请求]
+    end
+    
+    subgraph "API接口层"
+        B --> C{路由分发}
+        C -->|单个评估| D[POST /evaluation/evaluate]
+        C -->|批量评估| E[POST /evaluation/batch]
+        C -->|Prompt对比| F[POST /evaluation/compare-prompts]
+        C -->|获取统计| G[GET /evaluation/statistics]
+    end
+    
+    subgraph "评估引擎层"
+        D --> H[EvaluationEngine]
+        E --> H
+        F --> H
+        H --> I[构建评估提示词]
+        I --> J[调用LLM API]
+        J --> K{LLM裁判评分}
+        K --> L[解析JSON结果]
+        L --> M[计算总分/平均分]
+    end
+    
+    subgraph "LLM评估维度"
+        K --> N1[共情程度 1-5分]
+        K --> N2[自然度 1-5分]
+        K --> N3[安全性 1-5分]
+        N1 --> O[详细推理]
+        N2 --> O
+        N3 --> O
+        O --> P[优点/缺点/建议]
+    end
+    
+    subgraph "数据持久层"
+        M --> Q[DatabaseManager]
+        Q --> R[(response_evaluations表)]
+        R --> S[评估结果存储]
+        S --> T[统计分析]
+        T --> U[趋势报告]
+    end
+    
+    subgraph "反馈循环"
+        U --> V{分数是否达标?}
+        V -->|是| W[持续监控]
+        V -->|否| X[优化Prompt]
+        X --> Y[A/B测试]
+        Y --> B
+        W --> Z[定期评估]
+        Z --> B
+    end
+    
+    subgraph "人工校准"
+        S --> AA[人工抽样验证]
+        AA --> AB[对比AI与人工评分]
+        AB --> AC[优化评估提示词]
+        AC --> I
+    end
+    
+    style A fill:#e1f5ff
+    style K fill:#fff4e1
+    style R fill:#e8f5e9
+    style V fill:#ffebee
+    style N1 fill:#f3e5f5
+    style N2 fill:#f3e5f5
+    style N3 fill:#f3e5f5
+
