@@ -1,25 +1,126 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Heart, MessageCircle, User, Bot, Loader2 } from 'lucide-react';
+import { Send, Heart, MessageCircle, User, Bot, Loader2, Plus, Clock, MessageSquare, Paperclip, X, FileText, Image, Link, ExternalLink } from 'lucide-react';
 import ChatAPI from './services/ChatAPI';
 
 const AppContainer = styled.div`
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
-  justify-content: center;
-  align-items: center;
+`;
+
+const Sidebar = styled(motion.div)`
+  width: 300px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+`;
+
+const SidebarHeader = styled.div`
   padding: 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const UserAvatar = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+`;
+
+const UserName = styled.div`
+  font-weight: 600;
+  color: #333;
+  font-size: 1.1rem;
+`;
+
+const NewChatButton = styled(motion.button)`
+  width: 100%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 20px;
+  margin-top: 0;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  }
+`;
+
+const HistorySection = styled.div`
+  flex: 1;
+  padding: 0 20px;
+  overflow-y: auto;
+`;
+
+const HistoryTitle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 15px;
+  font-size: 0.9rem;
+`;
+
+const HistoryList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const HistoryItem = styled(motion.div)`
+  padding: 12px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: ${props => props.active ? 'rgba(102, 126, 234, 0.1)' : 'transparent'};
+  border: 1px solid ${props => props.active ? 'rgba(102, 126, 234, 0.3)' : 'transparent'};
+  
+  &:hover {
+    background: rgba(102, 126, 234, 0.05);
+  }
+`;
+
+const HistoryItemTitle = styled.div`
+  font-size: 0.9rem;
+  color: #333;
+  margin-bottom: 4px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+`;
+
+const HistoryItemTime = styled.div`
+  font-size: 0.75rem;
+  color: #666;
 `;
 
 const ChatContainer = styled(motion.div)`
-  width: 100%;
-  max-width: 800px;
-  height: 80vh;
+  flex: 1;
   background: rgba(255, 255, 255, 0.95);
-  border-radius: 20px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -150,8 +251,119 @@ const InputContainer = styled.div`
   padding: 20px;
   border-top: 1px solid rgba(0, 0, 0, 0.1);
   display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const InputRow = styled.div`
+  display: flex;
   gap: 10px;
   align-items: center;
+`;
+
+const AttachmentButton = styled(motion.button)`
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: scale(1.05);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+`;
+
+const FileInput = styled.input`
+  display: none;
+`;
+
+const AttachmentsPreview = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+`;
+
+const AttachmentItem = styled(motion.div)`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(102, 126, 234, 0.1);
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 20px;
+  font-size: 0.9rem;
+  color: #667eea;
+`;
+
+const AttachmentIcon = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const RemoveAttachmentButton = styled.button`
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    background: rgba(255, 107, 107, 0.1);
+  }
+`;
+
+const URLPreview = styled(motion.div)`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(0, 184, 148, 0.1);
+  border: 1px solid rgba(0, 184, 148, 0.3);
+  border-radius: 20px;
+  font-size: 0.9rem;
+  color: #00b894;
+  margin-bottom: 10px;
+`;
+
+const URLText = styled.span`
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const URLButton = styled.button`
+  background: none;
+  border: none;
+  color: #00b894;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    background: rgba(0, 184, 148, 0.1);
+  }
 `;
 
 const MessageInput = styled.input`
@@ -227,7 +439,13 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
+  const [historySessions, setHistorySessions] = useState([]);
+  const [currentUserId] = useState('user_001'); // 固定用户ID，实际应用中应该从登录状态获取
+  const [attachments, setAttachments] = useState([]);
+  const [detectedURLs, setDetectedURLs] = useState([]);
+  const [isProcessingURL, setIsProcessingURL] = useState(false);
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -237,10 +455,117 @@ function App() {
     scrollToBottom();
   }, [messages]);
 
+  // 加载历史会话
+  useEffect(() => {
+    loadHistorySessions();
+  }, [currentUserId]);
+
+  const loadHistorySessions = async () => {
+    try {
+      const response = await ChatAPI.getUserSessions(currentUserId);
+      setHistorySessions(response.sessions || []);
+    } catch (error) {
+      console.error('加载历史会话失败:', error);
+    }
+  };
+
+  const startNewChat = () => {
+    setMessages([]);
+    setSessionId(null);
+    setSuggestions([]);
+    setAttachments([]);
+    setDetectedURLs([]);
+  };
+
+  // URL检测函数
+  const detectURLs = (text) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return text.match(urlRegex) || [];
+  };
+
+  // 处理URL内容
+  const processURL = async (url) => {
+    setIsProcessingURL(true);
+    try {
+      const response = await ChatAPI.parseURL({ url });
+      return response;
+    } catch (error) {
+      console.error('URL解析失败:', error);
+      return null;
+    } finally {
+      setIsProcessingURL(false);
+    }
+  };
+
+  // 处理文件上传
+  const handleFileUpload = (event) => {
+    const files = Array.from(event.target.files);
+    const newAttachments = files.map(file => ({
+      id: Date.now() + Math.random(),
+      file,
+      name: file.name,
+      size: file.size,
+      type: file.type
+    }));
+    setAttachments(prev => [...prev, ...newAttachments]);
+  };
+
+  // 移除附件
+  const removeAttachment = (attachmentId) => {
+    setAttachments(prev => prev.filter(att => att.id !== attachmentId));
+  };
+
+  // 获取文件图标
+  const getFileIcon = (fileType) => {
+    if (fileType.startsWith('image/')) return <Image size={16} />;
+    if (fileType === 'application/pdf') return <FileText size={16} />;
+    return <FileText size={16} />;
+  };
+
+  // 格式化文件大小
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const loadSessionHistory = async (targetSessionId) => {
+    try {
+      const response = await ChatAPI.getSessionHistory(targetSessionId);
+      const sessionMessages = response.messages.map(msg => ({
+        id: Date.now() + Math.random(),
+        role: msg.role,
+        content: msg.content,
+        emotion: msg.emotion,
+        timestamp: new Date(msg.timestamp)
+      }));
+      setMessages(sessionMessages);
+      setSessionId(targetSessionId);
+      setSuggestions([]);
+    } catch (error) {
+      console.error('加载会话历史失败:', error);
+    }
+  };
+
   const sendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return;
+    if ((!inputValue.trim() && attachments.length === 0) || isLoading) return;
 
     const userMessage = inputValue.trim();
+    const urls = detectURLs(userMessage);
+    
+    // 处理检测到的URL
+    let urlContents = [];
+    if (urls.length > 0) {
+      for (const url of urls) {
+        const urlContent = await processURL(url);
+        if (urlContent) {
+          urlContents.push(urlContent);
+        }
+      }
+    }
+
     setInputValue('');
     setIsLoading(true);
 
@@ -249,15 +574,35 @@ function App() {
       id: Date.now(),
       role: 'user',
       content: userMessage,
+      attachments: attachments.map(att => ({
+        id: att.id,
+        name: att.name,
+        type: att.type,
+        size: att.size
+      })),
+      urls: urlContents,
       timestamp: new Date()
     };
     setMessages(prev => [...prev, newUserMessage]);
 
     try {
-      const response = await ChatAPI.sendMessage({
-        message: userMessage,
-        session_id: sessionId
+      // 准备FormData用于文件上传
+      const formData = new FormData();
+      formData.append('message', userMessage);
+      formData.append('session_id', sessionId || '');
+      formData.append('user_id', currentUserId);
+      
+      // 添加URL内容
+      if (urlContents.length > 0) {
+        formData.append('url_contents', JSON.stringify(urlContents));
+      }
+
+      // 添加文件附件
+      attachments.forEach((attachment, index) => {
+        formData.append(`file_${index}`, attachment.file, attachment.name);
       });
+
+      const response = await ChatAPI.sendMessageWithAttachments(formData);
 
       setSessionId(response.session_id);
       setSuggestions(response.suggestions || []);
@@ -271,6 +616,13 @@ function App() {
         timestamp: new Date()
       };
       setMessages(prev => [...prev, botMessage]);
+
+      // 清空附件和URL
+      setAttachments([]);
+      setDetectedURLs([]);
+
+      // 刷新历史会话列表
+      loadHistorySessions();
 
     } catch (error) {
       console.error('发送消息失败:', error);
@@ -297,11 +649,69 @@ function App() {
     }
   };
 
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setInputValue(value);
+    
+    // 检测URL
+    const urls = detectURLs(value);
+    setDetectedURLs(urls);
+  };
+
   return (
     <AppContainer>
+      <Sidebar
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <SidebarHeader>
+          <UserAvatar>
+            <User size={20} />
+          </UserAvatar>
+          <UserName>情感伙伴</UserName>
+        </SidebarHeader>
+
+        <NewChatButton
+          onClick={startNewChat}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <Plus size={16} />
+          新对话
+        </NewChatButton>
+
+        <HistorySection>
+          <HistoryTitle>
+            <Clock size={16} />
+            历史对话
+          </HistoryTitle>
+          <HistoryList>
+            <AnimatePresence>
+              {historySessions.map((session) => (
+                <HistoryItem
+                  key={session.session_id}
+                  active={session.session_id === sessionId}
+                  onClick={() => loadSessionHistory(session.session_id)}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <HistoryItemTitle>{session.title}</HistoryItemTitle>
+                  <HistoryItemTime>
+                    {new Date(session.updated_at).toLocaleDateString()}
+                  </HistoryItemTime>
+                </HistoryItem>
+              ))}
+            </AnimatePresence>
+          </HistoryList>
+        </HistorySection>
+      </Sidebar>
+
       <ChatContainer
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5 }}
       >
         <Header>
@@ -386,22 +796,82 @@ function App() {
         </MessagesContainer>
 
         <InputContainer>
-          <MessageInput
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="分享你的想法和感受..."
-            disabled={isLoading}
+          {/* URL预览 */}
+          {detectedURLs.length > 0 && (
+            <URLPreview
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <Link size={16} />
+              <URLText>{detectedURLs[0]}</URLText>
+              <URLButton onClick={() => window.open(detectedURLs[0], '_blank')}>
+                <ExternalLink size={14} />
+              </URLButton>
+            </URLPreview>
+          )}
+
+          {/* 附件预览 */}
+          {attachments.length > 0 && (
+            <AttachmentsPreview>
+              <AnimatePresence>
+                {attachments.map((attachment) => (
+                  <AttachmentItem
+                    key={attachment.id}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                  >
+                    <AttachmentIcon>
+                      {getFileIcon(attachment.type)}
+                    </AttachmentIcon>
+                    <span>{attachment.name}</span>
+                    <span>({formatFileSize(attachment.size)})</span>
+                    <RemoveAttachmentButton
+                      onClick={() => removeAttachment(attachment.id)}
+                    >
+                      <X size={12} />
+                    </RemoveAttachmentButton>
+                  </AttachmentItem>
+                ))}
+              </AnimatePresence>
+            </AttachmentsPreview>
+          )}
+
+          <InputRow>
+            <MessageInput
+              type="text"
+              value={inputValue}
+              onChange={handleInputChange}
+              onKeyPress={handleKeyPress}
+              placeholder="分享你的想法和感受..."
+              disabled={isLoading}
+            />
+            <AttachmentButton
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Paperclip size={20} />
+            </AttachmentButton>
+            <SendButton
+              onClick={sendMessage}
+              disabled={(!inputValue.trim() && attachments.length === 0) || isLoading}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Send size={20} />
+            </SendButton>
+          </InputRow>
+
+          <FileInput
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*,application/pdf,.doc,.docx,.txt"
+            onChange={handleFileUpload}
           />
-          <SendButton
-            onClick={sendMessage}
-            disabled={!inputValue.trim() || isLoading}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Send size={20} />
-          </SendButton>
         </InputContainer>
       </ChatContainer>
     </AppContainer>

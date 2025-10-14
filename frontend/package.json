@@ -6,20 +6,20 @@
     "@testing-library/jest-dom": "^5.16.4",
     "@testing-library/react": "^13.3.0",
     "@testing-library/user-event": "^13.5.0",
+    "axios": "^1.6.0",
+    "framer-motion": "^10.16.0",
+    "lucide-react": "^0.292.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-scripts": "5.0.1",
-    "axios": "^1.6.0",
-    "styled-components": "^6.1.0",
-    "react-router-dom": "^6.8.0",
-    "lucide-react": "^0.292.0",
-    "framer-motion": "^10.16.0",
     "react-markdown": "^9.0.0",
+    "react-router-dom": "^6.8.0",
+    "react-scripts": "5.0.1",
+    "styled-components": "^6.1.0",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "dev": "PORT=3003 react-scripts start",
-    "start": "PORT=3003 react-scripts start",
+    "dev": "PORT=3000 react-scripts start",
+    "start": "PORT=3000 react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
@@ -42,5 +42,8 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://localhost:8008"
+  "proxy": "http://localhost:8000",
+  "devDependencies": {
+    "http-proxy-middleware": "^3.0.5"
+  }
 }

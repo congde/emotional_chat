@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8008';
+// Use external server IP for external access
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://8.130.162.82:8000';
 
 class ChatAPI {
   static async sendMessage(data) {
@@ -13,6 +14,34 @@ class ChatAPI {
       return response.data;
     } catch (error) {
       console.error('发送消息失败:', error);
+      throw error;
+    }
+  }
+
+  static async sendMessageWithAttachments(formData) {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/chat/with-attachments`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('发送带附件的消息失败:', error);
+      throw error;
+    }
+  }
+
+  static async parseURL(data) {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/parse-url`, data, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('URL解析失败:', error);
       throw error;
     }
   }
@@ -62,6 +91,18 @@ class ChatAPI {
       return response.data;
     } catch (error) {
       console.error('添加情感示例失败:', error);
+      throw error;
+    }
+  }
+
+  static async getUserSessions(userId, limit = 50) {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/users/${userId}/sessions`, {
+        params: { limit }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('获取用户会话列表失败:', error);
       throw error;
     }
   }
