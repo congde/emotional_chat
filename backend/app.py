@@ -25,6 +25,14 @@ from backend.routers import (
     evaluation_router
 )
 
+# 尝试导入Agent路由
+try:
+    from backend.routers.agent import router as agent_router
+    AGENT_ENABLED = True
+except ImportError:
+    AGENT_ENABLED = False
+    agent_router = None
+
 # 导入日志配置
 from backend.logging_config import get_logger
 
@@ -67,23 +75,35 @@ def create_app() -> FastAPI:
     app.include_router(feedback_router)
     app.include_router(evaluation_router)
     
+    # 注册Agent路由（如果可用）
+    if AGENT_ENABLED and agent_router:
+        app.include_router(agent_router)
+        logger.info("Agent模块已启用")
+    
     # 根路由
     @app.get("/")
     async def root():
         """API根路径"""
+        features = [
+            "情感分析",
+            "记忆系统",
+            "上下文管理",
+            "向量数据库",
+            "LangChain集成",
+            "自动评估"
+        ]
+        
+        # 如果Agent模块启用，添加到功能列表
+        if AGENT_ENABLED:
+            features.append("Agent智能核心")
+        
         return {
             "name": "心语情感陪伴机器人",
             "version": "3.0.0",
             "status": "running",
-            "features": [
-                "情感分析",
-                "记忆系统",
-                "上下文管理",
-                "向量数据库",
-                "LangChain集成",
-                "自动评估"
-            ],
-            "architecture": "分层服务架构",
+            "features": features,
+            "architecture": "分层服务架构 + Agent核心" if AGENT_ENABLED else "分层服务架构",
+            "agent_enabled": AGENT_ENABLED,
             "timestamp": datetime.now().isoformat()
         }
     
@@ -121,12 +141,20 @@ def create_app() -> FastAPI:
     @app.get("/system/info")
     async def system_info():
         """系统信息"""
-        return {
+        routers_list = ["chat", "memory", "feedback", "evaluation"]
+        services_list = ["ChatService", "MemoryService", "ContextService"]
+        
+        # 如果Agent模块启用，添加Agent相关信息
+        if AGENT_ENABLED:
+            routers_list.append("agent")
+            services_list.append("AgentService")
+        
+        info = {
             "architecture": {
-                "pattern": "分层服务架构",
-                "layers": ["路由层", "服务层", "数据层"],
-                "services": ["ChatService", "MemoryService", "ContextService"],
-                "routers": ["chat", "memory", "feedback", "evaluation"]
+                "pattern": "分层服务架构 + Agent核心" if AGENT_ENABLED else "分层服务架构",
+                "layers": ["路由层", "服务层", "核心层", "数据层"] if AGENT_ENABLED else ["路由层", "服务层", "数据层"],
+                "services": services_list,
+                "routers": routers_list
             },
             "memory_system": {
                 "enabled": True,
@@ -141,6 +169,33 @@ def create_app() -> FastAPI:
                 "evaluation": "自动评估系统"
             }
         }
+        
+        # 添加Agent信息
+        if AGENT_ENABLED:
+            info["agent_system"] = {
+                "enabled": True,
+                "components": [
+                    "Agent Core - 核心控制器",
+                    "Memory Hub - 记忆中枢",
+                    "Planner - 任务规划器",
+                    "Tool Caller - 工具调用器",
+                    "Reflector - 反思优化器"
+                ],
+                "capabilities": [
+                    "智能任务规划",
+                    "工具自动调用",
+                    "主动回访",
+                    "策略优化"
+                ],
+                "external_tools": [
+                    "日历API",
+                    "音频播放服务",
+                    "心理资源数据库",
+                    "定时提醒服务"
+                ]
+            }
+        
+        return info
     
     logger.info("应用初始化完成")
     
