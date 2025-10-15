@@ -28,7 +28,7 @@ if __name__ == "__main__":
     print(f"✓ 从项目根目录启动，监视backend目录的变化")
     
     uvicorn.run(
-        "backend.main:app",  # 从项目根目录启动，使用backend.main模块路径
+        "backend.app:app",  # 使用新的app.py模块
         host=Config.HOST,
         port=Config.PORT,
         reload=Config.DEBUG,

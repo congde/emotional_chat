@@ -148,6 +148,66 @@ class ResponseEvaluation(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+class UserProfileDB(Base):
+    """用户画像表 - 存储用户的基本信息和特征"""
+    __tablename__ = "user_profiles"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(100), unique=True, index=True)
+    
+    # 基本信息
+    name = Column(String(100))
+    age = Column(Integer)
+    gender = Column(String(20))
+    
+    # 用户特征 (JSON格式存储)
+    personality_traits = Column(Text)  # 性格特征列表
+    interests = Column(Text)  # 兴趣爱好列表
+    concerns = Column(Text)  # 长期关注的问题列表
+    
+    # 沟通偏好
+    communication_style = Column(String(50), default="默认")  # 沟通风格偏好
+    emotional_baseline = Column(String(50), default="稳定")  # 情绪基线
+    
+    # 统计信息
+    total_sessions = Column(Integer, default=0)  # 总会话数
+    total_messages = Column(Integer, default=0)  # 总消息数
+    avg_emotion_intensity = Column(Float)  # 平均情绪强度
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class MemoryItem(Base):
+    """记忆条目表 - 存储结构化的用户记忆（配合向量数据库使用）"""
+    __tablename__ = "memory_items"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    memory_id = Column(String(100), unique=True, index=True)  # 对应向量数据库中的ID
+    user_id = Column(String(100), index=True)
+    session_id = Column(String(100), index=True)
+    
+    # 记忆内容
+    content = Column(Text)  # 原始内容
+    summary = Column(Text)  # 摘要
+    memory_type = Column(String(50))  # event, relationship, commitment, preference, concern
+    
+    # 关联信息
+    emotion = Column(String(50))  # 相关情绪
+    emotion_intensity = Column(Float)  # 情绪强度
+    importance = Column(Float)  # 重要性评分 (0-1)
+    
+    # 提取信息
+    extraction_method = Column(String(50))  # rule_based, llm_based
+    keywords = Column(Text)  # 关键词 (JSON数组)
+    
+    # 状态
+    is_active = Column(Boolean, default=True)  # 是否活跃（可以设置为False来软删除）
+    access_count = Column(Integer, default=0)  # 被检索次数
+    last_accessed = Column(DateTime)  # 最后访问时间
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 # 创建所有表
 def create_tables():
     """
