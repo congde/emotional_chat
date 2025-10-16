@@ -4,7 +4,7 @@
 处理所有与聊天相关的业务逻辑
 """
 
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, List
 from backend.simple_langchain_engine import SimpleEmotionalChatEngine
 from backend.services.memory_service import MemoryService
 from backend.services.context_service import ContextService
@@ -13,6 +13,14 @@ from backend.database import DatabaseManager
 import uuid
 from datetime import datetime
 
+# 尝试导入RAG服务（可选功能）
+try:
+    from backend.modules.rag.services.rag_service import RAGIntegrationService
+    RAG_AVAILABLE = True
+except ImportError:
+    RAG_AVAILABLE = False
+    RAGIntegrationService = None
+
 
 class ChatService:
     """聊天服务 - 统一的聊天接口"""
@@ -20,12 +28,38 @@ class ChatService:
     def __init__(
         self,
         memory_service: Optional[MemoryService] = None,
-        context_service: Optional[ContextService] = None
+        context_service: Optional[ContextService] = None,
+        use_rag: bool = True
     ):
-        """初始化聊天服务"""
+        """
+        初始化聊天服务
+        
+        Args:
+            memory_service: 记忆服务
+            context_service: 上下文服务
+            use_rag: 是否启用RAG知识库功能
+        """
         self.chat_engine = SimpleEmotionalChatEngine()
         self.memory_service = memory_service or MemoryService()
         self.context_service = context_service or ContextService(memory_service=self.memory_service)
+        
+        # 初始化RAG服务（如果可用且启用）
+        self.rag_enabled = False
+        self.rag_service = None
+        if use_rag and RAG_AVAILABLE:
+            try:
+                self.rag_service = RAGIntegrationService()
+                # 检查知识库是否可用
+                if self.rag_service.rag_service.is_knowledge_available():
+                    self.rag_enabled = True
+                    print("✓ RAG知识库已启用")
+                else:
+                    print("⚠ RAG服务已加载，但知识库未初始化")
+            except Exception as e:
+                print(f"⚠ RAG服务初始化失败: {e}")
+        else:
+            if not RAG_AVAILABLE:
+                print("⚠ RAG模块不可用（需要安装相关依赖）")
     
     async def chat(
         self,
@@ -73,11 +107,52 @@ class ChatService:
             emotion_intensity=emotion_intensity
         )
         
-        # 3. 生成回复（使用增强的上下文）
-        # 这里可以选择使用原引擎或增强的prompt
-        response = self.chat_engine.chat(request)
+        # 3. 尝试使用RAG增强回复
+        rag_result = None
+        if self.rag_enabled and self.rag_service:
+            try:
+                # 获取对话历史
+                conversation_history = await self._get_conversation_history(session_id)
+                
+                # 尝试RAG增强
+                rag_result = self.rag_service.enhance_response(
+                    message=message,
+                    emotion=emotion,
+                    conversation_history=conversation_history
+                )
+                
+            except Exception as e:
+                print(f"RAG增强失败，使用常规回复: {e}")
         
-        # 4. 处理并存储记忆
+        # 4. 生成回复
+        if rag_result and rag_result.get("use_rag"):
+            # 使用RAG增强的回复
+            response = ChatResponse(
+                response=rag_result["answer"],
+                emotion=emotion,
+                emotion_intensity=emotion_intensity,
+                session_id=session_id,
+                timestamp=datetime.now().isoformat()
+            )
+            # 添加RAG来源信息
+            response.context = {
+                "memories_count": len(context.get("memories", {}).get("all", [])),
+                "emotion_trend": context.get("emotion_context", {}).get("trend", {}).get("trend"),
+                "has_profile": bool(context.get("user_profile", {}).get("summary")),
+                "used_rag": True,
+                "knowledge_sources": len(rag_result.get("sources", []))
+            }
+        else:
+            # 使用常规引擎回复
+            response = self.chat_engine.chat(request)
+            response.context = {
+                "memories_count": len(context.get("memories", {}).get("all", [])),
+                "emotion_trend": context.get("emotion_context", {}).get("trend", {}).get("trend"),
+                "has_profile": bool(context.get("user_profile", {}).get("summary")),
+                "used_rag": False
+            }
+        
+        # 5. 处理并存储记忆
         await self.memory_service.process_and_store_memories(
             session_id=session_id,
             user_id=user_id,
@@ -87,14 +162,34 @@ class ChatService:
             emotion_intensity=emotion_intensity
         )
         
-        # 5. 添加上下文信息到响应
-        response.context = {
-            "memories_count": len(context.get("memories", {}).get("all", [])),
-            "emotion_trend": context.get("emotion_context", {}).get("trend", {}).get("trend"),
-            "has_profile": bool(context.get("user_profile", {}).get("summary"))
-        }
-        
         return response
+    
+    async def _get_conversation_history(self, session_id: str, limit: int = 5) -> List[Dict[str, str]]:
+        """
+        获取最近的对话历史（用于RAG上下文）
+        
+        Args:
+            session_id: 会话ID
+            limit: 限制数量
+            
+        Returns:
+            对话历史列表
+        """
+        try:
+            with DatabaseManager() as db:
+                messages = db.get_session_messages(session_id, limit)
+                
+                history = []
+                for msg in messages:
+                    history.append({
+                        "role": msg.role,
+                        "content": msg.content
+                    })
+                
+                return history
+        except Exception as e:
+            print(f"获取对话历史失败: {e}")
+            return []
     
     async def get_session_summary(self, session_id: str) -> Dict[str, Any]:
         """

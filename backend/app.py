@@ -22,7 +22,8 @@ from backend.routers import (
     chat_router,
     memory_router,
     feedback_router,
-    evaluation_router
+    evaluation_router,
+    rag_router
 )
 
 # 尝试导入Agent路由
@@ -74,6 +75,7 @@ def create_app() -> FastAPI:
     app.include_router(memory_router)
     app.include_router(feedback_router)
     app.include_router(evaluation_router)
+    app.include_router(rag_router)
     
     # 注册Agent路由（如果可用）
     if AGENT_ENABLED and agent_router:
@@ -90,7 +92,8 @@ def create_app() -> FastAPI:
             "上下文管理",
             "向量数据库",
             "LangChain集成",
-            "自动评估"
+            "自动评估",
+            "RAG知识库"
         ]
         
         # 如果Agent模块启用，添加到功能列表

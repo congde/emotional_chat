@@ -1,8 +1,13 @@
-.PHONY: help db-init db-upgrade db-downgrade db-check db-current db-history db-reset install run
+.PHONY: help db-init db-upgrade db-downgrade db-check db-current db-history db-reset install run rag-init rag-test rag-demo
 
 help:
 	@echo "可用的命令:"
+	@echo ""
+	@echo "基础命令:"
 	@echo "  make install      - 安装依赖"
+	@echo "  make run          - 运行后端服务"
+	@echo ""
+	@echo "数据库命令:"
 	@echo "  make db-init      - 初始化数据库"
 	@echo "  make db-upgrade   - 升级数据库到最新版本"
 	@echo "  make db-downgrade - 降级数据库一个版本"
@@ -10,7 +15,11 @@ help:
 	@echo "  make db-current   - 查看当前数据库版本"
 	@echo "  make db-history   - 查看迁移历史"
 	@echo "  make db-reset     - 重置数据库（危险！）"
-	@echo "  make run          - 运行后端服务"
+	@echo ""
+	@echo "RAG知识库命令:"
+	@echo "  make rag-init     - 初始化RAG知识库"
+	@echo "  make rag-test     - 测试RAG系统"
+	@echo "  make rag-demo     - 演示RAG效果对比"
 
 install:
 	pip install -r requirements.txt
@@ -38,4 +47,13 @@ db-reset:
 
 run:
 	python run_backend.py
+
+rag-init:
+	python init_rag_knowledge.py
+
+rag-test:
+	python test_rag_system.py
+
+rag-demo:
+	python demo_rag_comparison.py
 

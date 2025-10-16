@@ -15,3 +15,5 @@ sqlalchemy==1.4.53
 alembic==1.12.1
 flask
 flask-cors
+pypdf==3.17.4
+python-multipart==0.0.6
