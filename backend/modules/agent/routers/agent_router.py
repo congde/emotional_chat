@@ -8,11 +8,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional
 
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent))
-
-from services.agent_service import AgentService, get_agent_service
+from ..services.agent_service import AgentService, get_agent_service
 
 
 router = APIRouter(prefix="/agent", tags=["agent"])

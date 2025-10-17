@@ -8,12 +8,16 @@ from typing import List, Dict, Any, Optional
 import logging
 
 from langchain.chains import RetrievalQA
-from langchain.chat_models import ChatOpenAI
+try:
+    from langchain_openai import ChatOpenAI
+except ImportError:
+    from langchain.chat_models import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain.schema import Document
 
 from ..core.knowledge_base import KnowledgeBaseManager
 from backend.logging_config import get_logger
+from config import Config
 
 logger = get_logger(__name__)
 
@@ -37,7 +41,12 @@ class RAGService:
                 logger.warning(f"加载向量存储失败，可能需要先初始化知识库: {e}")
         
         self.kb_manager = kb_manager
-        self.llm = ChatOpenAI(model="gpt-4", temperature=0.7)
+        self.llm = ChatOpenAI(
+            api_key=Config.OPENAI_API_KEY,
+            base_url=Config.API_BASE_URL,
+            model=Config.DEFAULT_MODEL,
+            temperature=0.7
+        )
         
         # 心理健康专用prompt模板
         self.prompt_template = PromptTemplate(

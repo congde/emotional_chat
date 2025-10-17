@@ -26,6 +26,14 @@ from backend.routers import (
     rag_router
 )
 
+# 导入意图识别路由
+try:
+    from backend.modules.intent.routers import intent_router
+    INTENT_ENABLED = True
+except ImportError:
+    INTENT_ENABLED = False
+    intent_router = None
+
 # 尝试导入Agent路由
 try:
     from backend.routers.agent import router as agent_router
@@ -82,6 +90,11 @@ def create_app() -> FastAPI:
         app.include_router(agent_router)
         logger.info("Agent模块已启用")
     
+    # 注册意图识别路由（如果可用）
+    if INTENT_ENABLED and intent_router:
+        app.include_router(intent_router)
+        logger.info("意图识别模块已启用")
+    
     # 根路由
     @app.get("/")
     async def root():
@@ -99,6 +112,10 @@ def create_app() -> FastAPI:
         # 如果Agent模块启用，添加到功能列表
         if AGENT_ENABLED:
             features.append("Agent智能核心")
+        
+        # 如果意图识别模块启用，添加到功能列表
+        if INTENT_ENABLED:
+            features.append("意图识别系统")
         
         return {
             "name": "心语情感陪伴机器人",
@@ -152,6 +169,11 @@ def create_app() -> FastAPI:
             routers_list.append("agent")
             services_list.append("AgentService")
         
+        # 如果意图识别模块启用，添加相关信息
+        if INTENT_ENABLED:
+            routers_list.append("intent")
+            services_list.append("IntentService")
+        
         info = {
             "architecture": {
                 "pattern": "分层服务架构 + Agent核心" if AGENT_ENABLED else "分层服务架构",
@@ -169,7 +191,8 @@ def create_app() -> FastAPI:
                 "memory_extraction": "自动记忆提取",
                 "context_assembly": "上下文组装",
                 "user_profiling": "用户画像",
-                "evaluation": "自动评估系统"
+                "evaluation": "自动评估系统",
+                "intent_recognition": "意图识别系统" if INTENT_ENABLED else None
             }
         }
         
@@ -195,6 +218,32 @@ def create_app() -> FastAPI:
                     "音频播放服务",
                     "心理资源数据库",
                     "定时提醒服务"
+                ]
+            }
+        
+        # 添加意图识别信息
+        if INTENT_ENABLED:
+            info["intent_system"] = {
+                "enabled": True,
+                "mode": "hybrid",
+                "components": [
+                    "Rule Engine - 规则引擎",
+                    "ML Classifier - 机器学习分类器",
+                    "Input Processor - 输入预处理器"
+                ],
+                "supported_intents": [
+                    "emotion - 情感表达",
+                    "advice - 寻求建议",
+                    "conversation - 普通对话",
+                    "function - 功能请求",
+                    "crisis - 危机干预",
+                    "chat - 闲聊"
+                ],
+                "capabilities": [
+                    "关键词快速匹配",
+                    "语义意图识别",
+                    "危机情况检测",
+                    "智能Prompt构建"
                 ]
             }
         

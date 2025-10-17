@@ -179,7 +179,7 @@ class SearchRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=100, description="搜索关键词")
     filters: Optional[Dict[str, Any]] = Field(None, description="搜索过滤器")
     sort_by: Optional[str] = Field(None, description="排序字段")
-    sort_order: str = Field("desc", regex="^(asc|desc)$", description="排序顺序")
+    sort_order: str = Field("desc", pattern="^(asc|desc)$", description="排序顺序")
     pagination: PaginationRequest = Field(default_factory=PaginationRequest, description="分页参数")
     
     @validator('query')

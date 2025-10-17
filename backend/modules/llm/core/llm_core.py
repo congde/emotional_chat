@@ -42,9 +42,9 @@ except ImportError as e:
 
 class SimpleEmotionalChatEngine:
     def __init__(self):
-        # 初始化API配置 - 优先使用Qwen API
-        self.api_key = os.getenv("DASHSCOPE_API_KEY") or os.getenv("OPENAI_API_KEY")
-        self.api_base_url = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
+        # 初始化API配置 - 使用统一的LLM配置
+        self.api_key = os.getenv("LLM_API_KEY") or os.getenv("DASHSCOPE_API_KEY") or os.getenv("OPENAI_API_KEY")
+        self.api_base_url = os.getenv("LLM_BASE_URL") or os.getenv("API_BASE_URL", "https://api.openai.com/v1")
         self.model = os.getenv("DEFAULT_MODEL", "qwen-plus")
         
         if not self.api_key:

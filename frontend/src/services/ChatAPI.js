@@ -58,7 +58,7 @@ class ChatAPI {
 
   static async parseURL(data) {
     try {
-      const response = await axios.post(`${API_BASE_URL}/parse-url`, data, {
+      const response = await axios.post(`${API_BASE_URL}/chat/parse-url`, data, {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -72,7 +72,7 @@ class ChatAPI {
 
   static async getSessionHistory(sessionId, limit = 20) {
     try {
-      const response = await axios.get(`${API_BASE_URL}/sessions/${sessionId}/history`, {
+      const response = await axios.get(`${API_BASE_URL}/chat/sessions/${sessionId}/history`, {
         params: { limit }
       });
       return response.data;
@@ -84,7 +84,7 @@ class ChatAPI {
 
   static async getSessionSummary(sessionId) {
     try {
-      const response = await axios.get(`${API_BASE_URL}/sessions/${sessionId}/summary`);
+      const response = await axios.get(`${API_BASE_URL}/chat/sessions/${sessionId}/summary`);
       return response.data;
     } catch (error) {
       console.error('获取会话摘要失败:', error);
@@ -121,7 +121,7 @@ class ChatAPI {
 
   static async getUserSessions(userId, limit = 50) {
     try {
-      const response = await axios.get(`${API_BASE_URL}/users/${userId}/sessions`, {
+      const response = await axios.get(`${API_BASE_URL}/chat/users/${userId}/sessions`, {
         params: { limit }
       });
       return response.data;
@@ -133,7 +133,7 @@ class ChatAPI {
 
   static async deleteSession(sessionId) {
     try {
-      const response = await axios.delete(`${API_BASE_URL}/sessions/${sessionId}`);
+      const response = await axios.delete(`${API_BASE_URL}/chat/sessions/${sessionId}`);
       return response.data;
     } catch (error) {
       console.error('删除会话失败:', error);

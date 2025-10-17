@@ -7,11 +7,7 @@ Agent Service - Agent服务层
 from typing import Dict, Any, Optional
 from datetime import datetime
 
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent))
-
-from agent.agent_core import AgentCore, get_agent_core
+from ..core.agent.agent_core import AgentCore, get_agent_core
 
 
 class AgentService:

@@ -17,7 +17,10 @@ class MemoryExtractor:
     
     def __init__(self):
         """初始化记忆提取器"""
-        self.client = OpenAI(api_key=Config.OPENAI_API_KEY)
+        self.client = OpenAI(
+            api_key=Config.OPENAI_API_KEY,
+            base_url=Config.API_BASE_URL
+        )
         
         # 定义需要提取的记忆类型
         self.memory_types = {
@@ -186,7 +189,7 @@ class MemoryExtractor:
 如果没有值得记忆的信息，返回空数组。"""
 
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=Config.DEFAULT_MODEL,
                 messages=[
                     {"role": "system", "content": "你是一个专业的记忆提取助手，善于识别对话中的关键信息。"},
                     {"role": "user", "content": prompt}

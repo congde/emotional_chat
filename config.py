@@ -10,8 +10,15 @@ load_dotenv(env_path)
 PROJECT_ROOT = os.getenv('PROJECT_ROOT', str(Path(__file__).parent))
 
 class Config:
-    # OpenAI配置
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    # LLM API配置 - 支持通义千问(Qwen)、OpenAI等兼容接口
+    # 统一使用 LLM_API_KEY，兼容旧的环境变量名
+    LLM_API_KEY = os.getenv("LLM_API_KEY") or os.getenv("DASHSCOPE_API_KEY") or os.getenv("OPENAI_API_KEY")
+    LLM_BASE_URL = os.getenv("LLM_BASE_URL") or os.getenv("API_BASE_URL", "https://api.openai.com/v1")
+    
+    # 为了兼容性，保留旧的属性名（指向统一的配置）
+    OPENAI_API_KEY = LLM_API_KEY
+    API_BASE_URL = LLM_BASE_URL
+    DASHSCOPE_API_KEY = LLM_API_KEY
     
     # LangChain配置
     LANGCHAIN_TRACING_V2 = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"

@@ -10,13 +10,24 @@ from pathlib import Path
 import logging
 from datetime import datetime
 
-from langchain.document_loaders import PyPDFLoader, DirectoryLoader, TextLoader
+try:
+    from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader, TextLoader
+    from langchain_community.vectorstores import Chroma
+except ImportError:
+    # 兼容旧版本 langchain
+    from langchain.document_loaders import PyPDFLoader, DirectoryLoader, TextLoader
+    from langchain.vectorstores import Chroma
+
+try:
+    from langchain_openai import OpenAIEmbeddings
+except ImportError:
+    from langchain.embeddings import OpenAIEmbeddings
+
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.vectorstores import Chroma
 from langchain.schema import Document
 
 from backend.logging_config import get_logger
+from config import Config
 
 logger = get_logger(__name__)
 
@@ -32,7 +43,10 @@ class KnowledgeBaseManager:
             persist_directory: 向量数据库持久化目录
         """
         self.persist_directory = persist_directory
-        self.embeddings = OpenAIEmbeddings()
+        self.embeddings = OpenAIEmbeddings(
+            openai_api_key=Config.LLM_API_KEY,
+            openai_api_base=Config.LLM_BASE_URL
+        )
         self.vectorstore: Optional[Chroma] = None
         
         # 确保目录存在

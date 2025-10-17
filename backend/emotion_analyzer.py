@@ -2,13 +2,17 @@ from typing import Dict, List, Tuple
 import re
 from langchain.schema import BaseMessage, HumanMessage, AIMessage
 from langchain.prompts import PromptTemplate
-from langchain.chat_models import ChatOpenAI
+try:
+    from langchain_openai import ChatOpenAI
+except ImportError:
+    from langchain.chat_models import ChatOpenAI
 from config import Config
 
 class EmotionAnalyzer:
     def __init__(self):
         self.llm = ChatOpenAI(
             api_key=Config.OPENAI_API_KEY,
+            base_url=Config.API_BASE_URL,
             model_name=Config.DEFAULT_MODEL,
             temperature=0.3
         )

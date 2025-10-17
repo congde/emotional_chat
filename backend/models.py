@@ -26,8 +26,10 @@ class ChatResponse(BaseModel):
     response: str
     session_id: str
     emotion: Optional[str] = None
+    emotion_intensity: Optional[float] = None
     suggestions: Optional[List[str]] = None
     timestamp: datetime = datetime.now()
+    context: Optional[Dict[str, Any]] = None
 
 class EmotionAnalysis(BaseModel):
     emotion: str

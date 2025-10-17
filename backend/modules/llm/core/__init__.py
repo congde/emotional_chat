@@ -2,6 +2,6 @@
 LLM核心模块
 """
 
-from .llm_core import LLMCore, LLMConfig
+from .llm_core import SimpleEmotionalChatEngine
 
-__all__ = ["LLMCore", "LLMConfig"]
+__all__ = ["SimpleEmotionalChatEngine"]

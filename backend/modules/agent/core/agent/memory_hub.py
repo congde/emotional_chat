@@ -13,12 +13,9 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import sys
-sys.path.append(str(Path(__file__).parent.parent))
-
-from memory_manager import MemoryManager
-from database import get_db, User, Conversation, Message
-from vector_store import VectorStore
+from backend.memory_manager import MemoryManager
+from backend.database import get_db, User, ChatSession, ChatMessage
+from backend.vector_store import VectorStore
 
 
 class MemoryHub:

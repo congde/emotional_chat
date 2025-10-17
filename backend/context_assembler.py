@@ -192,7 +192,8 @@ class ContextAssembler:
         trend_data = context['emotion_context']['trend']
         if trend_data.get('emotions'):
             top_emotions = trend_data['emotions'][:3]
-            emotion_section += f"近期情绪: {', '.join([f'{e['emotion']}({e['count']}次)' for e in top_emotions])}\n"
+            emotion_list = ', '.join([f"{e['emotion']}({e['count']}次)" for e in top_emotions])
+            emotion_section += f"近期情绪: {emotion_list}\n"
             emotion_section += f"趋势: {trend_data['trend']}\n"
         
         # 构建对话历史部分
