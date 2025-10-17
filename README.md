@@ -1448,9 +1448,18 @@ make run              # 启动后端服务
 
 ## 📚 相关文档
 
+### 核心模块文档
 - **Agent模块**: [AGENT_README.md](AGENT_README.md) - Agent智能核心详细文档
 - **RAG系统**: [docs/RAG实施步骤.md](docs/RAG实施步骤.md) - RAG知识库实施指南
 - **记忆系统**: [docs/记忆系统架构.md](docs/记忆系统架构.md) - 记忆系统架构说明
+
+### 向量数据库教程（新增）
+- **📖 教程索引**: [docs/向量数据库教程索引.md](docs/向量数据库教程索引.md) - 向量数据库学习路径导航
+- **📘 完整教程**: [docs/向量数据库集成教程_Chroma版.md](docs/向量数据库集成教程_Chroma版.md) - Chroma 集成详细教程
+- **⚖️ 技术对比**: [docs/Pinecone_vs_Chroma_对比.md](docs/Pinecone_vs_Chroma_对比.md) - Pinecone vs Chroma 全面对比
+- **💻 代码示例**: [examples/README.md](examples/README.md) - 快速入门和完整演示
+
+### API文档
 - **API文档**: http://localhost:8000/docs - 交互式API文档（Swagger UI）
 
 ## 🤝 贡献指南
