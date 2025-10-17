@@ -29,6 +29,14 @@ except ImportError:
     INTENT_AVAILABLE = False
     IntentService = None
 
+# 导入增强版输入处理器
+try:
+    from backend.modules.intent.core.enhanced_input_processor import EnhancedInputProcessor
+    ENHANCED_PROCESSOR_AVAILABLE = True
+except ImportError:
+    ENHANCED_PROCESSOR_AVAILABLE = False
+    EnhancedInputProcessor = None
+
 
 class ChatService:
     """聊天服务 - 统一的聊天接口"""
@@ -38,7 +46,8 @@ class ChatService:
         memory_service: Optional[MemoryService] = None,
         context_service: Optional[ContextService] = None,
         use_rag: bool = True,
-        use_intent: bool = True
+        use_intent: bool = True,
+        use_enhanced_processor: bool = True
     ):
         """
         初始化聊天服务
@@ -48,10 +57,28 @@ class ChatService:
             context_service: 上下文服务
             use_rag: 是否启用RAG知识库功能
             use_intent: 是否启用意图识别功能
+            use_enhanced_processor: 是否启用增强版输入处理器
         """
         self.chat_engine = SimpleEmotionalChatEngine()
         self.memory_service = memory_service or MemoryService()
         self.context_service = context_service or ContextService(memory_service=self.memory_service)
+        
+        # 初始化增强版输入处理器（如果可用且启用）
+        self.enhanced_processor_enabled = False
+        self.enhanced_processor = None
+        if use_enhanced_processor and ENHANCED_PROCESSOR_AVAILABLE:
+            try:
+                self.enhanced_processor = EnhancedInputProcessor(
+                    enable_jieba=True,  # 启用分词
+                    enable_duplicate_check=True  # 启用重复检测
+                )
+                self.enhanced_processor_enabled = True
+                print("✓ 增强版输入处理器已启用")
+            except Exception as e:
+                print(f"⚠ 增强版输入处理器初始化失败: {e}")
+        else:
+            if not ENHANCED_PROCESSOR_AVAILABLE:
+                print("⚠ 增强版输入处理器不可用")
         
         # 初始化RAG服务（如果可用且启用）
         self.rag_enabled = False
@@ -117,7 +144,38 @@ class ChatService:
         session_id = request.session_id
         message = request.message
         
-        # 1. 分析情绪
+        # 0. 增强版输入预处理（第一步）
+        preprocessed = None
+        if self.enhanced_processor_enabled and self.enhanced_processor:
+            try:
+                preprocessed = self.enhanced_processor.preprocess(message, user_id)
+                
+                # 检查是否被阻止
+                if preprocessed["blocked"]:
+                    return ChatResponse(
+                        response=preprocessed.get("friendly_message", "输入无效，请重新输入"),
+                        emotion="neutral",
+                        session_id=session_id,
+                        timestamp=datetime.now(),
+                        context={
+                            "blocked": True,
+                            "reason": preprocessed["warnings"],
+                            "input_validation": "failed"
+                        }
+                    )
+                
+                # 使用清洗后的文本
+                message = preprocessed["cleaned"]
+                
+                # 如果检测到重复且频率过高，可以提供特殊提示
+                if preprocessed["metadata"].get("high_frequency_repeat"):
+                    print(f"⚠️ 用户 {user_id} 高频重复输入: {message[:30]}...")
+                
+            except Exception as e:
+                print(f"输入预处理失败，使用原始消息: {e}")
+                preprocessed = None
+        
+        # 1. 分析情绪（使用清洗后的消息）
         emotion_result = self.chat_engine.analyze_emotion(message)
         emotion = emotion_result.get("emotion", "neutral")
         emotion_intensity = emotion_result.get("intensity", 5.0)
@@ -178,7 +236,7 @@ class ChatService:
                 session_id=session_id,
                 timestamp=datetime.now()
             )
-            # 添加RAG来源信息
+            # 添加RAG来源信息和预处理信息
             response.context = {
                 "memories_count": len(context.get("memories", {}).get("all", [])),
                 "emotion_trend": context.get("emotion_context", {}).get("trend", {}).get("trend"),
@@ -186,7 +244,9 @@ class ChatService:
                 "used_rag": True,
                 "knowledge_sources": len(rag_result.get("sources", [])),
                 "intent": intent_result.get('intent') if intent_result else None,
-                "intent_confidence": intent_result.get('confidence') if intent_result else None
+                "intent_confidence": intent_result.get('confidence') if intent_result else None,
+                "input_preprocessed": preprocessed is not None,
+                "input_metadata": preprocessed.get("metadata") if preprocessed else None
             }
         else:
             # 使用常规引擎回复
@@ -197,7 +257,9 @@ class ChatService:
                 "has_profile": bool(context.get("user_profile", {}).get("summary")),
                 "used_rag": False,
                 "intent": intent_result.get('intent') if intent_result else None,
-                "intent_confidence": intent_result.get('confidence') if intent_result else None
+                "intent_confidence": intent_result.get('confidence') if intent_result else None,
+                "input_preprocessed": preprocessed is not None,
+                "input_metadata": preprocessed.get("metadata") if preprocessed else None
             }
         
         # 6. 处理并存储记忆
