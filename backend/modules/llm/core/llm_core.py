@@ -381,35 +381,45 @@ class SimpleEmotionalChatEngine:
         session_id = request.session_id or str(uuid.uuid4())
         user_id = request.user_id or "anonymous"
         
+        print(f"Chat请求: session_id={session_id}, user_id={user_id}, message={request.message[:50]}...")
+        
         # 分析情感
         emotion_data = self.analyze_emotion(request.message)
         
         # 保存用户消息到数据库
-        db_manager = DatabaseManager()
-        with db_manager as db:
-            # 如果是新会话，创建会话记录
-            if not request.session_id:
-                db.create_session(session_id, user_id)
-            
-            user_message = db.save_message(
-                session_id=session_id,
-                user_id=user_id,
-                role="user",
-                content=request.message,
-                emotion=emotion_data["emotion"],
-                emotion_intensity=emotion_data["intensity"]
-            )
-            
-            # 保存情感分析结果
-            db.save_emotion_analysis(
-                session_id=session_id,
-                user_id=user_id,
-                message_id=user_message.id,
-                emotion=emotion_data["emotion"],
-                intensity=emotion_data["intensity"],
-                keywords=emotion_data["keywords"],
-                suggestions=emotion_data["suggestions"]
-            )
+        user_message = None
+        try:
+            db_manager = DatabaseManager()
+            with db_manager as db:
+                # 如果是新会话，创建会话记录
+                if not request.session_id:
+                    print(f"创建新会话: {session_id} for user: {user_id}")
+                    db.create_session(session_id, user_id)
+                    print(f"会话创建完成")
+                
+                user_message = db.save_message(
+                    session_id=session_id,
+                    user_id=user_id,
+                    role="user",
+                    content=request.message,
+                    emotion=emotion_data["emotion"],
+                    emotion_intensity=emotion_data["intensity"]
+                )
+                
+                # 保存情感分析结果
+                db.save_emotion_analysis(
+                    session_id=session_id,
+                    user_id=user_id,
+                    message_id=user_message.id,
+                    emotion=emotion_data["emotion"],
+                    intensity=emotion_data["intensity"],
+                    keywords=emotion_data["keywords"],
+                    suggestions=emotion_data["suggestions"]
+                )
+        except Exception as e:
+            print(f"数据库操作失败: {e}")
+            import traceback
+            traceback.print_exc()
         
         # 生成回应
         response_text = self.get_openai_response(request.message, user_id, session_id)

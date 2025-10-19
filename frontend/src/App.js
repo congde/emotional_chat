@@ -1,13 +1,30 @@
-import React, { useState, useEffect, useRef } from 'react';
-import styled from 'styled-components';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import styled, { keyframes } from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Heart, MessageCircle, User, Bot, Loader2, Plus, Clock, MessageSquare, Paperclip, X, FileText, Image, Link, ExternalLink, ThumbsUp, ThumbsDown, MessageSquarePlus, Trash2 } from 'lucide-react';
+import { Send, Heart, User, Bot, Loader2, Plus, Clock, Paperclip, X, FileText, Image, Link, ExternalLink, MessageSquarePlus, Trash2 } from 'lucide-react';
 import ChatAPI from './services/ChatAPI';
+import TypewriterComponent from './components/TypewriterText';
+
+// 旋转动画
+const spin = keyframes`
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+`;
+
+// 脉动动画
+const pulse = keyframes`
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+`;
 
 const AppContainer = styled.div`
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
 `;
 
 const Sidebar = styled(motion.div)`
@@ -17,6 +34,14 @@ const Sidebar = styled(motion.div)`
   display: flex;
   flex-direction: column;
   border-right: 1px solid rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  
+  @media (max-width: 768px) {
+    width: 100%;
+    max-height: 40vh;
+    border-right: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
 `;
 
 const SidebarHeader = styled.div`
@@ -66,6 +91,7 @@ const NewChatButton = styled(motion.button)`
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
   }
 `;
+
 
 const HistorySection = styled.div`
   flex: 1;
@@ -220,7 +246,37 @@ const MessageWrapper = styled.div`
   display: flex;
   flex-direction: column;
   max-width: 70%;
+  
+  @media (max-width: 768px) {
+    max-width: 85%;
+  }
 `;
+
+const emotionColors = {
+  happy: '#ffd93d',
+  sad: '#74b9ff',
+  angry: '#fd79a8',
+  anxious: '#a29bfe',
+  excited: '#fdcb6e',
+  confused: '#6c5ce7',
+  frustrated: '#e84393',
+  lonely: '#636e72',
+  grateful: '#00b894',
+  neutral: '#b2bec3'
+};
+
+const emotionLabels = {
+  happy: '开心',
+  sad: '难过',
+  angry: '愤怒',
+  anxious: '焦虑',
+  excited: '兴奋',
+  confused: '困惑',
+  frustrated: '沮丧',
+  lonely: '孤独',
+  grateful: '感恩',
+  neutral: '平静'
+};
 
 const MessageContent = styled.div`
   padding: 12px 16px;
@@ -229,6 +285,14 @@ const MessageContent = styled.div`
   color: ${props => props.isUser ? 'white' : '#333'};
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   position: relative;
+  line-height: 1.6;
+  word-wrap: break-word;
+  
+  /* AI消息根据情绪添加左边框 */
+  ${props => !props.isUser && props.emotion && props.emotion !== 'neutral' && `
+    border-left: 4px solid ${emotionColors[props.emotion] || emotionColors.neutral};
+    padding-left: 16px;
+  `}
   
   &::before {
     content: '';
@@ -421,27 +485,27 @@ const SubmitButton = styled(motion.button)`
 
 const EmotionTag = styled.span`
   display: inline-block;
-  background: ${props => {
-    const colors = {
-      happy: '#ffd93d',
-      sad: '#74b9ff',
-      angry: '#fd79a8',
-      anxious: '#a29bfe',
-      excited: '#fdcb6e',
-      confused: '#6c5ce7',
-      frustrated: '#e84393',
-      lonely: '#636e72',
-      grateful: '#00b894',
-      neutral: '#b2bec3'
-    };
-    return colors[props.emotion] || colors.neutral;
-  }};
+  background: ${props => emotionColors[props.emotion] || emotionColors.neutral};
   color: white;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 0.7rem;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
   margin-left: 8px;
   font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+  }
+`;
+
+const MessageTimestamp = styled.div`
+  font-size: 0.7rem;
+  color: ${props => props.isUser ? 'rgba(255, 255, 255, 0.7)' : '#999'};
+  margin-top: 4px;
+  text-align: ${props => props.isUser ? 'right' : 'left'};
 `;
 
 const Suggestions = styled.div`
@@ -502,6 +566,11 @@ const AttachmentButton = styled(motion.button)`
     opacity: 0.5;
     cursor: not-allowed;
     transform: none;
+  }
+  
+  @media (max-width: 768px) {
+    width: 48px;
+    height: 48px;
   }
 `;
 
@@ -613,9 +682,11 @@ const SendButton = styled(motion.button)`
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
   
-  &:hover {
+  &:hover:not(:disabled) {
     transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
   }
   
   &:disabled {
@@ -623,19 +694,40 @@ const SendButton = styled(motion.button)`
     cursor: not-allowed;
     transform: none;
   }
+  
+  @media (max-width: 768px) {
+    width: 48px;
+    height: 48px;
+  }
 `;
 
 const LoadingIndicator = styled(motion.div)`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   color: #666;
   font-size: 0.9rem;
-  padding: 12px 16px;
+  padding: 12px 18px;
   background: #f8f9fa;
-  border-radius: 18px;
-  max-width: 200px;
-  margin: 0 auto;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  
+  .spinner {
+    animation: ${spin} 1s linear infinite;
+  }
+  
+  .dots span {
+    animation: ${pulse} 1.4s ease-in-out infinite;
+    margin: 0 1px;
+  }
+  
+  .dots span:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  
+  .dots span:nth-child(3) {
+    animation-delay: 0.4s;
+  }
 `;
 
 const WelcomeMessage = styled(motion.div)`
@@ -660,10 +752,22 @@ function App() {
   const [sessionId, setSessionId] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const [historySessions, setHistorySessions] = useState([]);
-  const [currentUserId] = useState('user_001'); // 固定用户ID，实际应用中应该从登录状态获取
+  
+  // 从localStorage读取或生成用户ID
+  const [currentUserId] = useState(() => {
+    const savedUserId = localStorage.getItem('emotional_chat_user_id');
+    if (savedUserId) {
+      console.log('使用已保存的用户ID:', savedUserId);
+      return savedUserId;
+    }
+    const newUserId = `user_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    console.log('生成新的用户ID:', newUserId);
+    localStorage.setItem('emotional_chat_user_id', newUserId);
+    return newUserId;
+  });
+  
   const [attachments, setAttachments] = useState([]);
   const [detectedURLs, setDetectedURLs] = useState([]);
-  const [isProcessingURL, setIsProcessingURL] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState(null);
   const [feedbackType, setFeedbackType] = useState('');
@@ -671,6 +775,29 @@ function App() {
   const [feedbackComment, setFeedbackComment] = useState('');
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const inputRef = useRef(null);
+
+  // 格式化时间戳
+  const formatTimestamp = (date) => {
+    if (!date) return '';
+    const now = new Date();
+    const messageDate = new Date(date);
+    const diffMs = now - messageDate;
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return '刚刚';
+    if (diffMins < 60) return `${diffMins}分钟前`;
+    
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}小时前`;
+    
+    return messageDate.toLocaleString('zh-CN', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -679,20 +806,29 @@ function App() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+  
+  // 会话ID改变时保存到localStorage
+  useEffect(() => {
+    if (sessionId) {
+      localStorage.setItem('emotional_chat_current_session', sessionId);
+    }
+  }, [sessionId]);
 
   // 加载历史会话
-  useEffect(() => {
-    loadHistorySessions();
-  }, [currentUserId]);
-
-  const loadHistorySessions = async () => {
+  const loadHistorySessions = useCallback(async () => {
     try {
+      console.log('正在加载历史会话，用户ID:', currentUserId);
       const response = await ChatAPI.getUserSessions(currentUserId);
+      console.log('历史会话响应:', response);
       setHistorySessions(response.sessions || []);
     } catch (error) {
       console.error('加载历史会话失败:', error);
     }
-  };
+  }, [currentUserId]);
+
+  useEffect(() => {
+    loadHistorySessions();
+  }, [loadHistorySessions]);
 
   const deleteConversation = async (targetSessionId, event) => {
     event.stopPropagation(); // 阻止触发父级的点击事件
@@ -735,15 +871,12 @@ function App() {
 
   // 处理URL内容
   const processURL = async (url) => {
-    setIsProcessingURL(true);
     try {
       const response = await ChatAPI.parseURL({ url });
       return response;
     } catch (error) {
       console.error('URL解析失败:', error);
       return null;
-    } finally {
-      setIsProcessingURL(false);
     }
   };
 
@@ -876,20 +1009,35 @@ function App() {
 
     } catch (error) {
       console.error('发送消息失败:', error);
+      
+      // 用户友好的错误提示
+      let errorMsg = '抱歉，我现在无法回应。';
+      if (error.response?.status === 500) {
+        errorMsg += '服务器遇到了一些问题，请稍后再试。';
+      } else if (error.message === 'Network Error') {
+        errorMsg += '网络连接似乎有问题，请检查网络设置。';
+      } else {
+        errorMsg += '请稍后再试。';
+      }
+      
       const errorMessage = {
         id: Date.now() + 1,
         role: 'assistant',
-        content: '抱歉，我现在无法回应。请稍后再试。',
+        content: errorMsg,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      // 发送后重新聚焦输入框
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
   };
 
   const handleSuggestionClick = (suggestion) => {
     setInputValue(suggestion);
+    // 自动聚焦输入框，允许用户修改后发送
+    inputRef.current?.focus();
   };
 
   const handleKeyPress = (e) => {
@@ -899,13 +1047,21 @@ function App() {
     }
   };
 
+  // 防抖URL检测
+  const debouncedDetectURLs = useCallback((text) => {
+    const timeoutId = setTimeout(() => {
+      const urls = detectURLs(text);
+      setDetectedURLs(urls);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, []);
+
   const handleInputChange = (e) => {
     const value = e.target.value;
     setInputValue(value);
     
-    // 检测URL
-    const urls = detectURLs(value);
-    setDetectedURLs(urls);
+    // 防抖检测URL
+    debouncedDetectURLs(value);
   };
 
   // 打开反馈模态框
@@ -980,6 +1136,7 @@ function App() {
           <Plus size={16} />
           新对话
         </NewChatButton>
+        
 
         <HistorySection>
           <HistoryTitle>
@@ -1062,14 +1219,30 @@ function App() {
                     {message.role === 'user' ? <User size={20} /> : <Bot size={20} />}
                   </Avatar>
                   <MessageWrapper>
-                    <MessageContent isUser={message.role === 'user'}>
-                      {message.content}
+                    <MessageContent 
+                      isUser={message.role === 'user'}
+                      emotion={message.emotion}
+                    >
+                      {message.role === 'assistant' ? (
+                        <TypewriterComponent
+                          text={message.content}
+                          speed={message.emotion === 'sad' ? 40 : message.emotion === 'angry' ? 20 : message.emotion === 'happy' ? 25 : 30}
+                          showCursor={true}
+                          cursorColor={message.emotion === 'sad' ? '#74b9ff' : message.emotion === 'angry' ? '#ff7675' : message.emotion === 'happy' ? '#00b894' : '#333'}
+                          isUser={false}
+                        />
+                      ) : (
+                        message.content
+                      )}
                       {message.emotion && message.emotion !== 'neutral' && (
                         <EmotionTag emotion={message.emotion}>
-                          {message.emotion}
+                          {emotionLabels[message.emotion] || message.emotion}
                         </EmotionTag>
                       )}
                     </MessageContent>
+                    <MessageTimestamp isUser={message.role === 'user'}>
+                      {formatTimestamp(message.timestamp)}
+                    </MessageTimestamp>
                     {message.role === 'assistant' && (
                       <FeedbackButtons>
                         <FeedbackButton
@@ -1090,12 +1263,17 @@ function App() {
 
           {isLoading && (
             <LoadingIndicator
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
             >
-              <Loader2 size={16} className="animate-spin" />
-              正在思考中...
+              <Loader2 size={18} className="spinner" />
+              <span>正在思考中</span>
+              <span className="dots">
+                <span>.</span>
+                <span>.</span>
+                <span>.</span>
+              </span>
             </LoadingIndicator>
           )}
 
@@ -1166,18 +1344,23 @@ function App() {
 
           <InputRow>
             <MessageInput
+              ref={inputRef}
               type="text"
               value={inputValue}
               onChange={handleInputChange}
               onKeyPress={handleKeyPress}
               placeholder="分享你的想法和感受..."
               disabled={isLoading}
+              aria-label="消息输入框"
+              aria-describedby="input-hint"
             />
             <AttachmentButton
               onClick={() => fileInputRef.current?.click()}
               disabled={isLoading}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              aria-label="添加附件"
+              title="添加附件 (图片、PDF、文档)"
             >
               <Paperclip size={20} />
             </AttachmentButton>
@@ -1186,6 +1369,9 @@ function App() {
               disabled={(!inputValue.trim() && attachments.length === 0) || isLoading}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              aria-label="发送消息"
+              aria-disabled={(!inputValue.trim() && attachments.length === 0) || isLoading}
+              title="发送消息 (Enter)"
             >
               <Send size={20} />
             </SendButton>

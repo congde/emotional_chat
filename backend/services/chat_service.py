@@ -9,7 +9,7 @@ from backend.modules.llm.core.llm_core import SimpleEmotionalChatEngine
 from backend.services.memory_service import MemoryService
 from backend.services.context_service import ContextService
 from backend.models import ChatRequest, ChatResponse
-from backend.database import DatabaseManager
+from backend.database import DatabaseManager, ChatSession
 import uuid
 from datetime import datetime
 
@@ -211,8 +211,10 @@ class ChatService:
         
         # 4. 尝试使用RAG增强回复
         rag_result = None
+        print(f"ChatService RAG检查: rag_enabled={self.rag_enabled}, rag_service={self.rag_service is not None}")
         if self.rag_enabled and self.rag_service:
             try:
+                print("ChatService尝试使用RAG增强")
                 # 获取对话历史
                 conversation_history = await self._get_conversation_history(session_id)
                 
@@ -222,9 +224,12 @@ class ChatService:
                     emotion=emotion,
                     conversation_history=conversation_history
                 )
+                print(f"ChatService RAG结果: {rag_result}")
                 
             except Exception as e:
                 print(f"RAG增强失败，使用常规回复: {e}")
+        else:
+            print("ChatService RAG未启用，使用常规引擎")
         
         # 5. 生成回复
         if rag_result and rag_result.get("use_rag"):
@@ -250,7 +255,21 @@ class ChatService:
             }
         else:
             # 使用常规引擎回复
-            response = self.chat_engine.chat(request)
+            print(f"ChatService使用常规引擎: session_id={session_id}, user_id={user_id}")
+            try:
+                response = self.chat_engine.chat(request)
+                print(f"ChatService常规引擎回复完成: {response.session_id}")
+            except Exception as e:
+                print(f"ChatService常规引擎调用失败: {e}")
+                import traceback
+                traceback.print_exc()
+                # 创建简单的回复
+                response = ChatResponse(
+                    response="抱歉，我遇到了一些技术问题，请稍后再试。",
+                    session_id=session_id,
+                    emotion="neutral",
+                    timestamp=datetime.now()
+                )
             response.context = {
                 "memories_count": len(context.get("memories", {}).get("all", [])),
                 "emotion_trend": context.get("emotion_context", {}).get("trend", {}).get("trend"),
@@ -262,6 +281,43 @@ class ChatService:
                 "input_metadata": preprocessed.get("metadata") if preprocessed else None
             }
         
+        # 5.1. 保存会话和消息到数据库（如果RAG分支没有保存）
+        if rag_result and rag_result.get("use_rag"):
+            # RAG分支需要手动保存会话和消息
+            try:
+                with DatabaseManager() as db:
+                    # 如果是新会话，创建会话记录
+                    if not request.session_id:
+                        print(f"ChatService创建新会话: {session_id} for user: {user_id}")
+                        db.create_session(session_id, user_id)
+                        print(f"ChatService会话创建完成")
+                    
+                    # 保存用户消息
+                    user_message = db.save_message(
+                        session_id=session_id,
+                        user_id=user_id,
+                        role="user",
+                        content=message,
+                        emotion=emotion,
+                        emotion_intensity=emotion_intensity
+                    )
+                    
+                    # 保存助手消息
+                    assistant_message = db.save_message(
+                        session_id=session_id,
+                        user_id=user_id,
+                        role="assistant",
+                        content=response.response,
+                        emotion="empathetic"
+                    )
+                    
+                    print(f"ChatService保存消息完成: user_msg_id={user_message.id}, assistant_msg_id={assistant_message.id}")
+                    
+            except Exception as e:
+                print(f"ChatService数据库操作失败: {e}")
+                import traceback
+                traceback.print_exc()
+        
         # 6. 处理并存储记忆
         await self.memory_service.process_and_store_memories(
             session_id=session_id,
@@ -271,6 +327,47 @@ class ChatService:
             emotion=emotion,
             emotion_intensity=emotion_intensity
         )
+        
+        # 7. 确保会话被保存（如果还没有保存）
+        try:
+            with DatabaseManager() as db:
+                # 检查会话是否存在
+                existing_session = db.db.query(ChatSession).filter(
+                    ChatSession.session_id == session_id
+                ).first()
+                
+                if not existing_session:
+                    print(f"ChatService手动创建会话: {session_id} for user: {user_id}")
+                    db.create_session(session_id, user_id)
+                    print(f"ChatService手动会话创建完成")
+                    
+                    # 保存用户消息
+                    user_message = db.save_message(
+                        session_id=session_id,
+                        user_id=user_id,
+                        role="user",
+                        content=message,
+                        emotion=emotion,
+                        emotion_intensity=emotion_intensity
+                    )
+                    
+                    # 保存助手消息
+                    assistant_message = db.save_message(
+                        session_id=session_id,
+                        user_id=user_id,
+                        role="assistant",
+                        content=response.response,
+                        emotion="empathetic"
+                    )
+                    
+                    print(f"ChatService手动保存消息完成: user_msg_id={user_message.id}, assistant_msg_id={assistant_message.id}")
+                else:
+                    print(f"ChatService会话已存在: {session_id}")
+                    
+        except Exception as e:
+            print(f"ChatService手动保存失败: {e}")
+            import traceback
+            traceback.print_exc()
         
         return response
     

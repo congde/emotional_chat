@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Use external server IP for external access
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://8.130.162.82:8000';
+// Use local server for development, external server for production
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 class ChatAPI {
   static async sendMessage(data) {
@@ -58,7 +58,7 @@ class ChatAPI {
 
   static async parseURL(data) {
     try {
-      const response = await axios.post(`${API_BASE_URL}/chat/parse-url`, data, {
+      const response = await axios.post(`${API_BASE_URL}/parse-url`, data, {
         headers: {
           'Content-Type': 'application/json',
         },
