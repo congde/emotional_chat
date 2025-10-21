@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Heart, User, Bot, Loader2, Plus, Clock, Paperclip, X, FileText, Image, Link, ExternalLink, MessageSquarePlus, Trash2 } from 'lucide-react';
+import { Send, Heart, User, Bot, Loader2, Plus, Clock, Paperclip, X, FileText, Image, Link, ExternalLink, MessageSquarePlus, Trash2, Settings } from 'lucide-react';
 import ChatAPI from './services/ChatAPI';
 import TypewriterComponent from './components/TypewriterText';
+import PersonalizationPanel from './components/PersonalizationPanel';
 
 // 旋转动画
 const spin = keyframes`
@@ -68,6 +69,28 @@ const UserName = styled.div`
   font-weight: 600;
   color: #333;
   font-size: 1.1rem;
+`;
+
+const SettingsButton = styled(motion.button)`
+  width: 100%;
+  background: transparent;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  color: #667eea;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 20px;
+  margin-top: 10px;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(102, 126, 234, 0.1);
+    transform: translateY(-1px);
+  }
 `;
 
 const NewChatButton = styled(motion.button)`
@@ -752,6 +775,7 @@ function App() {
   const [sessionId, setSessionId] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const [historySessions, setHistorySessions] = useState([]);
+  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
   
   // 从localStorage读取或生成用户ID
   const [currentUserId] = useState(() => {
@@ -1136,6 +1160,15 @@ function App() {
           <Plus size={16} />
           新对话
         </NewChatButton>
+
+        <SettingsButton
+          onClick={() => setShowPersonalizationPanel(true)}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <Settings size={16} />
+          个性化配置
+        </SettingsButton>
         
 
         <HistorySection>
@@ -1386,6 +1419,13 @@ function App() {
           />
         </InputContainer>
       </ChatContainer>
+
+      {/* 个性化配置面板 */}
+      <PersonalizationPanel
+        isOpen={showPersonalizationPanel}
+        onClose={() => setShowPersonalizationPanel(false)}
+        userId={currentUserId}
+      />
 
       {/* 反馈模态框 */}
       <AnimatePresence>

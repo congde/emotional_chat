@@ -23,8 +23,18 @@ from backend.routers import (
     memory_router,
     feedback_router,
     evaluation_router,
+    emotion_router,
+    personalization_router,
     rag_router
 )
+
+# 导入增强版聊天路由
+try:
+    from backend.routers.enhanced_chat import router as enhanced_chat_router
+    ENHANCED_CHAT_ENABLED = True
+except ImportError:
+    ENHANCED_CHAT_ENABLED = False
+    enhanced_chat_router = None
 
 # 导入意图识别路由
 try:
@@ -83,7 +93,14 @@ def create_app() -> FastAPI:
     app.include_router(memory_router)
     app.include_router(feedback_router)
     app.include_router(evaluation_router)
+    app.include_router(emotion_router)
+    app.include_router(personalization_router)
     app.include_router(rag_router)
+    
+    # 注册增强版聊天路由（如果可用）
+    if ENHANCED_CHAT_ENABLED and enhanced_chat_router:
+        app.include_router(enhanced_chat_router)
+        logger.info("增强版多轮对话系统已启用")
     
     # 注册Agent路由（如果可用）
     if AGENT_ENABLED and agent_router:
@@ -106,8 +123,13 @@ def create_app() -> FastAPI:
             "向量数据库",
             "LangChain集成",
             "自动评估",
-            "RAG知识库"
+            "RAG知识库",
+            "个性化配置"
         ]
+        
+        # 如果增强版聊天模块启用，添加到功能列表
+        if ENHANCED_CHAT_ENABLED:
+            features.append("增强版多轮对话")
         
         # 如果Agent模块启用，添加到功能列表
         if AGENT_ENABLED:

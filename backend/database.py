@@ -208,6 +208,53 @@ class MemoryItem(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+class UserPersonalization(Base):
+    """用户个性化配置表 - 存储用户的AI伙伴定制设置"""
+    __tablename__ = "user_personalizations"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(100), unique=True, index=True)
+    
+    # 角色层：AI身份与人格
+    role = Column(String(100), default="温暖倾听者")  # 角色类型
+    role_name = Column(String(100), default="心语")  # 角色名称
+    role_background = Column(Text)  # 角色背景故事
+    personality = Column(String(100), default="温暖耐心")  # 性格特征
+    core_principles = Column(Text)  # 核心原则 (JSON数组)
+    forbidden_behaviors = Column(Text)  # 禁忌行为 (JSON数组)
+    
+    # 表达层：风格与语气
+    tone = Column(String(50), default="温和")  # 语气: 温和/活泼/正式/幽默
+    style = Column(String(50), default="简洁")  # 风格: 简洁/详细/诗意/直接
+    formality = Column(Float, default=0.3)  # 正式程度 (0-1)
+    enthusiasm = Column(Float, default=0.5)  # 活泼度 (0-1)
+    empathy_level = Column(Float, default=0.8)  # 共情程度 (0-1)
+    humor_level = Column(Float, default=0.3)  # 幽默程度 (0-1)
+    response_length = Column(String(20), default="medium")  # 回复长度: short/medium/long
+    use_emoji = Column(Boolean, default=False)  # 是否使用emoji
+    
+    # 记忆层：长期偏好
+    preferred_topics = Column(Text)  # 偏好话题 (JSON数组)
+    avoided_topics = Column(Text)  # 避免话题 (JSON数组)
+    communication_preferences = Column(Text)  # 沟通偏好 (JSON对象)
+    
+    # 高级设置
+    learning_mode = Column(Boolean, default=True)  # 是否启用学习模式
+    safety_level = Column(String(20), default="standard")  # 安全级别: strict/standard/relaxed
+    context_window = Column(Integer, default=10)  # 上下文窗口大小
+    
+    # 情境化角色（多角色支持）
+    situational_roles = Column(Text)  # 情境角色配置 (JSON对象)
+    active_role = Column(String(50), default="default")  # 当前激活的角色
+    
+    # 统计信息
+    total_interactions = Column(Integer, default=0)  # 总交互次数
+    positive_feedbacks = Column(Integer, default=0)  # 正向反馈次数
+    config_version = Column(Integer, default=1)  # 配置版本号
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 # 创建所有表
 def create_tables():
     """

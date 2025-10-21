@@ -121,3 +121,93 @@ class EvaluationListResponse(BaseModel):
     evaluations: List[Dict[str, Any]]
     total: int
     statistics: Optional[Dict[str, Any]] = None
+
+# 个性化配置相关模型
+class PersonalizationConfig(BaseModel):
+    """个性化配置模型"""
+    user_id: str
+    
+    # 角色层
+    role: str = "温暖倾听者"
+    role_name: str = "心语"
+    role_background: Optional[str] = None
+    personality: str = "温暖耐心"
+    core_principles: Optional[List[str]] = None
+    forbidden_behaviors: Optional[List[str]] = None
+    
+    # 表达层
+    tone: str = "温和"
+    style: str = "简洁"
+    formality: float = 0.3
+    enthusiasm: float = 0.5
+    empathy_level: float = 0.8
+    humor_level: float = 0.3
+    response_length: str = "medium"
+    use_emoji: bool = False
+    
+    # 记忆层
+    preferred_topics: Optional[List[str]] = None
+    avoided_topics: Optional[List[str]] = None
+    communication_preferences: Optional[Dict[str, Any]] = None
+    
+    # 高级设置
+    learning_mode: bool = True
+    safety_level: str = "standard"
+    context_window: int = 10
+    
+    # 情境化角色
+    situational_roles: Optional[Dict[str, Any]] = None
+    active_role: str = "default"
+
+class PersonalizationUpdateRequest(BaseModel):
+    """个性化配置更新请求"""
+    role: Optional[str] = None
+    role_name: Optional[str] = None
+    role_background: Optional[str] = None
+    personality: Optional[str] = None
+    core_principles: Optional[List[str]] = None
+    forbidden_behaviors: Optional[List[str]] = None
+    
+    tone: Optional[str] = None
+    style: Optional[str] = None
+    formality: Optional[float] = None
+    enthusiasm: Optional[float] = None
+    empathy_level: Optional[float] = None
+    humor_level: Optional[float] = None
+    response_length: Optional[str] = None
+    use_emoji: Optional[bool] = None
+    
+    preferred_topics: Optional[List[str]] = None
+    avoided_topics: Optional[List[str]] = None
+    communication_preferences: Optional[Dict[str, Any]] = None
+    
+    learning_mode: Optional[bool] = None
+    safety_level: Optional[str] = None
+    context_window: Optional[int] = None
+    
+    situational_roles: Optional[Dict[str, Any]] = None
+    active_role: Optional[str] = None
+
+class PersonalizationResponse(BaseModel):
+    """个性化配置响应"""
+    user_id: str
+    config: PersonalizationConfig
+    total_interactions: int
+    positive_feedbacks: int
+    config_version: int
+    created_at: datetime
+    updated_at: datetime
+
+class RoleTemplate(BaseModel):
+    """角色模板"""
+    id: str
+    name: str
+    role: str
+    personality: str
+    tone: str
+    style: str
+    description: str
+    icon: str
+    background: Optional[str] = None
+    core_principles: List[str]
+    sample_responses: List[str]
