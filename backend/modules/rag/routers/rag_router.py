@@ -173,6 +173,46 @@ async def init_sample_knowledge(request: LoadSampleRequest = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/init/knowledge-base")
+async def init_knowledge_base_structure(request: LoadSampleRequest = None):
+    """
+    从标准知识库结构初始化知识库
+    
+    加载knowledge_base目录下的分类知识文档
+    """
+    try:
+        logger.info("开始从知识库结构初始化...")
+        
+        if request is None:
+            request = LoadSampleRequest()
+        
+        kb_manager = get_kb_manager()
+        
+        # 如果要覆盖，先删除现有集合
+        if request.overwrite:
+            try:
+                kb_manager.delete_collection()
+                logger.info("已删除现有知识库")
+            except:
+                pass
+        
+        # 从知识库结构加载知识
+        loader = PsychologyKnowledgeLoader(kb_manager)
+        loader.load_from_knowledge_base_structure()
+        
+        # 获取统计信息
+        stats = kb_manager.get_stats()
+        
+        return {
+            "success": True,
+            "message": "知识库结构初始化成功",
+            "data": stats
+        }
+    except Exception as e:
+        logger.error(f"从知识库结构初始化失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/upload/pdf")
 async def upload_pdf(file: UploadFile = File(...)):
     """

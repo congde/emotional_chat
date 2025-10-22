@@ -640,6 +640,70 @@ class PsychologyKnowledgeLoader:
         except Exception as e:
             logger.error(f"从目录加载知识失败: {e}")
             raise
+    
+    def load_from_knowledge_base_structure(self, base_path: str = "./knowledge_base") -> None:
+        """
+        从标准知识库结构加载知识
+        
+        Args:
+            base_path: 知识库根目录路径
+        """
+        try:
+            logger.info(f"从标准知识库结构加载知识: {base_path}")
+            
+            all_documents = []
+            
+            # 定义知识库结构
+            knowledge_structure = {
+                "clinical_guidelines": "临床指南",
+                "therapy_methods": "治疗方法", 
+                "self_help_tools": "自助工具",
+                "organization_policy": "机构政策"
+            }
+            
+            for folder, category in knowledge_structure.items():
+                folder_path = os.path.join(base_path, folder)
+                if os.path.exists(folder_path):
+                    logger.info(f"加载 {category} 知识: {folder_path}")
+                    
+                    # 加载该目录下的所有文档
+                    try:
+                        docs = self.kb_manager.load_directory_documents(
+                            folder_path, 
+                            glob_pattern="**/*"
+                        )
+                        
+                        # 为每个文档添加分类元数据
+                        for doc in docs:
+                            doc.metadata.update({
+                                "category": category,
+                                "folder": folder,
+                                "source": "知识库文件"
+                            })
+                        
+                        all_documents.extend(docs)
+                        logger.info(f"成功加载 {category} 知识，共 {len(docs)} 个文档")
+                        
+                    except Exception as e:
+                        logger.warning(f"加载 {category} 知识失败: {e}")
+                        continue
+                else:
+                    logger.warning(f"知识库目录不存在: {folder_path}")
+            
+            if all_documents:
+                # 分割文档
+                chunks = self.kb_manager.split_documents(all_documents)
+                
+                # 创建向量存储
+                self.kb_manager.create_vectorstore(chunks)
+                
+                logger.info(f"成功从知识库结构加载知识，共 {len(all_documents)} 个文档，{len(chunks)} 个文档块")
+            else:
+                logger.warning("未找到任何知识库文档")
+                
+        except Exception as e:
+            logger.error(f"从知识库结构加载知识失败: {e}")
+            raise
 
 
 if __name__ == "__main__":
