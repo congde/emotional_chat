@@ -139,7 +139,7 @@ class AgentTool(BaseModel):
     max_execution_time: Optional[float] = Field(None, description="最大执行时间")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "tool_name": "calendar_check",
                 "tool_type": "calendar",

@@ -36,7 +36,7 @@ class ErrorResponse(BaseResponse):
     error: Dict[str, Any] = Field(..., description="错误详情")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "success": False,
                 "message": "请求失败",
@@ -111,7 +111,7 @@ class HealthCheckResponse(BaseModel):
         json_encoders = {
             datetime: lambda v: v.isoformat()
         }
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "status": "healthy",
                 "version": "3.0.0",
@@ -236,7 +236,7 @@ class ValidationErrorResponse(BaseResponse):
     errors: List[ValidationErrorDetail] = Field(..., description="验证错误列表")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "success": False,
                 "message": "输入验证失败",

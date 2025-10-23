@@ -162,7 +162,7 @@ class LLMConfig(BaseModel):
     enable_function_calling: bool = Field(False, description="是否启用函数调用")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "provider": "openai",
                 "api_key": "sk-...",

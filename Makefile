@@ -1,11 +1,13 @@
-.PHONY: help db-init db-upgrade db-downgrade db-check db-current db-history db-reset install run rag-init rag-test rag-demo
+.PHONY: help db-init db-upgrade db-downgrade db-check db-current db-history db-reset install run run-rag quick-start rag-init rag-test rag-demo
 
 help:
 	@echo "可用的命令:"
 	@echo ""
 	@echo "基础命令:"
 	@echo "  make install      - 安装依赖"
-	@echo "  make run          - 运行后端服务"
+	@echo "  make run          - 运行后端服务（自动构建知识库）"
+	@echo "  make run-rag      - 运行带RAG功能的后端服务"
+	@echo "  make quick-start  - 快速启动（推荐）"
 	@echo ""
 	@echo "数据库命令:"
 	@echo "  make db-init      - 初始化数据库"
@@ -47,6 +49,12 @@ db-reset:
 
 run:
 	python run_backend.py
+
+run-rag:
+	python start_with_rag.py
+
+quick-start:
+	python quick_start.py
 
 rag-init:
 	python init_rag_knowledge.py

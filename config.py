@@ -23,6 +23,8 @@ class Config:
     # LangChain配置
     LANGCHAIN_TRACING_V2 = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"
     LANGCHAIN_API_KEY = os.getenv("LANGCHAIN_API_KEY")
+    # 禁用LangSmith以避免403错误
+    LANGCHAIN_ENDPOINT = os.getenv("LANGCHAIN_ENDPOINT", "")
     
     # 数据库配置
     DATABASE_URL = os.getenv("DATABASE_URL")

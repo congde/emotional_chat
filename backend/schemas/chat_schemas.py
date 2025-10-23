@@ -82,7 +82,7 @@ class ChatRequest(BaseModel):
         return v.strip()
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "message": "我最近总是失眠，怎么办？",
                 "user_id": "user123",
@@ -114,7 +114,7 @@ class ChatResponse(BaseResponse):
         json_encoders = {
             datetime: lambda v: v.isoformat()
         }
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "success": True,
                 "message": "回复生成成功",
@@ -188,7 +188,7 @@ class SessionHistoryResponse(BaseResponse):
     pagination: Optional[PaginationResponse] = Field(None, description="分页信息")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "success": True,
                 "message": "获取会话历史成功",

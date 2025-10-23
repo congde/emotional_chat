@@ -58,7 +58,7 @@ class AskRequest(BaseModel):
     search_k: int = 3
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "question": "我最近总是失眠，怎么办？",
                 "search_k": 3
@@ -74,7 +74,7 @@ class AskWithContextRequest(BaseModel):
     search_k: int = 3
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "question": "有什么具体的方法可以帮助我入睡吗？",
                 "conversation_history": [
@@ -93,7 +93,7 @@ class SearchRequest(BaseModel):
     k: int = 3
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "query": "焦虑应对方法",
                 "k": 3
@@ -106,7 +106,7 @@ class LoadSampleRequest(BaseModel):
     overwrite: bool = False
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "overwrite": False
             }
