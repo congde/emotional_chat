@@ -28,6 +28,16 @@ from backend.routers import (
     rag_router
 )
 
+# 导入性能优化路由
+try:
+    from backend.routers.performance import router as performance_router
+    from backend.routers.streaming_chat import router as streaming_router
+    PERFORMANCE_OPTIMIZATION_ENABLED = True
+except ImportError:
+    PERFORMANCE_OPTIMIZATION_ENABLED = False
+    performance_router = None
+    streaming_router = None
+
 # 导入增强版聊天路由
 try:
     from backend.routers.enhanced_chat import router as enhanced_chat_router
@@ -112,6 +122,16 @@ def create_app() -> FastAPI:
         app.include_router(intent_router)
         logger.info("意图识别模块已启用")
     
+    # 注册性能优化路由（如果可用）
+    if PERFORMANCE_OPTIMIZATION_ENABLED and performance_router:
+        app.include_router(performance_router)
+        logger.info("性能优化模块已启用")
+    
+    # 注册流式聊天路由（如果可用）
+    if PERFORMANCE_OPTIMIZATION_ENABLED and streaming_router:
+        app.include_router(streaming_router)
+        logger.info("流式聊天模块已启用")
+    
     # 根路由
     @app.get("/")
     async def root():
@@ -126,6 +146,15 @@ def create_app() -> FastAPI:
             "RAG知识库",
             "个性化配置"
         ]
+        
+        # 如果性能优化模块启用，添加到功能列表
+        if PERFORMANCE_OPTIMIZATION_ENABLED:
+            features.extend([
+                "性能优化",
+                "流式响应",
+                "缓存机制",
+                "并行处理"
+            ])
         
         # 如果增强版聊天模块启用，添加到功能列表
         if ENHANCED_CHAT_ENABLED:
