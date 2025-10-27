@@ -150,6 +150,55 @@ class ChatAPI {
       throw error;
     }
   }
+
+  // 多模态功能
+  static async sendMultimodalMessage(data) {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/multimodal/chat`, data, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('发送多模态消息失败:', error);
+      throw error;
+    }
+  }
+
+  static async transcribeAudio(audioBlob) {
+    try {
+      const formData = new FormData();
+      formData.append('audio_file', audioBlob, 'audio.wav');
+
+      const response = await axios.post(`${API_BASE_URL}/multimodal/audio/transcribe`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('语音识别失败:', error);
+      throw error;
+    }
+  }
+
+  static async analyzeImage(imageBlob) {
+    try {
+      const formData = new FormData();
+      formData.append('image_file', imageBlob, 'image.jpg');
+
+      const response = await axios.post(`${API_BASE_URL}/multimodal/image/analyze`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('图像分析失败:', error);
+      throw error;
+    }
+  }
 }
 
 export default ChatAPI;

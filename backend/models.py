@@ -31,6 +31,29 @@ class ChatResponse(BaseModel):
     timestamp: datetime = datetime.now()
     context: Optional[Dict[str, Any]] = None
 
+# 多模态支持
+class MultimodalRequest(BaseModel):
+    """多模态聊天请求"""
+    text: Optional[str] = None  # 文本消息
+    session_id: Optional[str] = None
+    user_id: Optional[str] = None
+    context: Optional[Dict[str, Any]] = None
+    audio_transcript: Optional[str] = None  # 音频转录文本
+    audio_features: Optional[Dict[str, Any]] = None  # 音频特征
+    image_analysis: Optional[Dict[str, Any]] = None  # 图像分析结果
+
+class MultimodalResponse(BaseModel):
+    """多模态聊天响应"""
+    response: str
+    session_id: str
+    emotion: Optional[str] = None
+    emotion_intensity: Optional[float] = None
+    suggestions: Optional[List[str]] = None
+    timestamp: datetime = datetime.now()
+    context: Optional[Dict[str, Any]] = None
+    audio_url: Optional[str] = None  # 语音回复URL
+    multimodal_emotion: Optional[Dict[str, Any]] = None  # 多模态情感融合结果
+
 class EmotionAnalysis(BaseModel):
     emotion: str
     confidence: float

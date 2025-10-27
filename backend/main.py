@@ -34,8 +34,10 @@ from backend.models import (
     FeedbackStatistics, FeedbackListResponse,
     EvaluationRequest, EvaluationResponse, BatchEvaluationRequest,
     ComparePromptsRequest, HumanVerificationRequest,
-    EvaluationStatistics, EvaluationListResponse
+    EvaluationStatistics, EvaluationListResponse,
+    MultimodalRequest, MultimodalResponse
 )
+from backend.multimodal_services import voice_recognition, voice_synthesis, image_analysis, multimodal_fusion
 from backend.database import get_db
 from backend.evaluation_engine import EvaluationEngine
 
@@ -162,6 +164,132 @@ async def chat(request: ChatRequest):
         return response
     except Exception as e:
         logger.error(f"聊天接口错误: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/multimodal/chat", response_model=MultimodalResponse)
+async def multimodal_chat(request: MultimodalRequest):
+    """多模态聊天接口 - 支持文本、语音、图像融合"""
+    try:
+        # 融合多模态数据
+        fused_result = multimodal_fusion.fuse_modalities(
+            text=request.text or "",
+            audio_data={
+                "transcript": request.audio_transcript,
+                "audio_features": request.audio_features or {}
+            } if request.audio_transcript else None,
+            image_data=request.image_analysis
+        )
+        
+        # 构建增强的文本消息
+        enhanced_text = request.text or request.audio_transcript or ""
+        
+        # 添加多模态线索到消息中
+        if fused_result["contradictory_signals"]:
+            enhanced_text += " [检测到情绪信号矛盾]"
+        if fused_result["multimodal_emotion"]:
+            dominant_emotion = fused_result["dominant_emotion"]
+            enhanced_text += f" [多模态情绪: {dominant_emotion}]"
+        
+        # 创建聊天请求
+        chat_request = ChatRequest(
+            message=enhanced_text,
+            session_id=request.session_id,
+            user_id=request.user_id,
+            context={
+                **(request.context or {}),
+                "multimodal_emotion": fused_result
+            }
+        )
+        
+        # 调用聊天引擎
+        chat_response = chat_engine.chat(chat_request)
+        
+        # 生成语音回复
+        audio_url = None
+        try:
+            audio_data = voice_synthesis.synthesize(chat_response.response)
+            if audio_data:
+                # 保存音频文件
+                audio_filename = f"{uuid.uuid4()}.mp3"
+                audio_path = UPLOAD_DIR / audio_filename
+                audio_path.write_bytes(audio_data)
+                audio_url = f"/uploads/{audio_filename}"
+        except Exception as e:
+            logger.warning(f"语音合成失败: {e}")
+        
+        # 构建多模态响应
+        multimodal_response = MultimodalResponse(
+            response=chat_response.response,
+            session_id=chat_response.session_id,
+            emotion=chat_response.emotion,
+            emotion_intensity=chat_response.emotion_intensity,
+            suggestions=chat_response.suggestions,
+            timestamp=chat_response.timestamp,
+            context=chat_response.context,
+            audio_url=audio_url,
+            multimodal_emotion=fused_result
+        )
+        
+        return multimodal_response
+        
+    except Exception as e:
+        logger.error(f"多模态聊天接口错误: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/multimodal/audio/transcribe")
+async def transcribe_audio(audio_file: UploadFile = File(...)):
+    """语音识别接口 - 上传音频文件，返回转录文本"""
+    try:
+        # 保存上传的音频文件
+        audio_filename = f"audio_{uuid.uuid4()}.wav"
+        audio_path = UPLOAD_DIR / audio_filename
+        
+        # 保存文件
+        with open(audio_path, "wb") as f:
+            content = await audio_file.read()
+            f.write(content)
+        
+        # 调用语音识别服务
+        result = voice_recognition.transcribe(str(audio_path))
+        
+        # 清理临时文件
+        try:
+            audio_path.unlink()
+        except:
+            pass
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"语音识别错误: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/multimodal/image/analyze")
+async def analyze_image(image_file: UploadFile = File(...)):
+    """图像分析接口 - 上传图片，返回情感分析结果"""
+    try:
+        # 保存上传的图片文件
+        image_filename = f"image_{uuid.uuid4()}.jpg"
+        image_path = UPLOAD_DIR / image_filename
+        
+        # 保存文件
+        with open(image_path, "wb") as f:
+            content = await image_file.read()
+            f.write(content)
+        
+        # 调用图像分析服务
+        result = image_analysis.analyze(str(image_path))
+        
+        # 清理临时文件
+        try:
+            image_path.unlink()
+        except:
+            pass
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"图像分析错误: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/chat/with-attachments")
