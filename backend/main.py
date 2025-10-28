@@ -14,7 +14,7 @@ from bs4 import BeautifulSoup
 import PyPDF2
 from PIL import Image
 import io
-from typing import List
+from typing import List, Optional
 import logging
 
 # 导入日志配置
@@ -28,7 +28,9 @@ sys.path.insert(0, project_root)
 if 'PROJECT_ROOT' in os.environ:
     project_root = os.environ['PROJECT_ROOT']
 
-from backend.simple_langchain_engine import SimpleEmotionalChatEngine as EmotionalChatEngine
+# 使用带插件支持的聊天引擎
+from backend.modules.llm.core.llm_with_plugins import EmotionalChatEngineWithPlugins
+from backend.plugins.plugin_manager import PluginManager
 from backend.models import (
     ChatRequest, ChatResponse, FeedbackRequest, FeedbackResponse, 
     FeedbackStatistics, FeedbackListResponse,
@@ -67,8 +69,11 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 # 初始化日志记录器
 logger = get_logger(__name__)
 
-# 初始化聊天引擎
-chat_engine = EmotionalChatEngine()
+# 初始化带插件的聊天引擎
+chat_engine = EmotionalChatEngineWithPlugins()
+
+# 初始化插件管理器
+plugin_manager = chat_engine.plugin_manager
 
 # 初始化评估引擎
 evaluation_engine = EvaluationEngine()
@@ -149,11 +154,15 @@ def parse_url_content(url):
 @app.get("/")
 async def root():
     """根路径"""
+    # 获取插件统计
+    plugin_stats = plugin_manager.get_usage_stats() if plugin_manager else {}
+    
     return {
         "message": "情感聊天机器人API",
         "version": "2.0.0",
         "status": "running",
-        "features": ["LangChain", "MySQL", "VectorDB", "Emotion Analysis"]
+        "features": ["LangChain", "MySQL", "VectorDB", "Emotion Analysis", "Plugin System"],
+        "plugins": plugin_stats
     }
 
 @app.post("/chat", response_model=ChatResponse)
@@ -1007,6 +1016,53 @@ async def generate_evaluation_report(
             
     except Exception as e:
         logger.error(f"生成评估报告错误: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== 插件系统相关接口 ====================
+
+@app.get("/plugins/list")
+async def list_plugins():
+    """获取已注册的插件列表"""
+    try:
+        if not plugin_manager:
+            return {"error": "插件系统未初始化"}
+        
+        return {
+            "plugins": plugin_manager.list_plugins(),
+            "count": len(plugin_manager.plugins),
+            "schemas": plugin_manager.get_function_schemas()
+        }
+    except Exception as e:
+        logger.error(f"获取插件列表错误: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/plugins/stats")
+async def get_plugin_stats():
+    """获取插件使用统计"""
+    try:
+        if not plugin_manager:
+            return {"error": "插件系统未初始化"}
+        
+        return plugin_manager.get_usage_stats()
+    except Exception as e:
+        logger.error(f"获取插件统计错误: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/plugins/{plugin_name}/history")
+async def get_plugin_history(plugin_name: str, limit: int = 20):
+    """获取插件的调用历史"""
+    try:
+        if not plugin_manager:
+            raise HTTPException(status_code=503, detail="插件系统未初始化")
+        
+        history = plugin_manager.get_call_history(plugin_name, limit)
+        return {
+            "plugin": plugin_name,
+            "history": history,
+            "count": len(history)
+        }
+    except Exception as e:
+        logger.error(f"获取插件历史错误: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

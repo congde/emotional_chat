@@ -30,6 +30,8 @@ class ChatResponse(BaseModel):
     suggestions: Optional[List[str]] = None
     timestamp: datetime = datetime.now()
     context: Optional[Dict[str, Any]] = None
+    plugin_used: Optional[str] = None  # 使用的插件名称
+    plugin_result: Optional[Dict[str, Any]] = None  # 插件调用结果
 
 # 多模态支持
 class MultimodalRequest(BaseModel):
