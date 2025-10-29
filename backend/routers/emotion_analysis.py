@@ -22,7 +22,7 @@ router = APIRouter(
 )
 
 # 初始化服务
-sentiment_analyzer = get_analyzer(use_transformers=True)
+sentiment_analyzer = get_analyzer(use_transformers=False)
 trend_analyzer = EmotionTrendAnalyzer()
 
 

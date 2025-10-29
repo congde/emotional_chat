@@ -22,12 +22,12 @@ class AdvancedSentimentAnalyzer:
     基于Hugging Face Transformers的深度学习情感分析
     """
     
-    def __init__(self, use_transformers: bool = True, cache_size: int = 100):
+    def __init__(self, use_transformers: bool = False, cache_size: int = 100):
         """
         初始化高级情感分析器
         
         Args:
-            use_transformers: 是否使用Transformers模型（需要安装transformers库）
+            use_transformers: 是否使用Transformers模型（默认False，避免网络问题）
             cache_size: 情感历史缓存大小
         """
         self.use_transformers = use_transformers
@@ -37,9 +37,12 @@ class AdvancedSentimentAnalyzer:
         # 情感历史缓存（用于趋势分析）
         self.emotion_history = defaultdict(lambda: deque(maxlen=cache_size))
         
-        # 尝试加载Transformers模型
+        # 由于网络问题，默认禁用Transformers模型
         if use_transformers:
+            logger.info("尝试加载Transformers模型...")
             self._init_transformers_models()
+        else:
+            logger.info("使用关键词情感分析（避免网络问题）")
         
         # 备用：基于关键词的情感分析
         self._init_keyword_analyzer()
@@ -50,17 +53,22 @@ class AdvancedSentimentAnalyzer:
         """初始化Transformers模型"""
         try:
             from transformers import pipeline
+            import os
             
-            # 使用中文情感分析模型（可以替换为其他模型）
-            # 选项1: 使用英文情感分析模型
-            # model_name = "cardiffnlp/twitter-roberta-base-sentiment-latest"
+            # 设置环境变量，避免网络超时问题
+            os.environ["HF_HUB_OFFLINE"] = "1"  # 离线模式
+            os.environ["TRANSFORMERS_OFFLINE"] = "1"  # Transformers离线模式
             
-            # 选项2: 使用多语言情感分析模型
-            # model_name = "nlptown/bert-base-multilingual-uncased-sentiment"
+            logger.info("尝试加载Transformers模型（离线模式）...")
             
-            # 选项3: 使用细粒度情绪识别模型
-            emotion_model = "j-hartmann/emotion-english-distilroberta-base"
+            # 由于网络问题，直接禁用Transformers模型
+            logger.warning("由于网络连接问题，跳过Transformers模型加载")
+            self.use_transformers = False
+            self.pipeline = None
+            self.emotion_classifier = None
             
+            # 注释掉原来的模型加载代码，避免网络问题
+            """
             try:
                 # 加载情感极性分析模型（正面/负面/中性）
                 self.pipeline = pipeline(
@@ -75,6 +83,7 @@ class AdvancedSentimentAnalyzer:
             
             try:
                 # 加载细粒度情绪识别模型
+                emotion_model = "j-hartmann/emotion-english-distilroberta-base"
                 self.emotion_classifier = pipeline(
                     "text-classification",
                     model=emotion_model,
@@ -84,11 +93,7 @@ class AdvancedSentimentAnalyzer:
             except Exception as e:
                 logger.warning(f"细粒度情绪模型加载失败: {e}")
                 self.emotion_classifier = None
-            
-            # 如果都失败了，禁用transformers
-            if not self.pipeline and not self.emotion_classifier:
-                self.use_transformers = False
-                logger.warning("所有Transformers模型加载失败，使用关键词分析")
+            """
                 
         except ImportError:
             logger.warning("transformers库未安装，使用关键词分析")
@@ -561,12 +566,12 @@ class AdvancedSentimentAnalyzer:
 _global_analyzer = None
 
 
-def get_analyzer(use_transformers: bool = True) -> AdvancedSentimentAnalyzer:
+def get_analyzer(use_transformers: bool = False) -> AdvancedSentimentAnalyzer:
     """
     获取全局分析器实例
     
     Args:
-        use_transformers: 是否使用Transformers模型
+        use_transformers: 是否使用Transformers模型（默认False，避免网络问题）
     
     Returns:
         AdvancedSentimentAnalyzer实例
@@ -581,7 +586,7 @@ def get_analyzer(use_transformers: bool = True) -> AdvancedSentimentAnalyzer:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     
-    analyzer = AdvancedSentimentAnalyzer(use_transformers=True)
+    analyzer = AdvancedSentimentAnalyzer(use_transformers=False)
     
     # 测试用例
     test_cases = [

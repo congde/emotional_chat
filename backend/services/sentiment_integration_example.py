@@ -25,12 +25,12 @@ class SentimentIntegratedChatService:
     4. 风险预警
     """
     
-    def __init__(self, use_transformers: bool = True):
+    def __init__(self, use_transformers: bool = False):
         """
         初始化服务
         
         Args:
-            use_transformers: 是否使用Transformers模型（True推荐，False使用关键词）
+            use_transformers: 是否使用Transformers模型（默认False，避免网络问题）
         """
         # 初始化情感分析器
         self.sentiment_analyzer = AdvancedSentimentAnalyzer(use_transformers=use_transformers)
@@ -353,7 +353,7 @@ def example_usage():
     """
     
     # 初始化服务
-    service = SentimentIntegratedChatService(use_transformers=True)
+    service = SentimentIntegratedChatService(use_transformers=False)
     
     # 模拟用户消息
     user_message = "今天工作压力好大，感觉快撑不住了..."

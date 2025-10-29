@@ -43,10 +43,9 @@ class KnowledgeBaseManager:
             persist_directory: 向量数据库持久化目录
         """
         self.persist_directory = persist_directory
-        self.embeddings = OpenAIEmbeddings(
-            openai_api_key=Config.LLM_API_KEY,
-            openai_api_base=Config.LLM_BASE_URL
-        )
+        # 暂时禁用嵌入功能，使用简单的文本匹配
+        self.embeddings = None
+        logger.info("暂时禁用嵌入功能，使用简单文本匹配")
         self.vectorstore: Optional[Chroma] = None
         
         # 确保目录存在
@@ -167,16 +166,25 @@ class KnowledgeBaseManager:
                 if 'timestamp' not in chunk.metadata:
                     chunk.metadata['timestamp'] = datetime.now().isoformat()
             
-            vectorstore = Chroma.from_documents(
-                documents=chunks,
-                embedding=self.embeddings,
-                persist_directory=self.persist_directory
-            )
-            vectorstore.persist()
-            
-            self.vectorstore = vectorstore
-            logger.info("向量存储创建完成并持久化")
-            return vectorstore
+            # 如果没有嵌入函数，使用简单的文本存储
+            if self.embeddings is None:
+                logger.info("使用简单文本存储模式")
+                # 创建一个简单的文本存储，不使用向量
+                self.vectorstore = None
+                self.text_storage = chunks  # 直接存储文本块
+                logger.info("文本存储创建完成")
+                return None
+            else:
+                vectorstore = Chroma.from_documents(
+                    documents=chunks,
+                    embedding=self.embeddings,
+                    persist_directory=self.persist_directory
+                )
+                vectorstore.persist()
+                
+                self.vectorstore = vectorstore
+                logger.info("向量存储创建完成并持久化")
+                return vectorstore
         except Exception as e:
             logger.error(f"创建向量存储失败: {e}")
             raise
@@ -247,6 +255,21 @@ class KnowledgeBaseManager:
             相似文档列表
         """
         try:
+            # 如果使用简单文本存储
+            if self.embeddings is None and hasattr(self, 'text_storage'):
+                logger.info(f"使用简单文本搜索: {query[:50]}...")
+                # 简单的关键词匹配
+                query_lower = query.lower()
+                results = []
+                for doc in self.text_storage:
+                    if query_lower in doc.page_content.lower():
+                        results.append(doc)
+                        if len(results) >= k:
+                            break
+                logger.info(f"简单搜索完成，返回 {len(results)} 个结果")
+                return results
+            
+            # 使用向量搜索
             if self.vectorstore is None:
                 logger.info("向量存储未加载，尝试加载...")
                 self.load_vectorstore()
