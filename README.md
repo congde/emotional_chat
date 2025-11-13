@@ -435,7 +435,31 @@ CREATE TABLE system_logs (
 
 ### 1. 环境准备
 
-#### 1.1 安装依赖
+#### 1.1 安装系统依赖（必需）
+
+**安装 CMake 和编译工具**
+
+某些 Python 包（如 `dlib`、`opencv-python`）需要从源码编译，因此需要安装编译工具：
+
+```bash
+# CentOS/RHEL/Alibaba Cloud Linux
+sudo yum install -y cmake gcc gcc-c++ make
+
+# Ubuntu/Debian
+sudo apt update
+sudo apt install -y cmake gcc g++ make build-essential
+
+# 验证安装
+cmake --version
+gcc --version
+```
+
+**注意**：
+- `dlib`（face-recognition 的依赖）需要 CMake 编译，预计编译时间 10-30 分钟
+- `opencv-python` 也需要编译，预计编译时间 5-15 分钟
+- 如果不需要人脸识别功能，可以注释掉 `requirements.txt` 中的 `face-recognition==1.3.0`
+
+#### 1.2 安装Python依赖
 ```bash
 # 进入项目目录
 cd /home/emotional_chat
@@ -443,13 +467,16 @@ cd /home/emotional_chat
 # 安装Python依赖
 pip3 install --user -r requirements.txt
 
+# 注意：如果遇到 dlib 编译失败，请确保已安装 CMake
+# 如果遇到版本冲突，请参考 requirements.txt 中的注释说明
+
 # 安装前端依赖
 cd frontend
 npm install
 cd ..
 ```
 
-#### 1.2 配置环境变量
+#### 1.3 配置环境变量
 ```bash
 # 复制环境变量模板
 cp env_example.txt .env
@@ -488,7 +515,7 @@ DEBUG=true
 3. 创建 API Key
 4. 将 API Key 填入 `config.env` 文件
 
-#### 1.3 安装和配置MySQL
+#### 1.4 安装和配置MySQL
 ```bash
 # Ubuntu/Debian
 sudo apt update
