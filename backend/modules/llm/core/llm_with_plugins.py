@@ -17,12 +17,13 @@ try:
 except ImportError:
     LANGCHAIN_AVAILABLE = False
 
-from backend.database import DatabaseManager, create_tables
+from backend.database import DatabaseManager, create_tables, get_db
 from backend.models import ChatRequest, ChatResponse
 from backend.xinyu_prompt import get_system_prompt, build_full_prompt, validate_and_filter_input, XINYU_SYSTEM_PROMPT
 from backend.plugins.plugin_manager import PluginManager
 from backend.plugins.weather_plugin import WeatherPlugin
 from backend.plugins.news_plugin import NewsPlugin
+from backend.services.personalization_service import get_personalization_service
 
 try:
     from backend.vector_store import VectorStore
@@ -72,6 +73,14 @@ class EmotionalChatEngineWithPlugins:
             print("✓ 插件系统初始化成功")
         except Exception as e:
             print(f"警告: 插件初始化失败: {e}")
+        
+        # 初始化个性化服务
+        try:
+            self.personalization_service = get_personalization_service()
+            print("✓ 个性化配置服务初始化成功")
+        except Exception as e:
+            print(f"警告: 个性化服务初始化失败: {e}")
+            self.personalization_service = None
         
         # 初始化 LLM
         if self.api_key and LANGCHAIN_AVAILABLE:
@@ -150,6 +159,11 @@ class EmotionalChatEngineWithPlugins:
         response_text = self._generate_response_with_plugins(
             request.message, 
             session_id,
+            user_id=user_id,
+            emotion_state={
+                "emotion": emotion_data["emotion"],
+                "intensity": emotion_data["intensity"]
+            },
             plugin_used_ref=[plugin_used],
             plugin_result_ref=[plugin_result]
         )
@@ -190,6 +204,8 @@ class EmotionalChatEngineWithPlugins:
         )
     
     def _generate_response_with_plugins(self, user_input: str, session_id: str, 
+                                       user_id: str = "anonymous",
+                                       emotion_state: Optional[Dict] = None,
                                        plugin_used_ref: List = None, 
                                        plugin_result_ref: List = None):
         """
@@ -199,18 +215,21 @@ class EmotionalChatEngineWithPlugins:
         if not self.api_key:
             return self._get_fallback_response(user_input)
         
+        # 获取个性化系统Prompt
+        system_prompt = self._get_personalized_system_prompt(user_id, user_input, emotion_state)
+        
         # 获取函数列表
         functions = self.plugin_manager.get_function_schemas()
         
         if not functions:
             # 没有插件，使用普通模式
-            return self._call_llm_normal(user_input, session_id)
+            return self._call_llm_normal(user_input, session_id, user_id, emotion_state)
         
         # 构建消息
         messages = [
             {
                 "role": "system",
-                "content": XINYU_SYSTEM_PROMPT + "\n\n你可以通过调用以下工具来帮助用户："
+                "content": system_prompt + "\n\n你可以通过调用以下工具来帮助用户："
             },
             {
                 "role": "user",
@@ -270,10 +289,14 @@ class EmotionalChatEngineWithPlugins:
                     "name": func_name,
                     "content": json.dumps(plugin_result, ensure_ascii=False)
                 })
+                # 使用个性化Prompt生成最终回复
+                personalized_prompt = self._get_personalized_system_prompt(user_id, user_input, emotion_state)
                 messages.append({
                     "role": "user",
                     "content": f"基于以下信息：{plugin_result_text}\n\n请用自然、温暖的语言回复用户，不要重复数据本身，而要融合这些信息，给出贴心的建议和陪伴。"
                 })
+                # 更新系统消息为个性化Prompt
+                messages[0]["content"] = personalized_prompt
                 
                 # 生成最终回复
                 final_response = requests.post(
@@ -334,7 +357,9 @@ class EmotionalChatEngineWithPlugins:
         
         return "我已经为你查询了相关信息，有什么想聊的吗？"
     
-    def _call_llm_normal(self, user_input: str, session_id: str) -> str:
+    def _call_llm_normal(self, user_input: str, session_id: str, 
+                        user_id: str = "anonymous", 
+                        emotion_state: Optional[Dict] = None) -> str:
         """不使用插件的普通聊天"""
         # 获取历史
         db_manager = DatabaseManager()
@@ -344,8 +369,14 @@ class EmotionalChatEngineWithPlugins:
             for msg in reversed(recent_messages[-5:]):
                 history_text += "{}: {}\n".format('用户' if msg.role == 'user' else '心语', msg.content)
         
-        # 调用LLM
-        full_prompt = build_full_prompt(user_input, history_text, "")
+        # 获取个性化系统Prompt
+        system_prompt = self._get_personalized_system_prompt(user_id, user_input, emotion_state)
+        
+        # 构建完整Prompt（包含历史对话）
+        if history_text:
+            full_prompt = f"{system_prompt}\n\n对话历史：\n{history_text}\n\n用户：{user_input}\n心语："
+        else:
+            full_prompt = f"{system_prompt}\n\n用户：{user_input}\n心语："
         
         try:
             api_url = f"{self.api_base_url}/chat/completions"
@@ -370,6 +401,33 @@ class EmotionalChatEngineWithPlugins:
         except Exception as e:
             print(f"LLM调用失败: {e}")
             return self._get_fallback_response(user_input)
+    
+    def _get_personalized_system_prompt(self, user_id: str, user_input: str, 
+                                       emotion_state: Optional[Dict] = None) -> str:
+        """
+        获取个性化系统Prompt
+        如果用户配置了个性化设置，使用个性化Prompt；否则使用默认Prompt
+        """
+        if not self.personalization_service:
+            return XINYU_SYSTEM_PROMPT
+        
+        try:
+            # 获取数据库会话
+            db_manager = DatabaseManager()
+            with db_manager as db:
+                # 生成个性化Prompt（传递数据库会话对象）
+                personalized_prompt = self.personalization_service.generate_personalized_prompt(
+                    user_id=user_id,
+                    context=user_input,
+                    emotion_state=emotion_state,
+                    db=db.db  # 使用 db.db 访问实际的 Session 对象
+                )
+                return personalized_prompt
+        except Exception as e:
+            print(f"获取个性化Prompt失败，使用默认Prompt: {e}")
+            import traceback
+            traceback.print_exc()
+            return XINYU_SYSTEM_PROMPT
     
     def _analyze_emotion_simple(self, message: str) -> Dict[str, Any]:
         """简单的情感分析"""
