@@ -31,21 +31,51 @@
 
 ### 1. 天气查询插件 (WeatherPlugin)
 
-**功能**：根据城市名称查询实时天气信息
+**功能**：根据城市名称查询实时天气信息，支持多种数据源，具有智能降级机制
+
+**核心特性**：
+- ✅ 支持 OpenWeatherMap API（优先，需配置密钥）
+- ✅ 支持和风天气 API（备选，需配置密钥）
+- ✅ 集成免费的 wttr.in API（无需密钥，自动降级）
+- ✅ 智能意图识别，自动提取城市名称
+- ✅ 强制调用机制，确保准确响应
+- ✅ 返回完整的天气数据（温度、湿度、风速、气压等）
 
 **使用示例**：
 - 用户："明天去杭州，天气怎么样？"
 - 插件调用：`get_weather(location="杭州")`
-- 返回：`{"location": "杭州", "temperature": 22, "description": "晴", "humidity": 50}`
+- 返回：
+  ```json
+  {
+    "location": "Hangzhou",
+    "temperature": 17.0,
+    "description": "Fog",
+    "humidity": 68,
+    "wind_speed": 2.5,
+    "feels_like": 17.0,
+    "pressure": 1015,
+    "note": "使用免费的wttr.in API"
+  }
+  ```
+- AI回复："明天杭州的天气有些薄雾，气温17℃，体感也是17℃，整体比较舒适。湿度有68%，风不大，出门时可以带件薄外套。这样的天气适合慢慢走走，但能见度可能稍低，注意出行安全。希望你在杭州度过愉快的一天。"
 
-**配置**：
+**配置（可选）**：
 ```bash
-# 使用 OpenWeatherMap API
-export OPENWEATHER_API_KEY="your-api-key"
+# 选项1：使用 OpenWeatherMap API（推荐，免费额度1000次/天）
+export OPENWEATHER_API_KEY="your-openweather-api-key"
 
-# 或使用和风天气 API
-export HEFENG_WEATHER_API_KEY="your-api-key"
+# 选项2：使用和风天气 API（国内服务，免费额度1000次/天）
+export HEFENG_WEATHER_API_KEY="your-hefeng-api-key"
+# 或
+export WEATHER_API_KEY="your-hefeng-api-key"
+
+# 选项3：不配置任何密钥（默认使用免费的wttr.in API）
+# 无需任何配置，开箱即用！
 ```
+
+**配置优先级**：OpenWeatherMap > 和风天气 > wttr.in免费API
+
+**详细文档**：查看 [docs/weather_plugin_documentation.md](../docs/weather_plugin_documentation.md)
 
 ### 2. 新闻推送插件 (NewsPlugin)
 
