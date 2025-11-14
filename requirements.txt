@@ -90,3 +90,4 @@ jieba>=0.42.1
 # 其他必要依赖
 beautifulsoup4>=4.12.0
 PyPDF2>=3.0.0
+feedparser>=6.0.0  # RSS新闻源解析

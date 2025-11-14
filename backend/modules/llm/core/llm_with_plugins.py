@@ -276,6 +276,7 @@ class EmotionalChatEngineWithPlugins:
         for func in functions:
             tools_description += f"- {func.get('name', 'unknown')}: {func.get('description', '')}\n"
         tools_description += "\n如果用户询问天气（如'今天天气'、'XX天气'、'天气怎么样'），必须调用get_weather工具。"
+        tools_description += "\n如果用户询问新闻（如'最近有什么科技新闻'、'健康新闻'、'娱乐新闻'等），必须调用get_latest_news工具，根据用户提到的类别设置category参数。"
         
         if should_force_weather:
             tools_description += f"\n【强制要求】用户正在询问天气，你必须立即调用get_weather工具，location参数为：{weather_location if weather_location != '当前城市' else '用户所在城市'}。"
@@ -431,8 +432,9 @@ class EmotionalChatEngineWithPlugins:
                 # 使用个性化Prompt生成最终回复
                 personalized_prompt = self._get_personalized_system_prompt(user_id, user_input, emotion_state)
                 
-                # 构建用户消息，明确要求使用天气信息
-                user_message_content = f"""用户询问了天气信息，我已经查询到了以下数据：
+                # 根据插件类型构建不同的用户消息
+                if func_name == "get_weather":
+                    user_message_content = f"""用户询问了天气信息，我已经查询到了以下数据：
 
 {plugin_result_text}
 
@@ -441,6 +443,23 @@ class EmotionalChatEngineWithPlugins:
 2. 用温暖、关心的语气
 3. 可以结合天气给出贴心的建议
 4. 保持"心语"的陪伴者角色，不要只是冷冰冰地报数据"""
+                elif func_name == "get_latest_news":
+                    user_message_content = f"""用户询问了新闻信息，我已经查询到了以下新闻数据：
+
+{plugin_result_text}
+
+请基于这些真实的新闻数据，用自然、温暖、陪伴式的语言回复用户。要求：
+1. 必须列出具体的新闻标题和摘要（不要只是泛泛而谈）
+2. 每条新闻都要有明确的标题和简要描述
+3. 用温暖、关心的语气介绍这些新闻
+4. 可以询问用户对哪条新闻感兴趣，想了解更多
+5. 保持"心语"的陪伴者角色，让用户感受到你在分享有用的信息"""
+                else:
+                    user_message_content = f"""用户询问了相关信息，我已经查询到了以下数据：
+
+{plugin_result_text}
+
+请基于这些真实数据，用自然、温暖、陪伴式的语言回复用户。"""
                 
                 messages.append({
                     "role": "user",
@@ -522,9 +541,34 @@ class EmotionalChatEngineWithPlugins:
             if "error" in result:
                 return f"新闻查询失败: {result['error']}"
             articles = result.get('articles', [])
-            news_text = f"共有{len(articles)}条相关新闻：\n"
-            for i, article in enumerate(articles[:3], 1):
-                news_text += f"{i}. {article.get('title', '无标题')} - {article.get('description', '无描述')}\n"
+            if not articles:
+                return "未能获取到新闻数据"
+            
+            category = result.get('category', '综合')
+            category_cn = {
+                "general": "综合",
+                "technology": "科技",
+                "health": "健康",
+                "entertainment": "娱乐",
+                "science": "科学"
+            }.get(category, category)
+            
+            source = result.get('source', '新闻源')
+            news_text = f"【{category_cn}新闻】共找到{len(articles)}条新闻（来源：{source}）：\n\n"
+            for i, article in enumerate(articles, 1):
+                title = article.get('title', '无标题')
+                description = article.get('description', '')
+                source_name = article.get('source', '')
+                
+                news_text += f"{i}. {title}\n"
+                if description:
+                    # 限制描述长度
+                    desc = description[:150] + "..." if len(description) > 150 else description
+                    news_text += f"   {desc}\n"
+                if source_name:
+                    news_text += f"   来源：{source_name}\n"
+                news_text += "\n"
+            
             return news_text
         
         return json.dumps(result, ensure_ascii=False)
@@ -568,8 +612,30 @@ class EmotionalChatEngineWithPlugins:
         
         elif plugin_name == "get_latest_news":
             articles = result.get('articles', [])
-            news_preview = articles[0].get('title', '新闻') if articles else '最新新闻'
-            return f"为你找到了{len(articles)}条相关新闻，第一条是：{news_preview}。想了解更多详情吗？"
+            if not articles:
+                return "很抱歉，暂时没有找到相关新闻。不过我可以陪你聊聊其他话题，有什么想说的吗？"
+            
+            category = result.get('category', '综合')
+            category_cn = {
+                "general": "综合",
+                "technology": "科技",
+                "health": "健康",
+                "entertainment": "娱乐",
+                "science": "科学"
+            }.get(category, category)
+            
+            news_list = []
+            for i, article in enumerate(articles[:3], 1):
+                title = article.get('title', '无标题')
+                description = article.get('description', '')
+                if description:
+                    desc = description[:80] + "..." if len(description) > 80 else description
+                    news_list.append(f"{i}. {title} - {desc}")
+                else:
+                    news_list.append(f"{i}. {title}")
+            
+            news_text = "\n".join(news_list)
+            return f"我为你找到了{len(articles)}条{category_cn}新闻：\n\n{news_text}\n\n你对哪条新闻感兴趣，想了解更多吗？"
         
         return "我已经为你查询了相关信息，有什么想聊的吗？"
     
