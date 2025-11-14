@@ -5,6 +5,14 @@
 """
 
 from typing import Dict, Optional, Any, List
+# 优先使用带插件支持的引擎
+try:
+    from backend.modules.llm.core.llm_with_plugins import EmotionalChatEngineWithPlugins
+    PLUGIN_ENGINE_AVAILABLE = True
+except ImportError:
+    PLUGIN_ENGINE_AVAILABLE = False
+    EmotionalChatEngineWithPlugins = None
+
 from backend.modules.llm.core.llm_core import SimpleEmotionalChatEngine
 from backend.services.memory_service import MemoryService
 from backend.services.context_service import ContextService
@@ -59,7 +67,17 @@ class ChatService:
             use_intent: 是否启用意图识别功能
             use_enhanced_processor: 是否启用增强版输入处理器
         """
-        self.chat_engine = SimpleEmotionalChatEngine()
+        # 优先使用带插件支持的引擎（支持天气查询等功能）
+        if PLUGIN_ENGINE_AVAILABLE:
+            try:
+                self.chat_engine = EmotionalChatEngineWithPlugins()
+                print("✓ 使用带插件支持的聊天引擎（支持天气查询等功能）")
+            except Exception as e:
+                print(f"⚠ 插件引擎初始化失败，使用常规引擎: {e}")
+                self.chat_engine = SimpleEmotionalChatEngine()
+        else:
+            self.chat_engine = SimpleEmotionalChatEngine()
+            print("⚠ 插件引擎不可用，使用常规引擎")
         self.memory_service = memory_service or MemoryService()
         self.context_service = context_service or ContextService(memory_service=self.memory_service)
         

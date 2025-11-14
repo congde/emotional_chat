@@ -4,6 +4,7 @@
 import os
 import json
 import uuid
+import re
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import requests
@@ -118,6 +119,7 @@ class EmotionalChatEngineWithPlugins:
         """
         处理聊天请求（支持插件调用）
         """
+        print(f"\n[CHAT] 收到聊天请求: {request.message[:50]}...")
         session_id = request.session_id or str(uuid.uuid4())
         user_id = request.user_id or "anonymous"
         
@@ -203,6 +205,38 @@ class EmotionalChatEngineWithPlugins:
             plugin_result=plugin_result
         )
     
+    def _detect_weather_intent(self, user_input: str) -> Optional[str]:
+        """检测用户是否在询问天气，如果是则返回城市名称"""
+        weather_keywords = ["天气", "温度", "下雨", "晴天", "阴天", "weather", "温度", "气温", "降雨", "下雪"]
+        location_keywords = ["北京", "上海", "广州", "深圳", "杭州", "成都", "武汉", "西安", "南京", "重庆"]
+        
+        # 检查是否包含天气相关关键词
+        has_weather_keyword = any(keyword in user_input for keyword in weather_keywords)
+        if not has_weather_keyword:
+            return None
+        
+        # 尝试提取城市名称
+        for city in location_keywords:
+            if city in user_input:
+                return city
+        
+        # 如果没有明确城市，尝试从输入中提取
+        # 简单提取：查找"XX的天气"或"XX天气"模式
+        patterns = [
+            r"([\u4e00-\u9fa5]+)的?天气",
+            r"([\u4e00-\u9fa5]+)天气",
+            r"天气.*?([\u4e00-\u9fa5]+)",
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, user_input)
+            if match:
+                city = match.group(1)
+                if len(city) <= 4:  # 城市名通常不超过4个字
+                    return city
+        
+        # 如果没有找到具体城市，返回默认值（让API决定）
+        return "当前城市" if "当前" in user_input or "这里" in user_input else None
+    
     def _generate_response_with_plugins(self, user_input: str, session_id: str, 
                                        user_id: str = "anonymous",
                                        emotion_state: Optional[Dict] = None,
@@ -212,7 +246,14 @@ class EmotionalChatEngineWithPlugins:
         使用 Function Calling 生成回应
         如果模型决定调用插件，则执行插件并基于结果生成最终回复
         """
+        print(f"\n{'='*60}")
+        print(f"[DEBUG] _generate_response_with_plugins 被调用")
+        print(f"[DEBUG] 用户输入: {user_input}")
+        print(f"[DEBUG] session_id: {session_id}")
+        print(f"{'='*60}\n")
+        
         if not self.api_key:
+            print("[WARNING] API_KEY 未设置，使用fallback响应")
             return self._get_fallback_response(user_input)
         
         # 获取个性化系统Prompt
@@ -225,11 +266,24 @@ class EmotionalChatEngineWithPlugins:
             # 没有插件，使用普通模式
             return self._call_llm_normal(user_input, session_id, user_id, emotion_state)
         
-        # 构建消息
+        # 检测天气意图
+        weather_location = self._detect_weather_intent(user_input)
+        should_force_weather = weather_location is not None
+        print(f"[DEBUG] 天气意图检测: location={weather_location}, should_force={should_force_weather}")
+        
+        # 构建消息 - 明确指示模型使用工具
+        tools_description = "\n\n【重要】当用户询问天气、新闻等实时信息时，你必须调用相应的工具来获取数据。可用工具：\n"
+        for func in functions:
+            tools_description += f"- {func.get('name', 'unknown')}: {func.get('description', '')}\n"
+        tools_description += "\n如果用户询问天气（如'今天天气'、'XX天气'、'天气怎么样'），必须调用get_weather工具。"
+        
+        if should_force_weather:
+            tools_description += f"\n【强制要求】用户正在询问天气，你必须立即调用get_weather工具，location参数为：{weather_location if weather_location != '当前城市' else '用户所在城市'}。"
+        
         messages = [
             {
                 "role": "system",
-                "content": system_prompt + "\n\n你可以通过调用以下工具来帮助用户："
+                "content": system_prompt + tools_description
             },
             {
                 "role": "user",
@@ -246,32 +300,104 @@ class EmotionalChatEngineWithPlugins:
                 "Content-Type": "application/json"
             }
             
+            # 转换functions为tools格式（通义千问DashScope API使用tools格式）
+            tools = [{"type": "function", "function": func} for func in functions]
+            
+            # 如果检测到天气意图，强制调用get_weather工具
+            tool_choice = "auto"
+            if should_force_weather:
+                tool_choice = {
+                    "type": "function",
+                    "function": {"name": "get_weather"}
+                }
+                print(f"[DEBUG] 检测到天气查询意图，强制调用get_weather工具，城市: {weather_location}")
+            
+            # 优先尝试tools格式（通义千问）
             data = {
                 "model": self.model,
                 "messages": messages,
-                "functions": functions,
-                "function_call": "auto",  # 让模型决定是否调用函数
+                "tools": tools,
+                "tool_choice": tool_choice,  # 强制调用或让模型决定
                 "temperature": 0.7
             }
             
+            print(f"[DEBUG] 发送API请求，tool_choice: {tool_choice}")
+            
             response = requests.post(api_url, headers=headers, json=data, timeout=30)
             
+            # 如果tools格式失败，尝试functions格式（OpenAI兼容）
             if response.status_code != 200:
-                print(f"API错误: {response.status_code} - {response.text}")
+                print(f"[WARNING] 尝试tools格式失败 ({response.status_code}): {response.text[:200]}")
+                print(f"[DEBUG] 改用functions格式...")
+                
+                # 对于functions格式，也需要强制调用
+                function_call = "auto"
+                if should_force_weather:
+                    function_call = {"name": "get_weather"}
+                    print(f"[DEBUG] 强制调用get_weather (functions格式)")
+                
+                data = {
+                    "model": self.model,
+                    "messages": messages,
+                    "functions": functions,
+                    "function_call": function_call,
+                    "temperature": 0.7
+                }
+                response = requests.post(api_url, headers=headers, json=data, timeout=30)
+            
+            if response.status_code != 200:
+                print(f"API错误: {response.status_code} - {response.text[:500]}")
                 return self._get_fallback_response(user_input)
             
             result = response.json()
             assistant_message = result["choices"][0]["message"]
             
-            # 检查是否有函数调用
-            if "function_call" in assistant_message:
+            print(f"[DEBUG] API响应: {json.dumps(assistant_message, ensure_ascii=False, indent=2)[:500]}")
+            
+            # 检查是否有工具调用（支持两种格式）
+            function_call = None
+            func_name = None
+            func_args = None
+            
+            # 检查tools格式（通义千问DashScope）
+            if "tool_calls" in assistant_message and assistant_message.get("tool_calls"):
+                tool_call = assistant_message["tool_calls"][0]
+                function_call = tool_call.get("function", {})
+                func_name = function_call.get("name")
+                func_args_str = function_call.get("arguments", "{}")
+                try:
+                    func_args = json.loads(func_args_str) if isinstance(func_args_str, str) else func_args_str
+                except:
+                    func_args = {}
+                print(f"[DEBUG] 检测到tools格式调用: {func_name}, 参数: {func_args}")
+            
+            # 检查functions格式（OpenAI兼容）
+            elif "function_call" in assistant_message:
                 # 模型决定调用函数
                 function_call = assistant_message["function_call"]
-                func_name = function_call["name"]
-                func_args = json.loads(function_call["arguments"])
+                func_name = function_call.get("name")
+                func_args_str = function_call.get("arguments", "{}")
+                try:
+                    func_args = json.loads(func_args_str) if isinstance(func_args_str, str) else func_args_str
+                except:
+                    func_args = {}
+                print(f"[DEBUG] 检测到functions格式调用: {func_name}, 参数: {func_args}")
+            
+            if func_name:
+                # 如果强制调用天气但参数中没有location，添加默认值
+                if func_name == "get_weather" and "location" not in func_args:
+                    if weather_location and weather_location != "当前城市":
+                        func_args["location"] = weather_location
+                        print(f"[DEBUG] 自动添加location参数: {weather_location}")
+                    elif weather_location == "当前城市":
+                        # 尝试从用户输入中提取，或使用默认值
+                        func_args["location"] = "深圳"  # 默认值，可以根据需要修改
+                        print(f"[DEBUG] 使用默认location: 深圳")
                 
                 # 执行插件
+                print(f"[DEBUG] 执行插件: {func_name}, 参数: {func_args}")
                 plugin_result = self.plugin_manager.execute_plugin(func_name, **func_args)
+                print(f"[DEBUG] 插件执行结果: {json.dumps(plugin_result, ensure_ascii=False)[:200]}")
                 
                 # 更新引用（如果需要）
                 if plugin_used_ref is not None:
@@ -281,22 +407,50 @@ class EmotionalChatEngineWithPlugins:
                 
                 # 构建包含插件结果的系统消息
                 plugin_result_text = self._format_plugin_result(func_name, plugin_result)
+                print(f"[DEBUG] 格式化后的插件结果文本: {plugin_result_text}")
                 
                 # 第二次调用：让模型基于插件结果生成最终回复
                 messages.append(assistant_message)
-                messages.append({
-                    "role": "function",
-                    "name": func_name,
-                    "content": json.dumps(plugin_result, ensure_ascii=False)
-                })
+                
+                # 根据格式添加工具响应
+                if "tool_calls" in assistant_message:
+                    # tools格式（通义千问）
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": assistant_message["tool_calls"][0].get("id"),
+                        "name": func_name,
+                        "content": json.dumps(plugin_result, ensure_ascii=False)
+                    })
+                else:
+                    # functions格式（OpenAI兼容）
+                    messages.append({
+                        "role": "function",
+                        "name": func_name,
+                        "content": json.dumps(plugin_result, ensure_ascii=False)
+                    })
                 # 使用个性化Prompt生成最终回复
                 personalized_prompt = self._get_personalized_system_prompt(user_id, user_input, emotion_state)
+                
+                # 构建用户消息，明确要求使用天气信息
+                user_message_content = f"""用户询问了天气信息，我已经查询到了以下数据：
+
+{plugin_result_text}
+
+请基于这些真实的天气数据，用自然、温暖、陪伴式的语言回复用户。要求：
+1. 必须包含具体的天气信息（温度、天气状况等）
+2. 用温暖、关心的语气
+3. 可以结合天气给出贴心的建议
+4. 保持"心语"的陪伴者角色，不要只是冷冰冰地报数据"""
+                
                 messages.append({
                     "role": "user",
-                    "content": f"基于以下信息：{plugin_result_text}\n\n请用自然、温暖的语言回复用户，不要重复数据本身，而要融合这些信息，给出贴心的建议和陪伴。"
+                    "content": user_message_content
                 })
                 # 更新系统消息为个性化Prompt
                 messages[0]["content"] = personalized_prompt
+                
+                print(f"[DEBUG] 发送最终回复请求，消息数量: {len(messages)}")
+                print(f"[DEBUG] 最后一条用户消息: {user_message_content[:200]}...")
                 
                 # 生成最终回复
                 final_response = requests.post(
@@ -312,16 +466,31 @@ class EmotionalChatEngineWithPlugins:
                 
                 if final_response.status_code == 200:
                     final_result = final_response.json()
-                    return final_result["choices"][0]["message"]["content"].strip()
+                    final_content = final_result["choices"][0]["message"]["content"].strip()
+                    print(f"[DEBUG] 最终回复内容: {final_content[:200]}...")
+                    return final_content
                 else:
                     # 如果失败，手动生成回复
-                    return self._generate_response_from_plugin_result(func_name, plugin_result, user_input)
+                    print(f"[WARNING] 最终回复生成失败: {final_response.status_code} - {final_response.text[:200]}")
+                    fallback_response = self._generate_response_from_plugin_result(func_name, plugin_result, user_input)
+                    print(f"[DEBUG] 使用fallback回复: {fallback_response[:200]}...")
+                    return fallback_response
             else:
-                # 模型没有调用函数，直接返回回复
-                return assistant_message["content"].strip()
+                # 模型没有调用函数
+                content = assistant_message.get("content", "").strip()
+                print(f"[DEBUG] 模型未调用工具，直接返回回复: {content[:100]}...")
+                
+                # 如果用户明显在询问天气但模型没有调用工具，给出提示
+                weather_keywords = ["天气", "温度", "下雨", "晴天", "阴天", "weather"]
+                if any(keyword in user_input for keyword in weather_keywords):
+                    print(f"[WARNING] 用户询问天气但模型未调用工具，可能需要改进提示")
+                
+                return content
         
         except Exception as e:
-            print(f"调用LLM失败: {e}")
+            import traceback
+            print(f"[ERROR] 调用LLM失败: {e}")
+            traceback.print_exc()
             return self._get_fallback_response(user_input)
     
     def _format_plugin_result(self, plugin_name: str, result: Dict[str, Any]) -> str:
@@ -329,7 +498,25 @@ class EmotionalChatEngineWithPlugins:
         if plugin_name == "get_weather":
             if "error" in result:
                 return f"天气查询失败: {result['error']}"
-            return f"地点：{result.get('location')}，温度：{result.get('temperature')}℃，天气：{result.get('description')}，湿度：{result.get('humidity')}%"
+            
+            # 构建详细的天气信息
+            location = result.get('location', '未知地点')
+            temperature = result.get('temperature', 0)
+            description = result.get('description', '未知')
+            humidity = result.get('humidity', 0)
+            wind_speed = result.get('wind_speed', 0)
+            feels_like = result.get('feels_like', temperature)
+            pressure = result.get('pressure', 0)
+            
+            weather_info = f"""地点：{location}
+温度：{temperature}℃
+体感温度：{feels_like}℃
+天气状况：{description}
+湿度：{humidity}%
+风速：{wind_speed}m/s
+气压：{pressure}hPa"""
+            
+            return weather_info
         
         elif plugin_name == "get_latest_news":
             if "error" in result:
@@ -345,10 +532,39 @@ class EmotionalChatEngineWithPlugins:
     def _generate_response_from_plugin_result(self, plugin_name: str, result: Dict[str, Any], user_input: str) -> str:
         """基于插件结果手动生成回复"""
         if "error" in result:
-            return f"很抱歉，{result['error']}。不过我还是想陪伴你，有什么想聊的吗？"
+            error_msg = result['error']
+            # 如果是API密钥未配置，给出更友好的提示
+            if "API密钥" in error_msg or "未配置" in error_msg:
+                return "我暂时无法获取实时天气信息，因为天气服务还没有配置好。不过无论天气如何，都希望你能找到让自己舒服的状态。你今天有什么特别的安排吗？"
+            else:
+                return f"很抱歉，{error_msg}。不过我还是想陪伴你，有什么想聊的吗？"
         
         if plugin_name == "get_weather":
-            return f"查了{result.get('location', '该地')}的天气，{result.get('description', '晴朗')}，温度{result.get('temperature', 20)}℃。很舒适的天气呢~"
+            location = result.get('location', '该地')
+            description = result.get('description', '晴朗')
+            temperature = result.get('temperature', 20)
+            humidity = result.get('humidity', 0)
+            feels_like = result.get('feels_like', temperature)
+            
+            # 生成更自然的回复
+            reply = f"我帮你查了{location}的天气，{description}，温度{temperature}℃"
+            if feels_like != temperature:
+                reply += f"，体感温度{feels_like}℃"
+            if humidity:
+                reply += f"，湿度{humidity}%"
+            reply += "。"
+            
+            # 根据天气给出建议
+            if "晴" in description or "sunny" in description.lower():
+                reply += "很舒适的天气呢，适合出门走走~"
+            elif "雨" in description or "rain" in description.lower():
+                reply += "记得带伞哦，照顾好自己。"
+            elif "阴" in description or "cloudy" in description.lower():
+                reply += "天气有点阴沉，但心情可以保持晴朗呢。"
+            else:
+                reply += "无论天气如何，都希望你能找到让自己舒服的状态。"
+            
+            return reply
         
         elif plugin_name == "get_latest_news":
             articles = result.get('articles', [])
@@ -428,6 +644,18 @@ class EmotionalChatEngineWithPlugins:
             import traceback
             traceback.print_exc()
             return XINYU_SYSTEM_PROMPT
+    
+    def analyze_emotion(self, message: str) -> Dict[str, Any]:
+        """
+        分析用户消息的情感（公开接口，兼容 SimpleEmotionalChatEngine）
+        
+        Args:
+            message: 用户消息
+            
+        Returns:
+            情感分析结果字典，包含 emotion, intensity, keywords, suggestions
+        """
+        return self._analyze_emotion_simple(message)
     
     def _analyze_emotion_simple(self, message: str) -> Dict[str, Any]:
         """简单的情感分析"""

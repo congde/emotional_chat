@@ -14,23 +14,33 @@ class WeatherPlugin(BasePlugin):
     """天气查询插件 - 使用和风天气API"""
     
     def __init__(self, api_key: str = None):
-        # 如果没有提供API key，尝试从环境变量获取
-        api_key = api_key or os.getenv("HEFENG_WEATHER_API_KEY") or os.getenv("WEATHER_API_KEY")
+        # 优先使用 OpenWeatherMap API（如果配置了）
+        openweather_key = os.getenv("OPENWEATHER_API_KEY")
+        if openweather_key:
+            api_key = api_key or openweather_key
+            self.use_openweather = True
+            self.use_free_api = False
+            self.base_url = "https://api.openweathermap.org/data/2.5/weather"
+        else:
+            # 如果没有提供API key，尝试从环境变量获取和风天气API密钥
+            api_key = api_key or os.getenv("HEFENG_WEATHER_API_KEY") or os.getenv("WEATHER_API_KEY")
+            if api_key:
+                self.use_openweather = False
+                self.use_free_api = False
+                # 和风天气 API
+                self.base_url = "https://devapi.qweather.com/v7/weather/now"
+            else:
+                # 没有配置API密钥，使用免费的备用API
+                self.use_openweather = False
+                self.use_free_api = True
+                self.base_url = None  # 免费API不需要base_url
+                logger.info("未配置天气API密钥，将使用免费的wttr.in API")
         
         super().__init__(
             name="get_weather",
             description="获取指定城市的实时天气信息，包括温度、天气状况、风力、湿度等",
             api_key=api_key
         )
-        
-        # 如果使用 OpenWeatherMap API（备选）
-        self.use_openweather = bool(api_key and os.getenv("OPENWEATHER_API_KEY"))
-        
-        if self.use_openweather:
-            self.base_url = "https://api.openweathermap.org/data/2.5/weather"
-        else:
-            # 和风天气 API
-            self.base_url = "https://devapi.qweather.com/v7/weather/now"
     
     @property
     def function_schema(self) -> Dict[str, Any]:
@@ -63,9 +73,6 @@ class WeatherPlugin(BasePlugin):
         if not self.enabled:
             return {"error": "插件已禁用"}
         
-        if not self.api_key:
-            return {"error": "天气API密钥未配置"}
-        
         location = kwargs.get("location")
         if not self.validate_params(**kwargs):
             return {"error": "参数验证失败"}
@@ -73,6 +80,8 @@ class WeatherPlugin(BasePlugin):
         try:
             if self.use_openweather:
                 return self._query_openweather(location)
+            elif self.use_free_api:
+                return self._query_free_api(location)
             else:
                 return self._query_qweather(location)
         
@@ -89,26 +98,101 @@ class WeatherPlugin(BasePlugin):
             'lang': 'zh_cn'
         }
         
-        response = requests.get(self.base_url, params=params, timeout=10)
-        
-        if response.status_code != 200:
+        try:
+            response = requests.get(self.base_url, params=params, timeout=10)
+            
+            if response.status_code != 200:
+                error_data = response.json() if response.text else {}
+                error_msg = error_data.get("message", f"天气查询失败，状态码: {response.status_code}")
+                logger.error(f"OpenWeatherMap API错误: {error_msg}")
+                return {"error": error_msg}
+            
             data = response.json()
-            return {"error": data.get("message", "天气查询失败")}
-        
-        data = response.json()
-        
-        return {
-            "location": data["name"],
-            "temperature": data["main"]["temp"],
-            "description": data["weather"][0]["description"],
-            "humidity": data["main"]["humidity"],
-            "wind_speed": data["wind"].get("speed", 0),
-            "feels_like": data["main"].get("feels_like"),
-            "pressure": data["main"].get("pressure")
-        }
+            
+            return {
+                "location": data.get("name", location),
+                "temperature": round(data["main"]["temp"], 1),
+                "description": data["weather"][0]["description"] if data.get("weather") else "未知",
+                "humidity": data["main"].get("humidity", 0),
+                "wind_speed": round(data["wind"].get("speed", 0), 1),
+                "feels_like": round(data["main"].get("feels_like", data["main"]["temp"]), 1),
+                "pressure": data["main"].get("pressure", 0)
+            }
+        except requests.exceptions.RequestException as e:
+            logger.error(f"OpenWeatherMap API请求异常: {e}")
+            return {"error": f"网络请求失败: {str(e)}"}
+        except Exception as e:
+            logger.error(f"OpenWeatherMap API解析异常: {e}")
+            return {"error": f"数据解析失败: {str(e)}"}
+    
+    def _query_free_api(self, location: str) -> Dict[str, Any]:
+        """使用免费的wttr.in API查询（无需API密钥）"""
+        try:
+            # wttr.in 是一个免费的天气服务，支持多种格式
+            # 使用JSON格式获取数据
+            url = f"https://wttr.in/{location}?format=j1&lang=zh"
+            headers = {
+                "User-Agent": "Mozilla/5.0 (compatible; WeatherBot/1.0)"
+            }
+            
+            response = requests.get(url, headers=headers, timeout=10)
+            
+            if response.status_code != 200:
+                logger.error(f"wttr.in API错误: {response.status_code}")
+                return {"error": f"天气查询失败，状态码: {response.status_code}"}
+            
+            data = response.json()
+            
+            # 解析wttr.in的JSON格式
+            current = data.get("current_condition", [{}])[0]
+            location_info = data.get("nearest_area", [{}])[0]
+            
+            # 获取城市名称
+            city_name = location_info.get("areaName", [{}])[0].get("value", location)
+            
+            # 温度（摄氏度）
+            temp_c = float(current.get("temp_C", 0))
+            
+            # 天气描述
+            weather_desc = current.get("weatherDesc", [{}])[0].get("value", "未知")
+            
+            # 湿度
+            humidity = int(current.get("humidity", 0))
+            
+            # 风速（km/h）
+            wind_speed_kmh = float(current.get("windspeedKmph", 0))
+            wind_speed_ms = round(wind_speed_kmh / 3.6, 1)  # 转换为m/s
+            
+            # 体感温度
+            feels_like = float(current.get("FeelsLikeC", temp_c))
+            
+            # 气压
+            pressure = int(current.get("pressure", 0))
+            
+            return {
+                "location": city_name,
+                "temperature": round(temp_c, 1),
+                "description": weather_desc,
+                "humidity": humidity,
+                "wind_speed": wind_speed_ms,
+                "feels_like": round(feels_like, 1),
+                "pressure": pressure,
+                "note": "使用免费的wttr.in API"
+            }
+        except requests.exceptions.RequestException as e:
+            logger.error(f"wttr.in API请求异常: {e}")
+            return {"error": f"网络请求失败: {str(e)}"}
+        except Exception as e:
+            logger.error(f"wttr.in API解析异常: {e}")
+            return {"error": f"数据解析失败: {str(e)}"}
     
     def _query_qweather(self, location: str) -> Dict[str, Any]:
-        """使用和风天气API查询（示例实现）"""
+        """使用和风天气API查询（需要API密钥）"""
+        if not self.api_key:
+            # 如果没有API密钥，回退到免费API
+            logger.info(f"和风天气API密钥未配置，使用免费API: {location}")
+            return self._query_free_api(location)
+        
         # 这里使用模拟数据，实际需要调用和风天气API
         # 和风天气需要先获取location_id，然后查询天气
         
