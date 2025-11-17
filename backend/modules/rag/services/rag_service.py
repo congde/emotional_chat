@@ -291,15 +291,36 @@ class RAGService:
     
     def is_knowledge_available(self) -> bool:
         """
-        检查知识库是否可用
+        检查知识库是否可用，如果不可用则尝试自动初始化
         
         Returns:
             是否可用
         """
         try:
             stats = self.kb_manager.get_stats()
-            return stats.get("status") == "就绪" and stats.get("document_count", 0) > 0
-        except:
+            if stats.get("status") == "就绪" and stats.get("document_count", 0) > 0:
+                return True
+            
+            # 如果知识库未初始化，尝试自动初始化
+            logger.info("知识库未初始化，尝试自动加载示例知识...")
+            try:
+                from ..core.knowledge_base import PsychologyKnowledgeLoader
+                loader = PsychologyKnowledgeLoader(self.kb_manager)
+                loader.load_sample_knowledge()
+                
+                # 再次检查
+                stats = self.kb_manager.get_stats()
+                if stats.get("status") == "就绪" and stats.get("document_count", 0) > 0:
+                    logger.info(f"知识库自动初始化成功，文档数: {stats.get('document_count', 0)}")
+                    return True
+                else:
+                    logger.warning("知识库自动初始化后仍不可用")
+                    return False
+            except Exception as e:
+                logger.warning(f"知识库自动初始化失败: {e}")
+                return False
+        except Exception as e:
+            logger.error(f"检查知识库可用性时出错: {e}")
             return False
 
 

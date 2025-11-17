@@ -6,6 +6,8 @@ Agent Core - Agent核心控制器
 - Planner: 任务规划
 - Tool Caller: 工具调用
 - Reflector: 反思优化
+
+支持MCP协议：所有模块间通信使用标准化的MCP协议
 """
 
 import json
@@ -17,6 +19,16 @@ from .memory_hub import MemoryHub, get_memory_hub
 from .planner import Planner
 from .tool_caller import ToolCaller, get_tool_caller
 from .reflector import Reflector, get_reflector
+
+# 导入MCP协议
+import sys
+import os
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+sys.path.insert(0, project_root)
+
+from backend.modules.agent.protocol.mcp import (
+    MCPMessage, MCPProtocol, MCPContext, MCPMessageType, get_mcp_logger
+)
 
 
 class AgentCore:
@@ -58,6 +70,11 @@ class AgentCore:
         
         # 执行历史
         self.execution_history: List[Dict[str, Any]] = []
+        
+        # MCP协议支持
+        self.mcp_protocol = MCPProtocol()
+        self.mcp_logger = get_mcp_logger()
+        self.use_mcp = True  # 是否使用MCP协议（可配置）
     
     def _init_legacy_components(self):
         """初始化现有系统组件"""
@@ -209,6 +226,261 @@ class AgentCore:
                 "error": str(e),
                 "response_time": (datetime.now() - start_time).total_seconds()
             }
+    
+    async def process_with_mcp(
+        self,
+        user_input: str,
+        user_id: str,
+        conversation_id: Optional[str] = None
+    ) -> MCPMessage:
+        """
+        使用MCP协议处理用户输入（新接口）
+        
+        Args:
+            user_input: 用户输入
+            user_id: 用户ID
+            conversation_id: 对话ID（可选）
+            
+        Returns:
+            最终的MCP消息（包含Agent回复）
+        """
+        interaction_id = str(uuid.uuid4())
+        start_time = datetime.now()
+        
+        try:
+            # ===== 阶段1: 感知层 =====
+            perception = await self._perceive(user_input, user_id)
+            
+            # ===== 阶段2: 记忆检索 =====
+            # 检索相关记忆
+            relevant_memories = self.memory_hub.retrieve(
+                query=user_input,
+                user_id=user_id,
+                context={
+                    "emotion": perception.get("emotion", ""),
+                    "time_range": 30
+                },
+                top_k=5
+            )
+            
+            # 获取用户画像
+            user_profile = self.memory_hub.get_user_profile(user_id)
+            
+            # 获取对话历史
+            working_memory = self.memory_hub.get_working_memory()
+            conversation_history = working_memory.get("conversation", [])
+            
+            # ===== 阶段3: 创建用户输入MCP消息 =====
+            user_mcp_message = self.mcp_protocol.create_user_input(
+                content=user_input,
+                user_profile={**user_profile, "user_id": user_id} if user_profile else {"user_id": user_id},
+                emotion_state={
+                    "emotion": perception.get("emotion", "平静"),
+                    "intensity": perception.get("emotion_intensity", 5.0),
+                    "data": perception.get("emotion_data", {})
+                },
+                conversation_history=conversation_history[-10:]  # 最近10轮对话
+            )
+            user_mcp_message.metadata = {
+                "interaction_id": interaction_id,
+                "conversation_id": conversation_id
+            }
+            self.mcp_logger.log(user_mcp_message)
+            
+            # ===== 阶段4: Planner规划（使用MCP） =====
+            planner_mcp_message = await self.planner.plan_with_mcp(user_mcp_message)
+            
+            # ===== 阶段5: 执行工具调用（如果有） =====
+            tool_response_mcp_message = None
+            if planner_mcp_message.tool_calls:
+                tool_response_mcp_message = await self.tool_caller.call_with_mcp(planner_mcp_message)
+            
+            # ===== 阶段6: 生成回复 =====
+            # 合并上下文和工具结果
+            final_context = MCPContext(
+                user_profile=user_mcp_message.context.user_profile,
+                emotion_state=user_mcp_message.context.emotion_state,
+                task_goal=planner_mcp_message.context.task_goal,
+                memory_summary={
+                    "memories": [
+                        {
+                            "content": m.get("content", ""),
+                            "emotion": m.get("emotion", {}),
+                            "importance": m.get("importance", 0)
+                        }
+                        for m in relevant_memories
+                    ]
+                },
+                conversation_history=conversation_history
+            )
+            
+            # 生成回复内容
+            response_content = await self._generate_response_with_mcp(
+                user_input=user_input,
+                context=final_context,
+                tool_responses=tool_response_mcp_message.tool_responses if tool_response_mcp_message else []
+            )
+            
+            # ===== 阶段7: 创建Agent回复MCP消息 =====
+            response_time = (datetime.now() - start_time).total_seconds()
+            agent_response = self.mcp_protocol.create_agent_response(
+                content=response_content,
+                context=final_context,
+                tool_responses=tool_response_mcp_message.tool_responses if tool_response_mcp_message else []
+            )
+            agent_response.metadata = {
+                "interaction_id": interaction_id,
+                "conversation_id": conversation_id,
+                "response_time": response_time
+            }
+            self.mcp_logger.log(agent_response)
+            
+            # ===== 阶段8: Reflector评估（使用MCP） =====
+            # 创建评估用的MCP消息（合并所有信息）
+            evaluation_mcp_message = MCPMessage(
+                message_type=MCPMessageType.INTERNAL_COMMUNICATION,
+                content=user_input,
+                context=final_context,
+                tool_responses=agent_response.tool_responses,
+                metadata={
+                    "interaction_id": interaction_id,
+                    "response": response_content,
+                    "response_time": response_time
+                }
+            )
+            evaluation_result = await self.reflector.evaluate_with_mcp(evaluation_mcp_message)
+            
+            # ===== 阶段9: 记忆巩固 =====
+            current_memory = self.memory_hub.encode({
+                "content": user_input,
+                "emotion": perception.get("emotion_data", {}),
+                "user_id": user_id,
+                "role": "user"
+            })
+            self.memory_hub.consolidate(current_memory)
+            
+            # 更新工作记忆
+            self.memory_hub.update_working_memory(
+                conversation=[
+                    {"role": "user", "content": user_input},
+                    {"role": "assistant", "content": response_content}
+                ]
+            )
+            
+            # ===== 阶段10: 记录执行历史 =====
+            execution_record = {
+                "interaction_id": interaction_id,
+                "user_id": user_id,
+                "timestamp": datetime.now(),
+                "mcp_messages": [
+                    user_mcp_message.message_id,
+                    planner_mcp_message.message_id,
+                    agent_response.message_id,
+                    evaluation_result.message_id
+                ],
+                "response_time": response_time
+            }
+            self.execution_history.append(execution_record)
+            
+            return agent_response
+        
+        except Exception as e:
+            print(f"Agent MCP处理错误: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            
+            # 返回错误MCP消息
+            error_context = MCPContext(
+                user_profile={"user_id": user_id},
+                metadata={"error": str(e)}
+            )
+            error_message = MCPMessage(
+                message_type=MCPMessageType.AGENT_RESPONSE,
+                content="抱歉，我遇到了一些问题。能再说一遍吗？",
+                context=error_context,
+                metadata={
+                    "interaction_id": interaction_id,
+                    "error": str(e),
+                    "response_time": (datetime.now() - start_time).total_seconds()
+                }
+            )
+            self.mcp_logger.log(error_message)
+            return error_message
+    
+    async def _generate_response_with_mcp(
+        self,
+        user_input: str,
+        context: MCPContext,
+        tool_responses: List
+    ) -> str:
+        """
+        基于MCP上下文生成回复
+        
+        Args:
+            user_input: 用户输入
+            context: MCP上下文
+            tool_responses: 工具响应列表
+            
+        Returns:
+            生成的回复内容
+        """
+        try:
+            # 组装完整上下文
+            if self.context_assembler:
+                full_context = self.context_assembler.assemble(
+                    user_id=context.user_profile.get("user_id") if context.user_profile else None,
+                    current_message=user_input,
+                    emotion_data=context.emotion_state or {},
+                    memories=context.memory_summary.get("memories", []) if context.memory_summary else []
+                )
+            else:
+                # 简化的上下文组装
+                parts = []
+                if context.user_profile:
+                    parts.append(f"用户信息：{context.user_profile.get('username', '用户')}")
+                if context.memory_summary and context.memory_summary.get("memories"):
+                    parts.append("相关记忆：")
+                    for mem in context.memory_summary["memories"][:3]:
+                        parts.append(f"  - {mem.get('content', '')}")
+                if tool_responses:
+                    parts.append("工具结果：")
+                    for tr in tool_responses:
+                        if tr.success:
+                            parts.append(f"  - {tr.tool_name}: {str(tr.result)[:100]}")
+                full_context = "\n".join(parts)
+            
+            # 调用LLM生成回复
+            if self.llm:
+                response = await self._call_llm(full_context, user_input)
+            else:
+                # 降级：使用模板回复
+                emotion = context.emotion_state.get("emotion") if context.emotion_state else "平静"
+                response = self._template_response(emotion, tool_responses)
+            
+            return response
+        
+        except Exception as e:
+            print(f"生成回复失败: {str(e)}")
+            return "我理解你的感受。能多告诉我一些吗？"
+    
+    def _template_response(self, emotion: str, tool_responses: List) -> str:
+        """模板回复（降级方案）"""
+        templates = {
+            "焦虑": "我能感受到你的焦虑。深呼吸，我们一起来面对。有什么具体让你担心的吗？",
+            "难过": "我能理解你现在的难过。允许自己感受这些情绪是很重要的。想聊聊吗？",
+            "愤怒": "我听到了你的愤怒。这些感受是完全正常的。能告诉我发生了什么吗？",
+            "开心": "真为你感到开心！能分享一下是什么让你这么高兴吗？",
+        }
+        
+        base_response = templates.get(emotion, "我在这里倾听。想跟我聊聊吗？")
+        
+        # 如果有工具结果，添加相关信息
+        if tool_responses:
+            successful_tools = [tr for tr in tool_responses if tr.success]
+            if successful_tools:
+                base_response += " 我已经为你查找了一些相关信息。"
+        
+        return base_response
     
     async def _perceive(
         self, 

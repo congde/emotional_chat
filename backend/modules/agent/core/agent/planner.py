@@ -6,12 +6,25 @@ Planner - 规划模块
 - 任务排序
 - 策略选择
 - 执行计划生成
+
+支持MCP协议：接收MCP消息，输出标准化的MCP消息
 """
 
 import json
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from enum import Enum
+
+# 导入MCP协议
+import sys
+import os
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+sys.path.insert(0, project_root)
+
+from backend.modules.agent.protocol.mcp import (
+    MCPMessage, MCPProtocol, MCPToolCall, MCPContext, 
+    MCPMessageType, get_mcp_logger
+)
 
 
 class GoalType(Enum):
@@ -80,6 +93,10 @@ class Planner:
         
         # 规则库
         self.rules = self._init_rules()
+        
+        # MCP协议支持
+        self.mcp_protocol = MCPProtocol()
+        self.mcp_logger = get_mcp_logger()
     
     async def plan(
         self, 
@@ -87,7 +104,7 @@ class Planner:
         context: Dict[str, Any]
     ) -> ExecutionPlan:
         """
-        生成执行计划
+        生成执行计划（传统接口，保持向后兼容）
         
         Args:
             user_input: 用户输入
@@ -428,6 +445,106 @@ class Planner:
                 "tool_count": sum(1 for s in steps if s["action"] == "tool_call")
             }
         )
+    
+    async def plan_with_mcp(
+        self,
+        mcp_message: MCPMessage
+    ) -> MCPMessage:
+        """
+        使用MCP协议进行规划（新接口）
+        
+        Args:
+            mcp_message: 输入的MCP消息（通常来自Agent Core）
+            
+        Returns:
+            输出的MCP消息（包含规划结果和工具调用指令）
+        """
+        # 提取信息
+        user_input = mcp_message.content
+        mcp_context = mcp_message.context
+        
+        # 转换为传统context格式
+        context = {
+            "user_input": user_input,
+            "user_id": mcp_context.user_profile.get("user_id") if mcp_context.user_profile else None,
+            "perception": {
+                "emotion": mcp_context.emotion_state.get("emotion") if mcp_context.emotion_state else "平静",
+                "emotion_intensity": mcp_context.emotion_state.get("intensity", 5.0) if mcp_context.emotion_state else 5.0
+            },
+            "memories": mcp_context.memory_summary.get("memories", []) if mcp_context.memory_summary else [],
+            "user_profile": mcp_context.user_profile or {}
+        }
+        
+        # 生成执行计划
+        execution_plan = await self.plan(user_input, context)
+        
+        # 构建任务目标
+        goal_type = execution_plan.goal.get("goal_type")
+        if hasattr(goal_type, "value"):
+            goal_type_value = goal_type.value
+        else:
+            goal_type_value = str(goal_type) if goal_type else ""
+        
+        complexity = execution_plan.goal.get("complexity")
+        if hasattr(complexity, "value"):
+            complexity_value = complexity.value
+        else:
+            complexity_value = str(complexity) if complexity else ""
+        
+        task_goal = {
+            "goal_type": goal_type_value,
+            "complexity": complexity_value,
+            "urgency": execution_plan.goal.get("urgency", "medium"),
+            "description": execution_plan.goal.get("description", "")
+        }
+        
+        # 转换为MCP工具调用
+        tool_calls = []
+        for step in execution_plan.steps:
+            if step.get("action") == "tool_call":
+                tool_call = MCPToolCall(
+                    tool_name=step.get("tool", ""),
+                    parameters=step.get("parameters", {})
+                )
+                tool_calls.append(tool_call)
+        
+        # 生成规划说明
+        plan_description = f"目标：{task_goal['description']}，策略：{execution_plan.strategy.value}，步骤数：{len(execution_plan.steps)}"
+        
+        # 创建MCP上下文（合并原有上下文）
+        output_context = MCPContext(
+            user_profile=mcp_context.user_profile,
+            emotion_state=mcp_context.emotion_state,
+            task_goal=task_goal,
+            memory_summary=mcp_context.memory_summary,
+            conversation_history=mcp_context.conversation_history,
+            metadata={
+                "strategy": execution_plan.strategy.value,
+                "steps_count": len(execution_plan.steps),
+                "plan_metadata": execution_plan.metadata
+            }
+        )
+        
+        # 创建MCP输出消息
+        output_message = self.mcp_protocol.create_planner_output(
+            content=plan_description,
+            task_goal=task_goal,
+            tool_calls=tool_calls,
+            context=output_context
+        )
+        
+        # 设置元数据
+        output_message.metadata = {
+            **(output_message.metadata or {}),
+            "interaction_id": mcp_message.metadata.get("interaction_id") if mcp_message.metadata else None,
+            "plan_id": execution_plan.metadata.get("plan_id"),
+            "execution_plan": execution_plan.to_dict()
+        }
+        
+        # 记录日志
+        self.mcp_logger.log(output_message)
+        
+        return output_message
     
     def _generate_tool_parameters(
         self,

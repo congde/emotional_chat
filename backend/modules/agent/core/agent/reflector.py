@@ -6,12 +6,25 @@ Reflector - 反思模块
 - 策略优化
 - 主动回访规划
 - 经验学习
+
+支持MCP协议：接收MCP消息，输出标准化的评估结果
 """
 
 import json
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from enum import Enum
+
+# 导入MCP协议
+import sys
+import os
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+sys.path.insert(0, project_root)
+
+from backend.modules.agent.protocol.mcp import (
+    MCPMessage, MCPProtocol, MCPContext,
+    MCPMessageType, get_mcp_logger
+)
 
 
 class InteractionResult(Enum):
@@ -47,6 +60,10 @@ class Reflector:
         
         # 评估规则
         self.evaluation_rules = self._init_evaluation_rules()
+        
+        # MCP协议支持
+        self.mcp_protocol = MCPProtocol()
+        self.mcp_logger = get_mcp_logger()
     
     async def evaluate(
         self, 
@@ -92,6 +109,85 @@ class Reflector:
             "analysis": analysis,
             "improvements": improvements
         }
+    
+    async def evaluate_with_mcp(
+        self,
+        mcp_message: MCPMessage
+    ) -> MCPMessage:
+        """
+        使用MCP协议进行评估（新接口）
+        
+        Args:
+            mcp_message: 输入的MCP消息（包含交互信息）
+            
+        Returns:
+            输出的MCP消息（包含评估结果）
+        """
+        # 从MCP消息中提取交互信息
+        interaction = {
+            "id": mcp_message.metadata.get("interaction_id") if mcp_message.metadata else mcp_message.message_id,
+            "user_id": mcp_message.context.user_profile.get("user_id") if mcp_message.context.user_profile else None,
+            "input": mcp_message.content,
+            "perception": {
+                "emotion": mcp_message.context.emotion_state.get("emotion") if mcp_message.context.emotion_state else "平静",
+                "emotion_intensity": mcp_message.context.emotion_state.get("intensity", 5.0) if mcp_message.context.emotion_state else 5.0
+            },
+            "plan": mcp_message.context.task_goal or {},
+            "results": [
+                {
+                    "type": "tool_response",
+                    "success": tr.success,
+                    "tool": tr.tool_name,
+                    "result": tr.result
+                }
+                for tr in mcp_message.tool_responses
+            ],
+            "response": mcp_message.content,
+            "response_time": mcp_message.metadata.get("response_time", 0) if mcp_message.metadata else 0,
+            "feedback_score": mcp_message.metadata.get("feedback_score", 0.5) if mcp_message.metadata else 0.5,
+            "goal_achieved": mcp_message.metadata.get("goal_achieved", False) if mcp_message.metadata else False
+        }
+        
+        # 执行评估
+        evaluation_result = await self.evaluate(interaction)
+        
+        # 创建评估说明
+        evaluation_content = f"评估结果：{evaluation_result['result']}，评分：{evaluation_result['score']:.2f}"
+        if evaluation_result.get("improvements"):
+            evaluation_content += f"，改进建议：{', '.join(evaluation_result['improvements'][:2])}"
+        
+        # 创建MCP上下文
+        base_metadata = mcp_message.context.metadata or {}
+        merged_metadata = dict(base_metadata)
+        merged_metadata["evaluation"] = evaluation_result
+        
+        output_context = MCPContext(
+            user_profile=mcp_message.context.user_profile,
+            emotion_state=mcp_message.context.emotion_state,
+            task_goal=mcp_message.context.task_goal,
+            memory_summary=mcp_message.context.memory_summary,
+            conversation_history=mcp_message.context.conversation_history,
+            metadata=merged_metadata
+        )
+        
+        # 创建MCP评估消息
+        output_message = self.mcp_protocol.create_reflector_evaluation(
+            content=evaluation_content,
+            evaluation_result=evaluation_result,
+            context=output_context
+        )
+        
+        # 设置元数据
+        output_message.metadata = {
+            **(output_message.metadata or {}),
+            "interaction_id": interaction["id"],
+            "source_message_id": mcp_message.message_id
+        }
+        
+        # 记录日志
+        self.mcp_logger.log(output_message)
+        
+        return output_message
     
     async def plan_followup(
         self, 

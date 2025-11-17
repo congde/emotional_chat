@@ -6,12 +6,25 @@ Tool Caller - 工具调用模块
 - 工具调用执行
 - 参数验证
 - 结果解析
+
+支持MCP协议：接收MCP工具请求，返回标准化的MCP工具响应
 """
 
 import json
 from typing import List, Dict, Any, Optional, Callable
 from datetime import datetime
 import inspect
+
+# 导入MCP协议
+import sys
+import os
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+sys.path.insert(0, project_root)
+
+from backend.modules.agent.protocol.mcp import (
+    MCPMessage, MCPProtocol, MCPToolCall, MCPToolResponse, MCPContext,
+    MCPMessageType, get_mcp_logger
+)
 
 
 class Tool:
@@ -84,6 +97,10 @@ class ToolCaller:
         
         # 调用历史
         self.call_history: List[Dict[str, Any]] = []
+        
+        # MCP协议支持
+        self.mcp_protocol = MCPProtocol()
+        self.mcp_logger = get_mcp_logger()
     
     def _register_builtin_tools(self):
         """注册内置工具"""
@@ -245,6 +262,72 @@ class ToolCaller:
                 "error": str(e),
                 "timestamp": call_record["timestamp"].isoformat()
             }
+    
+    async def call_with_mcp(
+        self,
+        mcp_message: MCPMessage
+    ) -> MCPMessage:
+        """
+        使用MCP协议执行工具调用（新接口）
+        
+        Args:
+            mcp_message: 输入的MCP消息（包含tool_calls）
+            
+        Returns:
+            输出的MCP消息（包含tool_responses）
+        """
+        import time
+        
+        tool_responses = []
+        
+        # 执行所有工具调用
+        for tool_call in mcp_message.tool_calls:
+            start_time = time.time()
+            
+            try:
+                # 调用工具
+                result = await self.call(tool_call.tool_name, tool_call.parameters)
+                execution_time = time.time() - start_time
+                
+                # 创建工具响应
+                tool_response = MCPToolResponse(
+                    tool_id=tool_call.tool_id,
+                    tool_name=tool_call.tool_name,
+                    success=result.get("success", False),
+                    result=result.get("result"),
+                    error=result.get("error"),
+                    execution_time=execution_time
+                )
+                tool_responses.append(tool_response)
+                
+            except Exception as e:
+                execution_time = time.time() - start_time
+                tool_response = MCPToolResponse(
+                    tool_id=tool_call.tool_id,
+                    tool_name=tool_call.tool_name,
+                    success=False,
+                    error=str(e),
+                    execution_time=execution_time
+                )
+                tool_responses.append(tool_response)
+        
+        # 创建MCP响应消息
+        output_message = self.mcp_protocol.create_tool_response(
+            tool_responses=tool_responses,
+            context=mcp_message.context
+        )
+        
+        # 设置元数据
+        output_message.metadata = {
+            **(output_message.metadata or {}),
+            "interaction_id": mcp_message.metadata.get("interaction_id") if mcp_message.metadata else None,
+            "source_message_id": mcp_message.message_id
+        }
+        
+        # 记录日志
+        self.mcp_logger.log(output_message)
+        
+        return output_message
     
     def _validate_parameters(self, tool: Tool, parameters: Dict[str, Any]):
         """

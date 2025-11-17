@@ -5,7 +5,7 @@ RAG知识库管理模块
 """
 
 import os
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 import logging
 from datetime import datetime
@@ -282,7 +282,7 @@ class KnowledgeBaseManager:
             logger.error(f"相似度搜索失败: {e}")
             raise
     
-    def search_with_score(self, query: str, k: int = 3) -> List[tuple]:
+    def search_with_score(self, query: str, k: int = 3) -> List[Tuple[Document, float]]:
         """
         带评分的相似度搜索
         
@@ -350,6 +350,16 @@ class KnowledgeBaseManager:
             统计信息字典
         """
         try:
+            # 检查文本存储模式（当embeddings为None时使用简单文本存储）
+            if hasattr(self, 'text_storage') and self.text_storage:
+                return {
+                    "status": "就绪",
+                    "document_count": len(self.text_storage),
+                    "persist_directory": self.persist_directory,
+                    "embedding_model": "文本存储模式"
+                }
+            
+            # 检查向量存储模式
             if self.vectorstore is None:
                 return {
                     "status": "未初始化",
