@@ -11,7 +11,7 @@ from backend.routers.personalization import router as personalization_router
 
 # 模块化路由
 from backend.modules.rag.routers.rag_router import router as rag_router
-from backend.modules.agent.routers.agent_router import router as agent_router
+from backend.routers.agent import router as agent_router
 
 __all__ = [
     "chat_router",
