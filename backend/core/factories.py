@@ -48,7 +48,7 @@ class ChatEngineFactory(ServiceFactory):
     def create_service(self, *args, **kwargs) -> IChatEngine:
         """创建聊天引擎实例"""
         try:
-            from ..simple_langchain_engine import SimpleEmotionalChatEngine
+            from ..modules.llm.core.llm_core import SimpleEmotionalChatEngine
             return SimpleEmotionalChatEngine(*args, **kwargs)
         except ImportError as e:
             raise ConfigurationError(f"无法导入聊天引擎: {e}")
