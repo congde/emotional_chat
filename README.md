@@ -1570,7 +1570,8 @@ make run              # 启动后端服务
 
 如有问题或建议，欢迎通过以下方式联系：
 - 提交 GitHub Issue
-- 发送邮件到项目维护者
+- 发送邮件到项目维护者 congdeyuan@gmail.com
+- 微信：jx-yuancongde
 
 ---
 
