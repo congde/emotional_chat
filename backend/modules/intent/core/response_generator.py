@@ -209,7 +209,10 @@ class ResponseGenerator:
                             user_emotion: str, 
                             metadata: Optional[Dict]) -> bool:
         """
-        判断是否为危机情况
+        判断是否为危机情况（核心逻辑）
+        
+        注意：完整版本包含多级风险评估、关键词动态检测、情绪强度阈值等，
+        详见：backend/modules/intent/core/crisis_intervention.py
         
         Args:
             user_emotion: 用户情绪
@@ -218,15 +221,11 @@ class ResponseGenerator:
         Returns:
             是否为危机情况
         """
-        # 1. 情绪类型判断
+        # 核心判断逻辑（精简版）
         if user_emotion == "high_risk_depression":
             return True
         
-        # 2. 高风险关键词判断
         if metadata and metadata.get("requires_crisis_intervention"):
-            return True
-        
-        if metadata and metadata.get("risk_keywords"):
             return True
         
         return False
@@ -236,7 +235,10 @@ class ResponseGenerator:
                       user_emotion: str,
                       metadata: Optional[Dict]) -> str:
         """
-        处理危机情况，返回预设的危机干预回复
+        处理危机情况，返回预设的危机干预回复（核心逻辑）
+        
+        注意：完整版本包含动态话术生成、多级干预策略、日志记录等，
+        详见：backend/modules/intent/core/crisis_intervention.py
         
         Args:
             user_input: 用户输入
@@ -246,20 +248,15 @@ class ResponseGenerator:
         Returns:
             危机干预回复
         """
-        # 获取危机策略
+        # 核心处理逻辑（精简版）
         crisis_strategy = self.emotion_strategy.get("high_risk_depression", {})
-        
-        # 使用预设的危机回复
         crisis_response = crisis_strategy.get("fallback", "")
-        
-        # 如果有配置的热线信息，可以动态添加
-        hotlines = crisis_strategy.get("crisis_hotlines", [])
         
         if crisis_response:
             return crisis_response
-        else:
-            # 默认危机回复
-            return """我非常关心你现在的情绪状态。你不是一个人，有很多人愿意帮助你。
+        
+        # 默认危机回复（核心模板）
+        return """我非常关心你现在的情绪状态。你不是一个人，有很多人愿意帮助你。
 建议你立即联系心理援助热线：
 - 希望24热线：400-161-9995
 - 北京心理危机干预中心：010-82951332

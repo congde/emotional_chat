@@ -865,6 +865,7 @@ function App() {
         if (targetSessionId === sessionId) {
           setMessages([]);
           setSessionId(null);
+          loadedSessionIdRef.current = null; // 清除已加载会话记录
           setSuggestions([]);
         }
         
@@ -882,6 +883,7 @@ function App() {
   const startNewChat = () => {
     setMessages([]);
     setSessionId(null);
+    loadedSessionIdRef.current = null; // 清除已加载会话记录
     setSuggestions([]);
     setAttachments([]);
     setDetectedURLs([]);
@@ -938,61 +940,196 @@ function App() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const loadSessionHistory = async (targetSessionId) => {
-    // 如果已经加载了相同的会话，不重复加载
-    if (targetSessionId === sessionId && messages.length > 0) {
-      console.log('会话已加载，跳过重复加载');
+  // 使用 ref 来防止重复调用，避免 React StrictMode 导致的重复执行
+  const isLoadingHistoryRef = useRef(false);
+  const currentLoadingSessionIdRef = useRef(null);
+  const loadedSessionIdRef = useRef(null); // 记录已加载的会话ID
+  
+  const loadSessionHistory = useCallback(async (targetSessionId) => {
+    console.log('[loadSessionHistory] 开始加载会话:', targetSessionId);
+    console.log('[loadSessionHistory] 当前状态 - isLoadingHistory:', isLoadingHistoryRef.current, 'currentSessionId:', currentLoadingSessionIdRef.current);
+    console.log('[loadSessionHistory] 已加载会话:', loadedSessionIdRef.current);
+    
+    // 防止重复调用：如果正在加载相同的会话，直接返回
+    if (isLoadingHistoryRef.current && currentLoadingSessionIdRef.current === targetSessionId) {
+      console.warn('[loadSessionHistory] 正在加载该会话，跳过重复请求');
       return;
     }
     
+    // 如果已经加载了相同的会话，不重复加载
+    if (targetSessionId === loadedSessionIdRef.current) {
+      console.log('[loadSessionHistory] 会话已加载，跳过重复加载');
+      return;
+    }
+    
+    // 设置加载状态
+    isLoadingHistoryRef.current = true;
+    currentLoadingSessionIdRef.current = targetSessionId;
+    console.log('[loadSessionHistory] 设置加载状态为 true');
+    
     try {
+      console.log('[loadSessionHistory] 发送API请求...');
       const response = await ChatAPI.getSessionHistory(targetSessionId);
-      console.log('收到历史消息:', response.messages.length, '条');
+      console.log('[loadSessionHistory] 收到响应:', response);
+      console.log('[loadSessionHistory] 响应类型:', typeof response);
+      console.log('[loadSessionHistory] 消息数量:', response?.messages?.length || 0);
       
-      // 去重：使用内容+时间戳+角色作为唯一标识
-      const seenMessages = new Set();
-      const uniqueMessages = [];
-      
-      // 后端返回的是按时间倒序，需要反转并按时间正序排列
-      const sortedMessages = [...response.messages].reverse();
-      
-      for (const msg of sortedMessages) {
-        // 使用更精确的唯一标识：角色+内容+时间戳
-        const msgKey = `${msg.role}_${msg.content.substring(0, 50)}_${msg.timestamp}`;
-        if (!seenMessages.has(msgKey)) {
-          seenMessages.add(msgKey);
-          uniqueMessages.push(msg);
-        } else {
-          console.warn('发现重复消息，已跳过:', msgKey);
-        }
+      // 检查响应格式
+      if (!response || !response.messages) {
+        console.error('[loadSessionHistory] 响应格式错误:', response);
+        setMessages([]);
+        return;
       }
       
-      console.log('去重后消息数量:', uniqueMessages.length);
-      
-      const sessionMessages = uniqueMessages.map((msg, index) => {
-        // 使用消息内容hash作为ID的一部分，确保唯一性
-        const contentHash = msg.content.substring(0, 20).replace(/\s/g, '_');
-        return {
-          id: `history_${targetSessionId}_${index}_${msg.timestamp}_${msg.role}_${contentHash}`, // 使用更稳定的ID
-          role: msg.role,
-          content: msg.content,
-          emotion: msg.emotion,
-          timestamp: new Date(msg.timestamp),
-          isHistory: true // 标记为历史消息
-        };
+      // 检查是否有重复消息
+      const messageKeys = new Set();
+      const duplicates = [];
+      response.messages.forEach((msg, idx) => {
+        const key = `${msg.role}_${msg.content}_${msg.timestamp}`;
+        if (messageKeys.has(key)) {
+          duplicates.push({ index: idx, key, message: msg });
+        } else {
+          messageKeys.add(key);
+        }
       });
       
-      // 确保消息按时间正序排列
-      sessionMessages.sort((a, b) => a.timestamp - b.timestamp);
+      if (duplicates.length > 0) {
+        console.warn('[loadSessionHistory] 后端返回了重复消息:', duplicates);
+      }
       
-      console.log('最终消息数量:', sessionMessages.length);
+      // 后端返回的是按时间倒序，需要转换为正序
+      // 先创建消息对象，然后去重和排序
+      const messageMap = new Map(); // 用于去重，key是数据库ID
+      const contentKeyMap = new Map(); // 记录内容+角色的组合，用于检测内容重复（忽略时间戳）
+      
+      response.messages.forEach((msg, index) => {
+        // 使用数据库ID作为主要标识
+        const dbId = msg.id;
+        
+        // 创建内容key（只基于角色和内容，忽略时间戳），用于检测内容重复
+        const contentKey = `${msg.role}_${msg.content}`;
+        
+        // 如果消息有数据库ID，使用ID作为主要去重依据
+        if (dbId) {
+          // 首先检查数据库ID是否重复
+          if (messageMap.has(dbId)) {
+            console.warn('[loadSessionHistory] 发现重复的数据库ID，已跳过:', dbId);
+            return; // 跳过重复的ID
+          }
+          
+          // 然后检查内容是否重复（即使时间戳不同）
+          if (contentKeyMap.has(contentKey)) {
+            const existingMsg = contentKeyMap.get(contentKey);
+            // 如果内容相同，保留时间更早的那条（通常是第一条）
+            const currentTime = new Date(msg.timestamp);
+            const existingTime = existingMsg.timestamp;
+            if (currentTime >= existingTime) {
+              console.warn('[loadSessionHistory] 发现重复的消息内容（时间较晚），已跳过:', contentKey, '保留ID:', existingMsg.dbId);
+              return; // 跳过内容重复且时间较晚的消息
+            } else {
+              // 如果当前消息时间更早，移除之前的，保留当前的
+              console.warn('[loadSessionHistory] 发现重复的消息内容（时间较早），替换之前的:', contentKey);
+              messageMap.delete(existingMsg.dbId);
+            }
+          }
+          
+          const messageObj = {
+            id: `history_${targetSessionId}_${dbId}_${msg.timestamp}`,
+            role: msg.role,
+            content: msg.content,
+            emotion: msg.emotion,
+            timestamp: new Date(msg.timestamp),
+            dbId: dbId, // 保存数据库ID用于排序
+            isHistory: true // 标记为历史消息
+          };
+          
+          messageMap.set(dbId, messageObj);
+          contentKeyMap.set(contentKey, messageObj);
+        } else {
+          // 如果没有数据库ID，使用内容+时间作为key
+          if (contentKeyMap.has(contentKey)) {
+            console.warn('[loadSessionHistory] 发现重复的消息内容（无ID），已跳过:', contentKey);
+            return;
+          }
+          
+          const messageObj = {
+            id: `history_${targetSessionId}_${index}_${msg.timestamp}`,
+            role: msg.role,
+            content: msg.content,
+            emotion: msg.emotion,
+            timestamp: new Date(msg.timestamp),
+            dbId: null,
+            isHistory: true
+          };
+          
+          messageMap.set(`no_id_${index}`, messageObj);
+          contentKeyMap.set(contentKey, messageObj);
+        }
+      });
+      
+      // 转换为数组
+      const sessionMessages = Array.from(messageMap.values());
+      
+      // 确保消息按时间正序排列（如果时间相同，按数据库ID排序）
+      sessionMessages.sort((a, b) => {
+        const timeDiff = a.timestamp - b.timestamp;
+        if (timeDiff !== 0) return timeDiff;
+        // 如果时间相同，按数据库ID排序
+        if (a.dbId !== undefined && b.dbId !== undefined) {
+          return a.dbId - b.dbId;
+        }
+        // 如果时间相同且没有ID，user消息应该在assistant之前
+        if (a.role === 'user' && b.role === 'assistant') return -1;
+        if (a.role === 'assistant' && b.role === 'user') return 1;
+        return 0;
+      });
+      
+      console.log('[loadSessionHistory] 去重并排序后的消息数量:', sessionMessages.length);
+      console.log('[loadSessionHistory] 消息列表:', sessionMessages.map(m => ({ 
+        id: m.id, 
+        role: m.role, 
+        content: m.content.substring(0, 30), 
+        timestamp: m.timestamp.toISOString() 
+      })));
+      
+      console.log('[loadSessionHistory] 准备设置消息，最终消息数量:', sessionMessages.length);
+      
+      // 如果没有消息，也要设置空数组，这样前端可以显示空状态
+      if (sessionMessages.length === 0) {
+        console.warn('[loadSessionHistory] 会话没有消息，设置空数组');
+        setMessages([]);
+        setSessionId(targetSessionId);
+        loadedSessionIdRef.current = targetSessionId;
+        setSuggestions([]);
+        return;
+      }
+      
+      // 使用函数式更新，确保不会重复设置
+      console.log('[loadSessionHistory] 准备设置消息到state，消息数量:', sessionMessages.length);
+      console.log('[loadSessionHistory] 消息详情:', sessionMessages.map(m => ({
+        id: m.id,
+        role: m.role,
+        contentLength: m.content.length,
+        timestamp: m.timestamp.toISOString()
+      })));
+      
       setMessages(sessionMessages);
       setSessionId(targetSessionId);
+      loadedSessionIdRef.current = targetSessionId; // 记录已加载的会话
       setSuggestions([]);
+      
+      // 注意：这里不能直接访问messages，因为它是异步更新的
+      // 消息会在下一次渲染时显示
+      
+      console.log('[loadSessionHistory] 消息已设置到state');
     } catch (error) {
-      console.error('加载会话历史失败:', error);
+      console.error('[loadSessionHistory] 加载会话历史失败:', error);
+    } finally {
+      isLoadingHistoryRef.current = false;
+      currentLoadingSessionIdRef.current = null;
+      console.log('[loadSessionHistory] 清除加载状态');
     }
-  };
+  }, []); // 移除所有依赖，使用ref来跟踪状态
 
   const sendMessage = async () => {
     if ((!inputValue.trim() && attachments.length === 0) || isLoading) return;
@@ -1220,7 +1357,12 @@ function App() {
                 <HistoryItem
                   key={session.session_id}
                   active={session.session_id === sessionId}
-                  onClick={() => loadSessionHistory(session.session_id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    console.log('[onClick] 点击历史记录项:', session.session_id);
+                    loadSessionHistory(session.session_id);
+                  }}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
@@ -1263,11 +1405,13 @@ function App() {
         </Header>
 
         <MessagesContainer>
-          <AnimatePresence>
+          <AnimatePresence initial={false}>
             {messages.length === 0 ? (
               <WelcomeMessage
+                key="welcome"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 transition={{ delay: 0.5 }}
               >
                 <h3>👋 你好！我是你的情感支持伙伴</h3>
@@ -1278,12 +1422,15 @@ function App() {
                 </p>
               </WelcomeMessage>
             ) : (
-              messages.map((message) => (
+              messages.map((message, index) => {
+                console.log('[渲染消息]', index, message.id, message.role, message.content.substring(0, 20));
+                return (
                 <MessageBubble
                   key={message.id}
                   isUser={message.role === 'user'}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.3 }}
                 >
                   <Avatar isUser={message.role === 'user'}>
@@ -1328,7 +1475,8 @@ function App() {
                     )}
                   </MessageWrapper>
                 </MessageBubble>
-              ))
+                );
+              })
             )}
           </AnimatePresence>
 

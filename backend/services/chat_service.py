@@ -300,8 +300,9 @@ class ChatService:
             }
         
         # 5.1. 保存会话和消息到数据库（如果RAG分支没有保存）
+        # 注意：llm_with_plugins.py 的 chat 方法已经保存了消息，这里不再重复保存
         if rag_result and rag_result.get("use_rag"):
-            # RAG分支需要手动保存会话和消息
+            # RAG分支只需要确保会话存在
             try:
                 with DatabaseManager() as db:
                     # 如果是新会话，创建会话记录
@@ -309,27 +310,8 @@ class ChatService:
                         print(f"ChatService创建新会话: {session_id} for user: {user_id}")
                         db.create_session(session_id, user_id)
                         print(f"ChatService会话创建完成")
-                    
-                    # 保存用户消息
-                    user_message = db.save_message(
-                        session_id=session_id,
-                        user_id=user_id,
-                        role="user",
-                        content=message,
-                        emotion=emotion,
-                        emotion_intensity=emotion_intensity
-                    )
-                    
-                    # 保存助手消息
-                    assistant_message = db.save_message(
-                        session_id=session_id,
-                        user_id=user_id,
-                        role="assistant",
-                        content=response.response,
-                        emotion="empathetic"
-                    )
-                    
-                    print(f"ChatService保存消息完成: user_msg_id={user_message.id}, assistant_msg_id={assistant_message.id}")
+                    # 消息已经在 llm_with_plugins.py 中保存，这里不再重复保存
+                    print(f"ChatService RAG分支：消息已在llm引擎中保存，跳过重复保存")
                     
             except Exception as e:
                 print(f"ChatService数据库操作失败: {e}")
@@ -347,6 +329,7 @@ class ChatService:
         )
         
         # 7. 确保会话被保存（如果还没有保存）
+        # 注意：消息已经在 llm_with_plugins.py 中保存，这里只确保会话存在
         try:
             with DatabaseManager() as db:
                 # 检查会话是否存在
@@ -358,27 +341,8 @@ class ChatService:
                     print(f"ChatService手动创建会话: {session_id} for user: {user_id}")
                     db.create_session(session_id, user_id)
                     print(f"ChatService手动会话创建完成")
-                    
-                    # 保存用户消息
-                    user_message = db.save_message(
-                        session_id=session_id,
-                        user_id=user_id,
-                        role="user",
-                        content=message,
-                        emotion=emotion,
-                        emotion_intensity=emotion_intensity
-                    )
-                    
-                    # 保存助手消息
-                    assistant_message = db.save_message(
-                        session_id=session_id,
-                        user_id=user_id,
-                        role="assistant",
-                        content=response.response,
-                        emotion="empathetic"
-                    )
-                    
-                    print(f"ChatService手动保存消息完成: user_msg_id={user_message.id}, assistant_msg_id={assistant_message.id}")
+                    # 消息已经在 llm_with_plugins.py 中保存，这里不再重复保存
+                    print(f"ChatService：消息已在llm引擎中保存，跳过重复保存")
                 else:
                     print(f"ChatService会话已存在: {session_id}")
                     
@@ -501,6 +465,15 @@ class ChatService:
                 
                 session_list = []
                 for session in sessions:
+                    # 检查会话是否有消息
+                    message_count = db.db.query(ChatMessage)\
+                        .filter(ChatMessage.session_id == session.session_id)\
+                        .count()
+                    
+                    # 如果会话没有消息，跳过（不显示在历史列表中）
+                    if message_count == 0:
+                        continue
+                    
                     # 获取会话的第一条消息作为标题
                     first_message = db.db.query(ChatMessage)\
                         .filter(ChatMessage.session_id == session.session_id)\

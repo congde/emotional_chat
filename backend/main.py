@@ -424,9 +424,8 @@ async def get_session_history(session_id: str, limit: int = 20):
         with DatabaseManager() as db:
             messages = db.get_session_messages(session_id, limit)
             
-            if not messages:
-                raise HTTPException(status_code=404, detail="会话不存在")
-            
+            # 如果没有消息，返回空列表而不是404
+            # 这样前端可以正常处理空会话的情况
             return {
                 "session_id": session_id,
                 "messages": [
@@ -440,6 +439,9 @@ async def get_session_history(session_id: str, limit: int = 20):
                     for msg in messages
                 ]
             }
+    except HTTPException:
+        # 重新抛出HTTP异常
+        raise
     except Exception as e:
         logger.error(f"获取会话历史错误: {e}")
         raise HTTPException(status_code=500, detail=str(e))

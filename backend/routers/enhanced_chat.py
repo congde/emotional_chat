@@ -48,8 +48,13 @@ async def get_session_history(session_id: str, limit: int = 20):
     """获取会话历史"""
     try:
         history = await enhanced_chat_service.get_session_history(session_id, limit)
+        # 如果没有消息，返回空列表而不是404
+        # 这样前端可以正常处理空会话的情况
         if not history.get("messages"):
-            raise HTTPException(status_code=404, detail="会话不存在或无消息")
+            return {
+                "session_id": session_id,
+                "messages": []
+            }
         return history
     except HTTPException:
         raise
