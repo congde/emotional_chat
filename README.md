@@ -232,6 +232,7 @@ cd frontend && npm start  # 前端服务（新终端）
 ### 访问地址
 
 - 🌐 **前端界面**: http://localhost:3000
+image.png
 - 🔌 **后端API**: http://localhost:8000
 - 📖 **API文档**: http://localhost:8000/docs
 
@@ -1137,11 +1138,21 @@ GET http://localhost:8000/sessions/{session_id}/summary
 
 ## 🎨 界面预览
 
-- 现代化的聊天界面设计
+### 首页界面
+
+![首页界面](image/首页界面.png)
+
+现代化的聊天界面设计，包含：
 - 情感标签可视化
 - 建议按钮快速回复
 - 流畅的动画效果
 - 响应式设计，支持移动端
+
+### AI形象定制
+
+![AI形象定制](image/AI形象定制.png)
+
+个性化AI形象定制功能，让AI陪伴更加生动有趣。
 
 ## 🔮 未来规划
 

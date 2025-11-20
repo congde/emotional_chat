@@ -939,15 +939,53 @@ function App() {
   };
 
   const loadSessionHistory = async (targetSessionId) => {
+    // 如果已经加载了相同的会话，不重复加载
+    if (targetSessionId === sessionId && messages.length > 0) {
+      console.log('会话已加载，跳过重复加载');
+      return;
+    }
+    
     try {
       const response = await ChatAPI.getSessionHistory(targetSessionId);
-      const sessionMessages = response.messages.map(msg => ({
-        id: Date.now() + Math.random(),
-        role: msg.role,
-        content: msg.content,
-        emotion: msg.emotion,
-        timestamp: new Date(msg.timestamp)
-      }));
+      console.log('收到历史消息:', response.messages.length, '条');
+      
+      // 去重：使用内容+时间戳+角色作为唯一标识
+      const seenMessages = new Set();
+      const uniqueMessages = [];
+      
+      // 后端返回的是按时间倒序，需要反转并按时间正序排列
+      const sortedMessages = [...response.messages].reverse();
+      
+      for (const msg of sortedMessages) {
+        // 使用更精确的唯一标识：角色+内容+时间戳
+        const msgKey = `${msg.role}_${msg.content.substring(0, 50)}_${msg.timestamp}`;
+        if (!seenMessages.has(msgKey)) {
+          seenMessages.add(msgKey);
+          uniqueMessages.push(msg);
+        } else {
+          console.warn('发现重复消息，已跳过:', msgKey);
+        }
+      }
+      
+      console.log('去重后消息数量:', uniqueMessages.length);
+      
+      const sessionMessages = uniqueMessages.map((msg, index) => {
+        // 使用消息内容hash作为ID的一部分，确保唯一性
+        const contentHash = msg.content.substring(0, 20).replace(/\s/g, '_');
+        return {
+          id: `history_${targetSessionId}_${index}_${msg.timestamp}_${msg.role}_${contentHash}`, // 使用更稳定的ID
+          role: msg.role,
+          content: msg.content,
+          emotion: msg.emotion,
+          timestamp: new Date(msg.timestamp),
+          isHistory: true // 标记为历史消息
+        };
+      });
+      
+      // 确保消息按时间正序排列
+      sessionMessages.sort((a, b) => a.timestamp - b.timestamp);
+      
+      console.log('最终消息数量:', sessionMessages.length);
       setMessages(sessionMessages);
       setSessionId(targetSessionId);
       setSuggestions([]);
@@ -1256,7 +1294,7 @@ function App() {
                       isUser={message.role === 'user'}
                       emotion={message.emotion}
                     >
-                      {message.role === 'assistant' ? (
+                      {message.role === 'assistant' && !message.isHistory ? (
                         <TypewriterComponent
                           text={message.content}
                           speed={message.emotion === 'sad' ? 40 : message.emotion === 'angry' ? 20 : message.emotion === 'happy' ? 25 : 30}
