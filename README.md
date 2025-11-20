@@ -14,18 +14,17 @@
 ## 📑 目录
 
 - [功能特点](#-功能特点)
-- [系统架构](#️-系统架构)
-- [数据库设计](#️-数据库设计)
-- [技术栈](#️-技术栈)
 - [快速开始](#-快速开始)
+- [系统架构](#️-系统架构)
+- [技术栈](#️-技术栈)
 - [项目结构](#-项目结构)
 - [API接口文档](#-api接口文档)
-- [核心功能实现](#-核心功能实现)
-- [未来规划](#-未来规划)
-- [版本历史](#-版本历史)
+- [核心功能](#-核心功能)
+- [界面预览](#-界面预览)
 - [生产部署](#-生产部署)
 - [Makefile命令](#️-makefile-命令速查)
 - [相关文档](#-相关文档)
+- [版本历史](#-版本历史)
 - [贡献指南](#-贡献指南)
 
 ## ✨ 功能特点
@@ -212,6 +211,141 @@ python init_rag_knowledge.py
 - 👤 **用户画像**: 自动构建用户性格特征和偏好
 - 😊 **情感模式学习**: 学习用户的情感表达模式
 
+## 🚀 快速开始
+
+> 💡 **提示**: 完整详细的安装指南请查看 [快速开始详细指南](#快速开始详细指南)
+
+### 快速启动（3步）
+
+```bash
+# 1. 安装依赖
+make install
+
+# 2. 初始化数据库
+make db-upgrade
+
+# 3. 启动服务
+make run              # 后端服务
+cd frontend && npm start  # 前端服务（新终端）
+```
+
+### 访问地址
+
+- 🌐 **前端界面**: http://localhost:3000
+- 🔌 **后端API**: http://localhost:8000
+- 📖 **API文档**: http://localhost:8000/docs
+
+### Docker 一键部署
+
+```bash
+# 配置环境变量
+cp config.env.example config.env
+nano config.env
+
+# 启动所有服务
+docker-compose up -d
+```
+
+---
+
+## 快速开始详细指南
+
+### 1. 环境准备
+
+#### 1.1 安装系统依赖
+
+```bash
+# CentOS/RHEL/Alibaba Cloud Linux
+sudo yum install -y cmake gcc gcc-c++ make
+
+# Ubuntu/Debian
+sudo apt update && sudo apt install -y cmake gcc g++ make build-essential
+```
+
+#### 1.2 安装Python依赖
+
+```bash
+cd /home/workSpace/emotional_chat
+pip3 install --user -r requirements.txt
+cd frontend && npm install && cd ..
+```
+
+#### 1.3 配置环境变量
+
+```bash
+cp env_example.txt .env
+nano .env  # 配置API密钥和数据库信息
+```
+
+**必需配置项**:
+- `DASHSCOPE_API_KEY`: 阿里云通义千问API密钥
+- `MYSQL_HOST`, `MYSQL_USER`, `MYSQL_PASSWORD`: MySQL数据库配置
+
+> 📝 **获取API Key**: 访问 [阿里云 DashScope](https://dashscope.console.aliyun.com/) 创建API Key
+
+#### 1.4 安装MySQL
+
+```bash
+# Ubuntu/Debian
+sudo apt install mysql-server mysql-client
+sudo systemctl start mysql
+
+# CentOS/RHEL
+sudo yum install mysql-server mysql
+sudo systemctl start mysql
+```
+
+### 2. 初始化数据库
+
+```bash
+# 创建数据库
+mysql -u root -p -e "CREATE DATABASE emotional_chat CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+# 运行数据库迁移
+make db-upgrade
+
+# 初始化RAG知识库（推荐）
+make rag-init
+```
+
+### 3. 启动服务
+
+**后端服务**:
+```bash
+python3 run_backend.py
+# 或使用 uvicorn
+cd backend && python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+**前端服务**（新终端）:
+```bash
+cd frontend
+npm start
+```
+
+### 4. 验证服务
+
+```bash
+# 健康检查
+curl http://localhost:8000/health
+
+# 测试聊天接口
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "你好", "user_id": "test_user"}'
+```
+
+### 5. 故障排除
+
+**常见问题**:
+- 端口冲突: `netstat -tulpn | grep :8000` 查看占用
+- 依赖安装失败: 确保已安装 CMake 和编译工具
+- 数据库连接失败: 检查 `config.env` 中的数据库配置
+
+> 📖 **更多帮助**: 查看 [完整安装指南](#快速开始详细指南) 或提交 Issue
+
+---
+
 ## 🏗️ 系统架构
 
 ### 总体架构图
@@ -304,88 +438,7 @@ backend/modules/
 - **ChromaDB**: 向量存储、语义检索
 - **Redis**: 缓存、会话状态（生产环境）
 
-## 🗄️ 数据库设计
-
-### MySQL数据库表结构
-
-#### 1. users - 用户表
-```sql
-CREATE TABLE users (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id VARCHAR(100) UNIQUE NOT NULL,
-    username VARCHAR(100),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    is_active BOOLEAN DEFAULT TRUE
-);
-```
-
-#### 2. chat_sessions - 会话表
-```sql
-CREATE TABLE chat_sessions (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    session_id VARCHAR(100) UNIQUE NOT NULL,
-    user_id VARCHAR(100) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    is_active BOOLEAN DEFAULT TRUE
-);
-```
-
-#### 3. chat_messages - 消息表
-```sql
-CREATE TABLE chat_messages (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    session_id VARCHAR(100) NOT NULL,
-    user_id VARCHAR(100) NOT NULL,
-    role VARCHAR(20) NOT NULL,  -- user, assistant
-    content TEXT NOT NULL,
-    emotion VARCHAR(50),
-    emotion_intensity FLOAT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-#### 4. emotion_analysis - 情感分析表
-```sql
-CREATE TABLE emotion_analysis (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    session_id VARCHAR(100) NOT NULL,
-    user_id VARCHAR(100) NOT NULL,
-    message_id INT NOT NULL,
-    emotion VARCHAR(50) NOT NULL,
-    intensity FLOAT NOT NULL,
-    keywords TEXT,
-    suggestions TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-#### 5. knowledge - 知识库表
-```sql
-CREATE TABLE knowledge (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    title VARCHAR(200) NOT NULL,
-    content TEXT NOT NULL,
-    category VARCHAR(100),
-    tags TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    is_active BOOLEAN DEFAULT TRUE
-);
-```
-
-#### 6. system_logs - 系统日志表
-```sql
-CREATE TABLE system_logs (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    level VARCHAR(20) NOT NULL,
-    message TEXT NOT NULL,
-    session_id VARCHAR(100),
-    user_id VARCHAR(100),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+> 📖 **详细架构文档**: 查看 [系统架构详解](docs/系统架构详解.md)（待补充）
 
 ## 🛠️ 技术栈
 
@@ -926,279 +979,35 @@ emotional_chat/
 
 ## 📡 API接口文档
 
-### 1. 根路径和系统信息
+> 📖 **完整API文档**: 查看 [docs/API接口文档.md](docs/API接口文档.md) - 包含所有接口的详细说明、请求参数、响应示例和错误处理
+
+### 主要接口概览
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/` | GET | 系统信息和功能列表 |
+| `/health` | GET | 健康检查 |
+| `/chat` | POST | 普通聊天接口 |
+| `/agent/chat` | POST | Agent智能聊天接口 |
+| `/sessions/{id}/history` | GET | 获取会话历史 |
+| `/rag/search` | POST | RAG知识库检索 |
+| `/agent/tools` | GET | Agent可用工具列表 |
+
+### 快速测试
+
 ```bash
-GET /
-```
-**响应示例:**
-```json
-{
-  "name": "心语情感陪伴机器人",
-  "version": "3.0.0",
-  "status": "running",
-  "features": [
-    "情感分析",
-    "记忆系统",
-    "上下文管理",
-    "向量数据库",
-    "LangChain集成",
-    "自动评估",
-    "RAG知识库",
-    "Agent智能核心"
-  ],
-  "architecture": "分层服务架构 + Agent核心",
-  "agent_enabled": true
-}
+# 健康检查
+curl http://localhost:8000/health
+
+# 测试聊天
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "你好", "user_id": "test_user"}'
 ```
 
-### 2. 健康检查
-```bash
-GET /health
-```
-**响应示例:**
-```json
-{
-  "status": "healthy",
-  "timestamp": "2025-10-16T10:00:00.000000",
-  "version": "3.0.0",
-  "database": "connected",
-  "vector_db": "ready",
-  "memory_system": "enabled"
-}
-```
+### 交互式文档
 
-### 3. 系统架构信息
-```bash
-GET /system/info
-```
-**响应示例:**
-```json
-{
-  "architecture": {
-    "pattern": "分层服务架构 + Agent核心",
-    "layers": ["路由层", "服务层", "核心层", "数据层"],
-    "services": ["ChatService", "MemoryService", "ContextService", "AgentService"],
-    "routers": ["chat", "memory", "feedback", "evaluation", "agent"]
-  },
-  "memory_system": {
-    "enabled": true,
-    "components": ["记忆提取器", "记忆管理器", "上下文组装器"],
-    "storage": ["向量数据库 (ChromaDB)", "关系数据库 (MySQL)"]
-  },
-  "agent_system": {
-    "enabled": true,
-    "components": [
-      "Agent Core - 核心控制器",
-      "Memory Hub - 记忆中枢",
-      "Planner - 任务规划器",
-      "Tool Caller - 工具调用器",
-      "Reflector - 反思优化器"
-    ]
-  }
-}
-```
-
-### 4. 聊天接口
-```bash
-POST /chat
-Content-Type: application/json
-
-{
-  "message": "你好，我今天心情很好！",
-  "user_id": "test_user",
-  "session_id": "optional-session-id"
-}
-```
-**响应示例:**
-```json
-{
-  "response": "你好，听到你今天心情很好，真是太棒了！😊",
-  "session_id": "0ccdde5c-8592-4e23-893a-8e1a8d8bbaf7",
-  "emotion": "happy",
-  "suggestions": [
-    "很高兴看到你这么开心！",
-    "有什么特别的事情想要分享吗？"
-  ],
-  "timestamp": "2025-10-10T16:57:50.584646"
-}
-```
-
-### 5. Agent聊天接口（智能模式）
-```bash
-POST /agent/chat
-Content-Type: application/json
-
-{
-  "user_id": "user_123",
-  "message": "我最近睡不好，怎么办？"
-}
-```
-**响应示例:**
-```json
-{
-  "code": 200,
-  "data": {
-    "success": true,
-    "response": "我理解你的困扰。睡眠问题确实很影响生活质量。我为你准备了几个科学有效的改善方法...",
-    "emotion": "焦虑",
-    "emotion_intensity": 7.5,
-    "actions": [
-      {
-        "type": "tool_call",
-        "tool": "recommend_meditation",
-        "success": true,
-        "result": "已推荐3个助眠冥想音频"
-      }
-    ],
-    "followup_scheduled": true,
-    "response_time": 1.2
-  }
-}
-```
-
-### 6. 获取会话历史
-```bash
-GET /sessions/{session_id}/history?limit=20
-```
-**响应示例:**
-```json
-{
-  "session_id": "0ccdde5c-8592-4e23-893a-8e1a8d8bbaf7",
-  "messages": [
-    {
-      "role": "user",
-      "content": "你好，我今天心情很好！",
-      "emotion": "happy",
-      "emotion_intensity": 8,
-      "timestamp": "2025-10-10T16:57:50.000000"
-    },
-    {
-      "role": "assistant",
-      "content": "你好，听到你今天心情很好，真是太棒了！😊",
-      "emotion": "empathetic",
-      "timestamp": "2025-10-10T16:57:52.000000"
-    }
-  ]
-}
-```
-
-### 7. 获取会话摘要
-```bash
-GET /sessions/{session_id}/summary
-```
-**响应示例:**
-```json
-{
-  "session_id": "0ccdde5c-8592-4e23-893a-8e1a8d8bbaf7",
-  "message_count": 10,
-  "emotion_distribution": {
-    "happy": 5,
-    "neutral": 3,
-    "anxious": 2
-  },
-  "created_at": "2025-10-10T16:57:50.000000",
-  "updated_at": "2025-10-10T17:05:20.000000"
-}
-```
-
-### 8. 获取用户情感趋势
-```bash
-GET /users/{user_id}/emotion-trends
-```
-**响应示例:**
-```json
-{
-  "user_id": "test_user",
-  "total_records": 50,
-  "recent_emotions": ["happy", "neutral", "anxious"],
-  "average_intensity": 6.5,
-  "emotion_counts": {
-    "happy": 20,
-    "neutral": 15,
-    "anxious": 10,
-    "sad": 5
-  }
-}
-```
-
-### 9. RAG知识库检索
-```bash
-POST /rag/search
-Content-Type: application/json
-
-{
-  "query": "如何改善睡眠质量？",
-  "top_k": 3
-}
-```
-**响应示例:**
-```json
-{
-  "query": "如何改善睡眠质量？",
-  "results": [
-    {
-      "content": "睡眠卫生的重要性：保持规律的作息时间，睡前避免使用电子设备...",
-      "category": "睡眠改善",
-      "relevance_score": 0.92,
-      "metadata": {
-        "source": "心理健康知识库",
-        "topic": "睡眠管理"
-      }
-    }
-  ]
-}
-```
-
-### 10. RAG知识库状态
-```bash
-GET /rag/status
-```
-**响应示例:**
-```json
-{
-  "status": "ready",
-  "total_documents": 50,
-  "categories": [
-    "认知行为疗法",
-    "正念减压",
-    "积极心理学",
-    "焦虑应对",
-    "睡眠改善",
-    "情绪调节"
-  ],
-  "last_updated": "2025-10-16T09:00:00.000000"
-}
-```
-
-### 11. Agent可用工具列表
-```bash
-GET /agent/tools
-```
-**响应示例:**
-```json
-{
-  "tools": [
-    {
-      "name": "search_memory",
-      "description": "检索用户历史记忆",
-      "category": "memory"
-    },
-    {
-      "name": "recommend_meditation",
-      "description": "推荐冥想音频",
-      "category": "resource"
-    },
-    {
-      "name": "set_reminder",
-      "description": "设置提醒",
-      "category": "scheduler"
-    }
-  ]
-}
-```
-
-### 完整API文档
-访问 http://localhost:8000/docs 查看完整的交互式API文档（Swagger UI）
+访问 **http://localhost:8000/docs** 查看完整的 Swagger UI 交互式文档，支持在线测试所有接口。
 
 ## 🎯 核心功能实现
 
