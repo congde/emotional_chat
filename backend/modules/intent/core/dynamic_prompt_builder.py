@@ -200,8 +200,6 @@ class DynamicPromptBuilder:
             example_section=example_section,
             conversation_history=conversation_history_text,
             user_input=user_input,
-            tone_requirement=tone_requirement,
-            empathy_level=self._get_empathy_level_description(empathy_level),
             max_sentences=max_sentences,
             emoji_instruction=emoji_instruction
         )

@@ -1,4 +1,4 @@
-.PHONY: help db-init db-upgrade db-downgrade db-check db-current db-history db-reset install run quick-start rag-init
+.PHONY: help db-init db-upgrade db-downgrade db-check db-current db-history db-reset install run quick-start rag-init rag-test rag-demo
 
 # 获取 Makefile 所在目录作为项目根目录
 # 使用 abspath 确保兼容性，适用于 GNU Make 3.81+
@@ -24,6 +24,8 @@ help:
 	@echo ""
 	@echo "RAG知识库命令:"
 	@echo "  make rag-init     - 初始化RAG知识库"
+	@echo "  make rag-test     - 测试RAG系统"
+	@echo "  make rag-demo     - 演示RAG效果"
 
 install:
 	cd $(ROOT_DIR) && pip install -r requirements.txt
@@ -57,4 +59,16 @@ quick-start:
 
 rag-init:
 	cd $(ROOT_DIR) && python init_rag_knowledge.py
+
+rag-test:
+	@echo "测试RAG系统..."
+	@echo "检查RAG API端点: http://localhost:8000/api/rag/test"
+	@curl -s http://localhost:8000/api/rag/test || echo "⚠️  请确保后端服务正在运行 (make run)"
+
+rag-demo:
+	@echo "演示RAG效果对比..."
+	@echo "测试问题: 失眠怎么办？"
+	@curl -s -X POST http://localhost:8000/api/rag/ask \
+		-H "Content-Type: application/json" \
+		-d '{"question": "失眠怎么办？"}' || echo "⚠️  请确保后端服务正在运行 (make run)"
 

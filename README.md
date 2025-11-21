@@ -232,7 +232,6 @@ cd frontend && npm start  # 前端服务（新终端）
 ### 访问地址
 
 - 🌐 **前端界面**: http://localhost:3000
-image.png
 - 🔌 **后端API**: http://localhost:8000
 - 📖 **API文档**: http://localhost:8000/docs
 
@@ -274,12 +273,12 @@ cd frontend && npm install && cd ..
 #### 1.3 配置环境变量
 
 ```bash
-cp env_example.txt .env
-nano .env  # 配置API密钥和数据库信息
+cp config.env.example config.env
+nano config.env  # 配置API密钥和数据库信息
 ```
 
 **必需配置项**:
-- `DASHSCOPE_API_KEY`: 阿里云通义千问API密钥
+- `LLM_API_KEY` 或 `DASHSCOPE_API_KEY`: 阿里云通义千问API密钥
 - `MYSQL_HOST`, `MYSQL_USER`, `MYSQL_PASSWORD`: MySQL数据库配置
 
 > 📝 **获取API Key**: 访问 [阿里云 DashScope](https://dashscope.console.aliyun.com/) 创建API Key
@@ -314,8 +313,8 @@ make rag-init
 **后端服务**:
 ```bash
 python3 run_backend.py
-# 或使用 uvicorn
-cd backend && python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+# 或使用 uvicorn（从项目根目录）
+python3 -m uvicorn backend.app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 **前端服务**（新终端）:
@@ -401,7 +400,7 @@ backend/routers/
 ├── memory.py        - 记忆管理接口
 ├── feedback.py      - 用户反馈接口
 ├── evaluation.py    - 评估系统接口
-└── agent_router.py  - Agent智能接口
+└── agent.py         - Agent智能接口
 ```
 
 #### 2. 服务层 (Service Layer)
@@ -429,7 +428,9 @@ backend/modules/
 │   ├── services/   - RAG服务
 │   └── routers/    - RAG路由
 └── llm/            - LLM模型封装
-    └── qwen_client.py - 通义千问客户端
+    ├── core/       - LLM核心功能
+    ├── providers/  - LLM提供商封装（OpenAI、Anthropic等）
+    └── services/   - LLM服务
 ```
 
 #### 4. 数据层 (Data Layer)
@@ -439,7 +440,7 @@ backend/modules/
 - **ChromaDB**: 向量存储、语义检索
 - **Redis**: 缓存、会话状态（生产环境）
 
-> 📖 **详细架构文档**: 查看 [系统架构详解](docs/系统架构详解.md)（待补充）
+> 📖 **详细架构文档**: 查看相关模块文档
 
 ## 🛠️ 技术栈
 
@@ -533,17 +534,19 @@ cd ..
 #### 1.3 配置环境变量
 ```bash
 # 复制环境变量模板
-cp env_example.txt .env
+cp config.env.example config.env
 
 # 编辑配置文件
-nano .env
+nano config.env
 ```
 
 配置内容：
 ```bash
 # API配置 - 使用阿里云通义千问(Qwen)
-DASHSCOPE_API_KEY=your_qwen_api_key_here
-API_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+LLM_API_KEY=your_qwen_api_key_here
+# 或者使用 DASHSCOPE_API_KEY (兼容旧版本)
+# DASHSCOPE_API_KEY=your_qwen_api_key_here
+LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 
 # MySQL数据库配置
 MYSQL_HOST=localhost
@@ -632,7 +635,7 @@ python3 run_backend.py
 
 # 方法2：直接在backend目录启动
 cd backend
-python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+python3 -m uvicorn backend.app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 > **注意**：启动脚本会自动切换到 backend 目录运行，避免 watchfiles 扫描 frontend/node_modules 导致的文件监视限制问题。
@@ -786,7 +789,7 @@ python3 run_backend.py
 
 # 或者使用uvicorn
 cd backend
-python3 -m uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+python3 -m uvicorn backend.app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 **终端2 - 启动前端：**
@@ -929,7 +932,8 @@ emotional_chat/
 │
 ├── config.py                         # 全局配置
 ├── config.env                        # 环境变量配置 ⚠️ 包含密钥
-├── env_example.txt                   # 环境变量模板
+├── config.env.example                # 环境变量模板
+├── env_example.txt                   # 旧版环境变量模板（已弃用，请使用config.env.example）
 ├── run_backend.py                    # 后端启动脚本
 ├── init_rag_knowledge.py            # RAG知识库初始化
 ├── requirements.txt                  # Python依赖
@@ -1351,7 +1355,7 @@ make run              # 启动后端服务
 - **记忆系统**: [docs/记忆系统架构.md](docs/记忆系统架构.md) - 记忆系统架构说明
 - **意图识别**: [docs/意图识别模块说明.md](docs/意图识别模块说明.md) - 意图识别系统完整文档
 - **输入处理**: [docs/增强版输入处理器使用指南.md](docs/增强版输入处理器使用指南.md) - 增强版输入预处理器 ⭐ **新增**
-- **多模态交互**: [docs/MULTIMODAL_FEATURES.md](docs/MULTIMODAL_FEATURES.md) - 多模态情感交互功能说明 🎙️ **新增**
+- **多模态交互**: 多模态情感交互功能（语音识别、图像理解等） 🎙️ **新增**
 
 ### 向量数据库教程（新增）
 - **📖 教程索引**: [docs/向量数据库教程索引.md](docs/向量数据库教程索引.md) - 向量数据库学习路径导航

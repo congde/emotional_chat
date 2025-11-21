@@ -123,8 +123,8 @@ if __name__ == "__main__":
     print("🎉 服务启动中...")
     print("="*60)
     
-    # 保持在项目根目录，使用backend.main模块路径
-    print(f"✓ 从项目根目录启动，监视backend目录的变化")
+    # 保持在项目根目录，使用backend.app应用工厂
+    print(f"✓ 从项目根目录启动，使用backend.app应用工厂")
     
     # 为了彻底解决 watchfiles 频繁检测问题，完全禁用热重载
     print("🚀 启动模式：禁用热重载以避免文件监视问题")
