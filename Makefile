@@ -1,5 +1,10 @@
 .PHONY: help db-init db-upgrade db-downgrade db-check db-current db-history db-reset install run quick-start rag-init
 
+# 获取 Makefile 所在目录作为项目根目录
+# 使用 abspath 确保兼容性，适用于 GNU Make 3.81+
+# 去掉尾部斜杠
+ROOT_DIR := $(patsubst %/,%,$(dir $(abspath $(firstword $(MAKEFILE_LIST)))))
+
 help:
 	@echo "可用的命令:"
 	@echo ""
@@ -21,35 +26,35 @@ help:
 	@echo "  make rag-init     - 初始化RAG知识库"
 
 install:
-	pip install -r requirements.txt
+	cd $(ROOT_DIR) && pip install -r requirements.txt
 
 db-init:
-	python db_manager.py init
+	cd $(ROOT_DIR) && python db_manager.py init
 
 db-upgrade:
-	python db_manager.py upgrade
+	cd $(ROOT_DIR) && python db_manager.py upgrade
 
 db-downgrade:
-	python db_manager.py downgrade
+	cd $(ROOT_DIR) && python db_manager.py downgrade
 
 db-check:
-	python db_manager.py check
+	cd $(ROOT_DIR) && python db_manager.py check
 
 db-current:
-	python db_manager.py current
+	cd $(ROOT_DIR) && python db_manager.py current
 
 db-history:
-	python db_manager.py history
+	cd $(ROOT_DIR) && python db_manager.py history
 
 db-reset:
-	python db_manager.py reset
+	cd $(ROOT_DIR) && python db_manager.py reset
 
 run:
-	python run_backend.py
+	cd $(ROOT_DIR) && python run_backend.py
 
 quick-start:
-	python quick_start.py
+	cd $(ROOT_DIR) && python quick_start.py
 
 rag-init:
-	python init_rag_knowledge.py
+	cd $(ROOT_DIR) && python init_rag_knowledge.py
 
