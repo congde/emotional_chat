@@ -11,7 +11,7 @@ import os
 project_root = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, project_root)
 
-from backend.rag_knowledge_base import KnowledgeBaseManager, PsychologyKnowledgeLoader
+from backend.modules.rag.core.knowledge_base import KnowledgeBaseManager, PsychologyKnowledgeLoader
 
 
 def main():
@@ -65,10 +65,9 @@ def main():
         print("=" * 70 + "\n")
         
         print("📝 后续步骤:")
-        print("  1. 测试完整系统: python test_rag_system.py")
-        print("  2. 启动API服务: python run_backend.py")
-        print("  3. 访问API文档: http://localhost:8000/docs")
-        print("  4. 测试RAG端点: http://localhost:8000/api/rag/test")
+        print("  1. 启动API服务: python run_backend.py")
+        print("  2. 访问API文档: http://localhost:8000/docs")
+        print("  3. 测试RAG端点: http://localhost:8000/api/rag/test")
         print()
         
         return True
