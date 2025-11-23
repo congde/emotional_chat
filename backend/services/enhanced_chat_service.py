@@ -447,17 +447,40 @@ class EnhancedChatService:
                 
                 session_list = []
                 for session in sessions:
+                    # 检查会话是否有消息
+                    message_count = db.db.query(ChatMessage)\
+                        .filter(ChatMessage.session_id == session.session_id)\
+                        .count()
+                    
+                    # 如果会话没有消息，跳过（不显示在历史列表中）
+                    if message_count == 0:
+                        continue
+                    
+                    # 获取会话的第一条消息作为标题
                     first_message = db.db.query(ChatMessage)\
                         .filter(ChatMessage.session_id == session.session_id)\
                         .filter(ChatMessage.role == 'user')\
                         .order_by(ChatMessage.created_at.asc())\
                         .first()
                     
+                    # 获取会话的最后一条消息作为预览
+                    last_message = db.db.query(ChatMessage)\
+                        .filter(ChatMessage.session_id == session.session_id)\
+                        .order_by(ChatMessage.created_at.desc())\
+                        .first()
+                    
                     title = first_message.content[:30] + "..." if first_message and len(first_message.content) > 30 else (first_message.content if first_message else "新对话")
+                    
+                    # 生成预览文本（最后一条消息的内容，最多50个字符）
+                    preview = ""
+                    if last_message:
+                        preview = last_message.content[:50] + "..." if len(last_message.content) > 50 else last_message.content
                     
                     session_list.append({
                         "session_id": session.session_id,
                         "title": title,
+                        "preview": preview,
+                        "message_count": message_count,
                         "created_at": session.created_at.isoformat() if session.created_at else None,
                         "updated_at": session.updated_at.isoformat() if session.updated_at else None
                     })

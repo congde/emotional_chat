@@ -481,11 +481,24 @@ class ChatService:
                         .order_by(ChatMessage.created_at.asc())\
                         .first()
                     
+                    # 获取会话的最后一条消息作为预览
+                    last_message = db.db.query(ChatMessage)\
+                        .filter(ChatMessage.session_id == session.session_id)\
+                        .order_by(ChatMessage.created_at.desc())\
+                        .first()
+                    
                     title = first_message.content[:30] + "..." if first_message and len(first_message.content) > 30 else (first_message.content if first_message else "新对话")
+                    
+                    # 生成预览文本（最后一条消息的内容，最多50个字符）
+                    preview = ""
+                    if last_message:
+                        preview = last_message.content[:50] + "..." if len(last_message.content) > 50 else last_message.content
                     
                     session_list.append({
                         "session_id": session.session_id,
                         "title": title,
+                        "preview": preview,
+                        "message_count": message_count,
                         "created_at": session.created_at.isoformat() if session.created_at else None,
                         "updated_at": session.updated_at.isoformat() if session.updated_at else None
                     })

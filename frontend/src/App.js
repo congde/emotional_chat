@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Heart, User, Bot, Loader2, Plus, Clock, Paperclip, X, FileText, Image, Link, ExternalLink, MessageSquarePlus, Trash2, Settings } from 'lucide-react';
+import { Send, Heart, User, Bot, Loader2, Plus, Clock, Paperclip, X, FileText, Image, Link, ExternalLink, MessageSquarePlus, Trash2, Settings, Palette } from 'lucide-react';
 import ChatAPI from './services/ChatAPI';
 import TypewriterComponent from './components/TypewriterText';
 import PersonalizationPanel from './components/PersonalizationPanel';
+import StyleComparison from './components/StyleComparison';
 
 // 旋转动画
 const spin = keyframes`
@@ -203,6 +204,68 @@ const HistoryItemTitle = styled.div`
 const HistoryItemTime = styled.div`
   font-size: 0.75rem;
   color: #666;
+  margin-top: 4px;
+`;
+
+const HistoryItemPreview = styled.div`
+  font-size: 0.8rem;
+  color: #999;
+  margin-top: 4px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const HistoryItemMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 0.7rem;
+  color: #999;
+`;
+
+const MessageCountBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  border-radius: 10px;
+  font-weight: 500;
+`;
+
+const EmptyHistoryState = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #999;
+  text-align: center;
+`;
+
+const EmptyHistoryIcon = styled.div`
+  font-size: 3rem;
+  margin-bottom: 16px;
+  opacity: 0.5;
+`;
+
+const EmptyHistoryText = styled.div`
+  font-size: 0.9rem;
+  line-height: 1.6;
+`;
+
+const LoadingHistoryState = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  color: #999;
+  font-size: 0.9rem;
 `;
 
 const ChatContainer = styled(motion.div)`
@@ -776,6 +839,7 @@ function App() {
   const [suggestions, setSuggestions] = useState([]);
   const [historySessions, setHistorySessions] = useState([]);
   const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
+  const [showStyleComparison, setShowStyleComparison] = useState(false);
   
   // 从localStorage读取或生成用户ID
   const [currentUserId] = useState(() => {
@@ -801,7 +865,7 @@ function App() {
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
 
-  // 格式化时间戳
+  // 格式化时间戳（用于消息）
   const formatTimestamp = (date) => {
     if (!date) return '';
     const now = new Date();
@@ -820,6 +884,38 @@ function App() {
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
+    });
+  };
+
+  // 格式化相对时间（用于会话列表）
+  const formatRelativeTime = (date) => {
+    if (!date) return '';
+    const now = new Date();
+    const targetDate = new Date(date);
+    const diffMs = now - targetDate;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffMins < 1) return '刚刚';
+    if (diffMins < 60) return `${diffMins}分钟前`;
+    if (diffHours < 24) return `${diffHours}小时前`;
+    if (diffDays === 1) return '昨天';
+    if (diffDays < 7) return `${diffDays}天前`;
+    if (diffDays < 30) {
+      const weeks = Math.floor(diffDays / 7);
+      return `${weeks}周前`;
+    }
+    if (diffDays < 365) {
+      const months = Math.floor(diffDays / 30);
+      return `${months}个月前`;
+    }
+    
+    // 超过一年，显示具体日期
+    return targetDate.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   };
 
@@ -1313,6 +1409,41 @@ function App() {
     }
   };
 
+  // 如果显示样式对比页面，直接渲染对比组件
+  if (showStyleComparison) {
+    return (
+      <>
+        <motion.button
+          onClick={() => setShowStyleComparison(false)}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            left: '20px',
+            zIndex: 1001,
+            padding: '12px 24px',
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(10px)',
+            border: '2px solid #667eea',
+            borderRadius: '12px',
+            color: '#667eea',
+            fontWeight: '600',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+          }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <X size={18} />
+          返回聊天
+        </motion.button>
+        <StyleComparison />
+      </>
+    );
+  }
+
   return (
     <AppContainer>
       <Sidebar
@@ -1344,6 +1475,15 @@ function App() {
           <Settings size={16} />
           个性化配置
         </SettingsButton>
+
+        <SettingsButton
+          onClick={() => setShowStyleComparison(true)}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <Palette size={16} />
+          样式对比演示
+        </SettingsButton>
         
 
         <HistorySection>
@@ -1352,41 +1492,64 @@ function App() {
             历史对话
           </HistoryTitle>
           <HistoryList>
-            <AnimatePresence>
-              {historySessions.map((session) => (
-                <HistoryItem
-                  key={session.session_id}
-                  active={session.session_id === sessionId}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    console.log('[onClick] 点击历史记录项:', session.session_id);
-                    loadSessionHistory(session.session_id);
-                  }}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <HistoryItemContent>
-                    <HistoryItemTitle>{session.title}</HistoryItemTitle>
-                    <HistoryItemTime>
-                      {new Date(session.updated_at).toLocaleDateString()}
-                    </HistoryItemTime>
-                  </HistoryItemContent>
-                  <HistoryItemActions>
-                    <DeleteButton
-                      onClick={(e) => deleteConversation(session.session_id, e)}
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      title="删除对话"
-                    >
-                      <Trash2 size={14} />
-                    </DeleteButton>
-                  </HistoryItemActions>
-                </HistoryItem>
-              ))}
-            </AnimatePresence>
+            {historySessions.length === 0 ? (
+              <EmptyHistoryState>
+                <EmptyHistoryIcon>💬</EmptyHistoryIcon>
+                <EmptyHistoryText>
+                  <div style={{ fontWeight: 600, marginBottom: 8 }}>还没有历史对话</div>
+                  <div>开始一段新的对话吧！</div>
+                </EmptyHistoryText>
+              </EmptyHistoryState>
+            ) : (
+              <AnimatePresence>
+                {historySessions.map((session) => (
+                  <HistoryItem
+                    key={session.session_id}
+                    active={session.session_id === sessionId}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      console.log('[onClick] 点击历史记录项:', session.session_id);
+                      loadSessionHistory(session.session_id);
+                    }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <HistoryItemContent>
+                      <HistoryItemTitle>{session.title || '新对话'}</HistoryItemTitle>
+                      {session.preview && (
+                        <HistoryItemPreview>{session.preview}</HistoryItemPreview>
+                      )}
+                      <HistoryItemMeta>
+                        <HistoryItemTime>
+                          {formatRelativeTime(session.updated_at)}
+                        </HistoryItemTime>
+                        {session.message_count !== undefined && session.message_count > 0 && (
+                          <>
+                            <span>•</span>
+                            <MessageCountBadge>
+                              {session.message_count} 条消息
+                            </MessageCountBadge>
+                          </>
+                        )}
+                      </HistoryItemMeta>
+                    </HistoryItemContent>
+                    <HistoryItemActions>
+                      <DeleteButton
+                        onClick={(e) => deleteConversation(session.session_id, e)}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        title="删除对话"
+                      >
+                        <Trash2 size={14} />
+                      </DeleteButton>
+                    </HistoryItemActions>
+                  </HistoryItem>
+                ))}
+              </AnimatePresence>
+            )}
           </HistoryList>
         </HistorySection>
       </Sidebar>
