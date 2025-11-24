@@ -25,6 +25,19 @@ from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Field, validator
 
+# 延迟导入上下文服务，避免循环导入
+try:
+    from backend.services.context_service import ContextService
+    CONTEXT_SERVICE_AVAILABLE = True
+except ImportError:
+    try:
+        from backend.context_assembler import ContextAssembler
+        CONTEXT_SERVICE_AVAILABLE = True
+    except ImportError:
+        CONTEXT_SERVICE_AVAILABLE = False
+        ContextService = None
+        ContextAssembler = None
+
 
 class MCPMessageType(str, Enum):
     """MCP消息类型"""
@@ -185,7 +198,81 @@ class MCPProtocol:
     MCP协议处理器
     
     提供MCP消息的创建、验证、转换等功能
+    支持自动上下文填充（通过ContextService）
     """
+    
+    def __init__(self, context_service: Optional[Any] = None):
+        """
+        初始化MCP协议处理器
+        
+        Args:
+            context_service: 上下文服务实例（可选，如果提供则启用自动上下文填充）
+        """
+        self.context_service = context_service
+        if context_service is None and CONTEXT_SERVICE_AVAILABLE:
+            try:
+                from backend.services.context_service import ContextService
+                self.context_service = ContextService()
+            except Exception:
+                # 如果无法创建ContextService，则使用None
+                self.context_service = None
+    
+    async def _enrich_context_from_service(
+        self,
+        user_id: str,
+        session_id: str,
+        current_message: str,
+        emotion: Optional[str] = None,
+        emotion_intensity: Optional[float] = None
+    ) -> MCPContext:
+        """
+        从上下文服务获取并填充上下文
+        
+        Args:
+            user_id: 用户ID
+            session_id: 会话ID
+            current_message: 当前消息
+            emotion: 当前情绪
+            emotion_intensity: 情绪强度
+            
+        Returns:
+            填充后的MCPContext
+        """
+        if not self.context_service:
+            return MCPContext()
+        
+        try:
+            # 调用上下文服务构建上下文
+            context_data = await self.context_service.build_context(
+                user_id=user_id,
+                session_id=session_id,
+                current_message=current_message,
+                emotion=emotion,
+                emotion_intensity=emotion_intensity
+            )
+            
+            # 将上下文数据转换为MCPContext
+            mcp_context = MCPContext(
+                user_profile=context_data.get("user_profile", {}).get("full"),
+                emotion_state={
+                    "emotion": context_data.get("emotion_context", {}).get("current_emotion"),
+                    "intensity": context_data.get("emotion_context", {}).get("current_intensity"),
+                    "trend": context_data.get("emotion_context", {}).get("trend")
+                },
+                memory_summary={
+                    "recent_events": context_data.get("memories", {}).get("recent_events", []),
+                    "concerns": context_data.get("memories", {}).get("concerns", []),
+                    "relationships": context_data.get("memories", {}).get("relationships", []),
+                    "count": len(context_data.get("memories", {}).get("all", []))
+                },
+                conversation_history=context_data.get("chat_history", [])
+            )
+            
+            return mcp_context
+        except Exception as e:
+            # 如果上下文服务调用失败，返回空上下文
+            print(f"[MCP Protocol] 上下文服务调用失败: {e}")
+            return MCPContext()
     
     @staticmethod
     def create_user_input(
@@ -195,7 +282,7 @@ class MCPProtocol:
         conversation_history: Optional[List[Dict[str, Any]]] = None
     ) -> MCPMessage:
         """
-        创建用户输入MCP消息
+        创建用户输入MCP消息（静态方法，不自动填充上下文）
         
         Args:
             content: 用户输入内容
@@ -211,6 +298,68 @@ class MCPProtocol:
             emotion_state=emotion_state,
             conversation_history=conversation_history
         )
+        
+        return MCPMessage(
+            message_type=MCPMessageType.USER_INPUT,
+            content=content,
+            context=context,
+            source_module="user",
+            target_module="agent_core"
+        )
+    
+    async def create_user_input_with_context(
+        self,
+        content: str,
+        user_id: str,
+        session_id: str,
+        emotion: Optional[str] = None,
+        emotion_intensity: Optional[float] = None,
+        user_profile: Optional[Dict[str, Any]] = None,
+        emotion_state: Optional[Dict[str, Any]] = None,
+        conversation_history: Optional[List[Dict[str, Any]]] = None
+    ) -> MCPMessage:
+        """
+        创建用户输入MCP消息（自动填充上下文）
+        
+        Args:
+            content: 用户输入内容
+            user_id: 用户ID（用于自动填充上下文）
+            session_id: 会话ID（用于自动填充上下文）
+            emotion: 当前情绪（可选，如果提供会传递给上下文服务）
+            emotion_intensity: 情绪强度（可选）
+            user_profile: 用户画像（可选，如果提供则覆盖自动填充的）
+            emotion_state: 情感状态（可选，如果提供则覆盖自动填充的）
+            conversation_history: 对话历史（可选，如果提供则覆盖自动填充的）
+            
+        Returns:
+            MCP消息（包含自动填充的上下文）
+        """
+        # 如果提供了显式参数，优先使用；否则尝试从上下文服务获取
+        if user_profile is None or emotion_state is None or conversation_history is None:
+            # 尝试从上下文服务自动填充
+            auto_context = await self._enrich_context_from_service(
+                user_id=user_id,
+                session_id=session_id,
+                current_message=content,
+                emotion=emotion,
+                emotion_intensity=emotion_intensity
+            )
+            
+            # 合并自动填充的上下文和显式提供的参数
+            context = MCPContext(
+                user_profile=user_profile or auto_context.user_profile,
+                emotion_state=emotion_state or auto_context.emotion_state,
+                memory_summary=auto_context.memory_summary,
+                conversation_history=conversation_history or auto_context.conversation_history,
+                metadata=auto_context.metadata
+            )
+        else:
+            # 如果所有参数都提供了，直接使用
+            context = MCPContext(
+                user_profile=user_profile,
+                emotion_state=emotion_state,
+                conversation_history=conversation_history
+            )
         
         return MCPMessage(
             message_type=MCPMessageType.USER_INPUT,
@@ -556,19 +705,48 @@ def get_mcp_logger(log_file: Optional[str] = None) -> MCPLogger:
     return _mcp_logger_instance
 
 
+def create_mcp_protocol_with_context(context_service: Optional[Any] = None) -> MCPProtocol:
+    """
+    创建带上下文服务的MCP协议处理器
+    
+    Args:
+        context_service: 上下文服务实例（可选）
+        
+    Returns:
+        MCP协议处理器实例
+    """
+    return MCPProtocol(context_service=context_service)
+
+
 # 使用示例
 if __name__ == "__main__":
-    # 创建MCP协议处理器
+    # 创建MCP协议处理器（不带上下文服务）
     protocol = MCPProtocol()
     
-    # 示例1：创建用户输入消息
+    # 创建带上下文服务的MCP协议处理器
+    protocol_with_context = create_mcp_protocol_with_context()
+    
+    # 示例1：创建用户输入消息（静态方法，不自动填充上下文）
     user_msg = protocol.create_user_input(
         content="我最近心情很不好，感觉很焦虑",
         emotion_state={"emotion": "焦虑", "intensity": 7.5}
     )
-    print("用户输入消息：")
+    print("用户输入消息（静态方法）：")
     print(user_msg.to_json())
     print("\n" + "="*60 + "\n")
+    
+    # 示例1b：创建用户输入消息（自动填充上下文）
+    # 注意：这是异步方法，需要在实际使用时用 await
+    # user_msg_with_context = await protocol_with_context.create_user_input_with_context(
+    #     content="我最近心情很不好，感觉很焦虑",
+    #     user_id="user_123",
+    #     session_id="session_456",
+    #     emotion="焦虑",
+    #     emotion_intensity=7.5
+    # )
+    # print("用户输入消息（自动填充上下文）：")
+    # print(user_msg_with_context.to_json())
+    # print("\n" + "="*60 + "\n")
     
     # 示例2：创建Planner输出消息
     tool_call = MCPToolCall(

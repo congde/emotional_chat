@@ -12,7 +12,8 @@ from .mcp import (
     MCPContext,
     MCPProtocol,
     MCPLogger,
-    get_mcp_logger
+    get_mcp_logger,
+    create_mcp_protocol_with_context
 )
 
 __all__ = [
@@ -23,6 +24,7 @@ __all__ = [
     "MCPContext",
     "MCPProtocol",
     "MCPLogger",
-    "get_mcp_logger"
+    "get_mcp_logger",
+    "create_mcp_protocol_with_context"
 ]
 
