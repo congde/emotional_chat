@@ -534,6 +534,141 @@ class ChatService:
             print(f"删除会话失败: {e}")
             return False
     
+    async def search_user_sessions(
+        self,
+        user_id: str,
+        keyword: str = "",
+        limit: int = 50
+    ) -> Dict[str, Any]:
+        """
+        搜索用户会话
+        
+        Args:
+            user_id: 用户ID
+            keyword: 搜索关键词
+            limit: 限制数量
+            
+        Returns:
+            会话列表
+        """
+        try:
+            with DatabaseManager() as db:
+                from backend.database import ChatMessage
+                
+                sessions = db.get_user_sessions(user_id, limit * 2)  # 获取更多以便筛选
+                
+                session_list = []
+                keyword_lower = keyword.lower() if keyword else ""
+                
+                for session in sessions:
+                    # 检查会话是否有消息
+                    message_count = db.db.query(ChatMessage)\
+                        .filter(ChatMessage.session_id == session.session_id)\
+                        .count()
+                    
+                    if message_count == 0:
+                        continue
+                    
+                    # 获取会话的第一条消息作为标题
+                    first_message = db.db.query(ChatMessage)\
+                        .filter(ChatMessage.session_id == session.session_id)\
+                        .filter(ChatMessage.role == 'user')\
+                        .order_by(ChatMessage.created_at.asc())\
+                        .first()
+                    
+                    # 获取会话的最后一条消息作为预览
+                    last_message = db.db.query(ChatMessage)\
+                        .filter(ChatMessage.session_id == session.session_id)\
+                        .order_by(ChatMessage.created_at.desc())\
+                        .first()
+                    
+                    title = first_message.content[:30] + "..." if first_message and len(first_message.content) > 30 else (first_message.content if first_message else "新对话")
+                    
+                    # 生成预览文本
+                    preview = ""
+                    if last_message:
+                        preview = last_message.content[:50] + "..." if len(last_message.content) > 50 else last_message.content
+                    
+                    # 如果有关键词，进行搜索过滤
+                    if keyword_lower:
+                        title_lower = title.lower()
+                        preview_lower = preview.lower()
+                        if keyword_lower not in title_lower and keyword_lower not in preview_lower:
+                            continue
+                    
+                    session_list.append({
+                        "session_id": session.session_id,
+                        "title": title,
+                        "preview": preview,
+                        "message_count": message_count,
+                        "created_at": session.created_at.isoformat() if session.created_at else None,
+                        "updated_at": session.updated_at.isoformat() if session.updated_at else None
+                    })
+                    
+                    # 限制返回数量
+                    if len(session_list) >= limit:
+                        break
+                
+                return {
+                    "user_id": user_id,
+                    "sessions": session_list,
+                    "total": len(session_list),
+                    "keyword": keyword
+                }
+        except Exception as e:
+            print(f"搜索用户会话失败: {e}")
+            return {
+                "user_id": user_id,
+                "sessions": [],
+                "total": 0,
+                "keyword": keyword,
+                "error": str(e)
+            }
+    
+    async def delete_sessions_batch(self, session_ids: List[str]) -> Dict[str, Any]:
+        """
+        批量删除会话
+        
+        Args:
+            session_ids: 会话ID列表
+            
+        Returns:
+            删除结果
+        """
+        try:
+            success_count = 0
+            failed_count = 0
+            failed_sessions = []
+            
+            for session_id in session_ids:
+                try:
+                    success = await self.delete_session(session_id)
+                    if success:
+                        success_count += 1
+                    else:
+                        failed_count += 1
+                        failed_sessions.append(session_id)
+                except Exception as e:
+                    failed_count += 1
+                    failed_sessions.append(session_id)
+                    print(f"删除会话 {session_id} 失败: {e}")
+            
+            return {
+                "success_count": success_count,
+                "failed_count": failed_count,
+                "failed_sessions": failed_sessions,
+                "total": len(session_ids)
+            }
+        except Exception as e:
+            print(f"批量删除会话失败: {e}")
+            return {
+                "success_count": 0,
+                "failed_count": len(session_ids),
+                "failed_sessions": session_ids,
+                "total": len(session_ids),
+                "error": str(e)
+            }
+    
     async def get_user_emotion_trends(self, user_id: str, days: int = 7) -> Dict[str, Any]:
         """
         获取用户情绪趋势

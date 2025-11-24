@@ -141,6 +141,32 @@ class ChatAPI {
     }
   }
 
+  static async searchUserSessions(userId, keyword = '', limit = 50) {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/chat/users/${userId}/sessions/search`, {
+        params: { keyword, limit }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('搜索用户会话失败:', error);
+      throw error;
+    }
+  }
+
+  static async deleteSessionsBatch(sessionIds) {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/chat/sessions/batch-delete`, sessionIds, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('批量删除会话失败:', error);
+      throw error;
+    }
+  }
+
   static async healthCheck() {
     try {
       const response = await axios.get(`${API_BASE_URL}/health`);

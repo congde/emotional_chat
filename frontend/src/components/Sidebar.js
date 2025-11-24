@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { Plus, Clock, Settings, Palette, User, Trash2 } from 'lucide-react';
+import { Plus, Clock, Settings, Palette, User, Trash2, FolderOpen } from 'lucide-react';
 import { Sidebar as SidebarStyled } from '../styles/layout';
 import {
   SidebarHeader,
@@ -34,7 +34,8 @@ const Sidebar = ({
   onLoadSession,
   onDeleteSession,
   onOpenPersonalization,
-  onOpenStyleComparison
+  onOpenStyleComparison,
+  onOpenHistoryManagement
 }) => {
   return (
     <SidebarStyled
@@ -77,10 +78,42 @@ const Sidebar = ({
       </SettingsButton>
 
       <HistorySection>
-        <HistoryTitle>
-          <Clock size={16} />
-          历史对话
-        </HistoryTitle>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
+          <HistoryTitle>
+            <Clock size={16} />
+            历史对话
+          </HistoryTitle>
+          {historySessions.length > 0 && onOpenHistoryManagement && (
+            <button
+              onClick={onOpenHistoryManagement}
+              style={{
+                padding: '6px 12px',
+                fontSize: '0.85rem',
+                background: 'rgba(102, 126, 234, 0.1)',
+                color: '#667eea',
+                border: '1px solid rgba(102, 126, 234, 0.3)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: '500',
+                transition: 'all 0.2s',
+                marginLeft: 'auto'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = 'rgba(102, 126, 234, 0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'rgba(102, 126, 234, 0.1)';
+              }}
+              title="管理对话记录"
+            >
+              <FolderOpen size={14} />
+              管理
+            </button>
+          )}
+        </div>
         <HistoryList>
           {historySessions.length === 0 ? (
             <EmptyHistoryState>

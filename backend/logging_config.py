@@ -62,7 +62,23 @@ def setup_logging():
     root_logger.addHandler(console_handler)
     
     # 设置第三方库的日志级别
+    # 配置Uvicorn日志
     logging.getLogger("uvicorn").setLevel(logging.INFO)
+    logging.getLogger("uvicorn.access").setLevel(logging.INFO)
+    logging.getLogger("uvicorn.error").setLevel(logging.INFO)
+    
+    # 过滤掉无效HTTP请求的警告（通常来自扫描器或格式错误的请求）
+    class InvalidRequestFilter(logging.Filter):
+        """过滤无效HTTP请求的警告"""
+        def filter(self, record):
+            # 过滤掉"Invalid HTTP request received"警告
+            if "Invalid HTTP request received" in str(record.getMessage()):
+                return False
+            return True
+    
+    # 应用过滤器到uvicorn.error日志记录器
+    invalid_request_filter = InvalidRequestFilter()
+    logging.getLogger("uvicorn.error").addFilter(invalid_request_filter)
     logging.getLogger("fastapi").setLevel(logging.INFO)
     logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
     logging.getLogger("chromadb").setLevel(logging.WARNING)

@@ -1,7 +1,9 @@
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import Message
 import sys
 import os
 import json
@@ -58,6 +60,30 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 添加中间件来静默处理常见请求，减少日志噪音
+class SilentCommonRequestsMiddleware(BaseHTTPMiddleware):
+    """静默处理常见请求（favicon、robots.txt等），减少日志噪音"""
+    
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+        
+        # 静默处理的路径列表
+        silent_paths = [
+            "/favicon.ico",
+            "/robots.txt",
+            "/.well-known/security.txt",
+            "/.well-known/",
+        ]
+        
+        # 如果是静默路径，直接返回空响应
+        if any(path.startswith(silent) for silent in silent_paths):
+            return Response(status_code=204)  # No Content
+        
+        # 继续处理其他请求
+        return await call_next(request)
+
+app.add_middleware(SilentCommonRequestsMiddleware)
 
 # 文件存储配置（使用项目根目录）
 UPLOAD_DIR = Path(project_root) / "uploads"
@@ -164,6 +190,29 @@ async def root():
         "features": ["LangChain", "MySQL", "VectorDB", "Emotion Analysis", "Plugin System"],
         "plugins": plugin_stats
     }
+
+@app.get("/favicon.ico")
+async def favicon():
+    """处理favicon请求，返回空响应"""
+    return Response(status_code=204)
+
+@app.get("/robots.txt")
+async def robots():
+    """处理robots.txt请求"""
+    return Response(
+        content="User-agent: *\nDisallow: /",
+        media_type="text/plain",
+        status_code=200
+    )
+
+@app.get("/.well-known/security.txt")
+async def security_txt():
+    """处理security.txt请求"""
+    return Response(
+        content="# Security Policy\nContact: security@example.com\n",
+        media_type="text/plain",
+        status_code=200
+    )
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):

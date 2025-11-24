@@ -5,6 +5,7 @@ import ChatContainer from './components/ChatContainer';
 import FeedbackModal from './components/FeedbackModal';
 import PersonalizationPanel from './components/PersonalizationPanel';
 import StyleComparison from './components/StyleComparison';
+import HistoryManagementModal from './components/HistoryManagementModal';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useChat, useFileUpload, useKeyboard, useSession, useFeedback, useURLDetection } from './hooks';
@@ -25,6 +26,7 @@ function App() {
   const [inputValue, setInputValue] = useState('');
   const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
   const [showStyleComparison, setShowStyleComparison] = useState(false);
+  const [showHistoryManagement, setShowHistoryManagement] = useState(false);
 
   // Refs
   const inputRef = useRef(null);
@@ -112,6 +114,24 @@ function App() {
     deleteConversationHook(targetSessionId, sessionId, setMessages, setSessionId, setSuggestions);
   }, [deleteConversationHook, sessionId, setSessionId, setMessages, setSuggestions]);
 
+  // 处理历史消息管理中的会话选择
+  const handleHistorySessionSelect = useCallback((targetSessionId) => {
+    loadSessionHistory(targetSessionId, setMessages, setSuggestions);
+    setSessionId(targetSessionId);
+  }, [loadSessionHistory, setMessages, setSuggestions, setSessionId]);
+
+  // 处理批量删除后的回调
+  const handleSessionsDeleted = useCallback((deletedSessionIds) => {
+    // 如果当前会话被删除，清空消息
+    if (deletedSessionIds.includes(sessionId)) {
+      setMessages([]);
+      setSessionId(null);
+      setSuggestions([]);
+    }
+    // 刷新历史会话列表
+    loadHistorySessions();
+  }, [sessionId, setMessages, setSessionId, setSuggestions, loadHistorySessions]);
+
   // 键盘处理
   const { handleKeyPress, handleTabNavigation } = useKeyboard(
     startNewChat,
@@ -185,6 +205,7 @@ function App() {
         onDeleteSession={handleDeleteSession}
         onOpenPersonalization={() => setShowPersonalizationPanel(true)}
         onOpenStyleComparison={() => setShowStyleComparison(true)}
+        onOpenHistoryManagement={() => setShowHistoryManagement(true)}
       />
 
       <ChatContainer
@@ -225,6 +246,14 @@ function App() {
         onRatingChange={setFeedbackRating}
         onCommentChange={setFeedbackComment}
         onSubmit={submitFeedback}
+      />
+
+      <HistoryManagementModal
+        show={showHistoryManagement}
+        onClose={() => setShowHistoryManagement(false)}
+        userId={currentUserId}
+        onSessionSelect={handleHistorySessionSelect}
+        onSessionsDeleted={handleSessionsDeleted}
       />
     </AppContainer>
   );

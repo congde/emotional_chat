@@ -85,6 +85,7 @@ export const HistoryTitle = styled.div`
   color: #333;
   margin-bottom: 15px;
   font-size: 0.9rem;
+  width: 100%;
 `;
 
 export const HistoryList = styled.div`

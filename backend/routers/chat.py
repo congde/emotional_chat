@@ -177,6 +177,33 @@ async def get_user_sessions(user_id: str, limit: int = 50):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/users/{user_id}/sessions/search")
+async def search_user_sessions(user_id: str, keyword: str = "", limit: int = 50):
+    """搜索用户会话"""
+    try:
+        result = await chat_service.search_user_sessions(user_id, keyword, limit)
+        return result
+    except Exception as e:
+        logger.error(f"搜索用户会话错误: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/sessions/batch-delete")
+async def delete_sessions_batch(session_ids: List[str]):
+    """批量删除会话"""
+    try:
+        if not session_ids:
+            raise HTTPException(status_code=400, detail="会话ID列表不能为空")
+        
+        result = await chat_service.delete_sessions_batch(session_ids)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"批量删除会话错误: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.delete("/sessions/{session_id}")
 async def delete_session(session_id: str):
     """删除会话"""
