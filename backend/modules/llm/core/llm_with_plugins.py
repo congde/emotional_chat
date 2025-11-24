@@ -27,6 +27,7 @@ from backend.xinyu_prompt import get_system_prompt, build_full_prompt, validate_
 from backend.plugins.plugin_manager import PluginManager
 from backend.plugins.weather_plugin import WeatherPlugin
 from backend.plugins.news_plugin import NewsPlugin
+from backend.plugins.holiday_plugin import HolidayPlugin
 from backend.services.personalization_service import get_personalization_service
 
 try:
@@ -73,8 +74,9 @@ class EmotionalChatEngineWithPlugins:
         try:
             weather_plugin = WeatherPlugin()
             news_plugin = NewsPlugin()
-            self.plugin_manager.register_many([weather_plugin, news_plugin])
-            print("✓ 插件系统初始化成功")
+            holiday_plugin = HolidayPlugin()
+            self.plugin_manager.register_many([weather_plugin, news_plugin, holiday_plugin])
+            print("✓ 插件系统初始化成功（天气、新闻、节假日）")
         except Exception as e:
             print(f"警告: 插件初始化失败: {e}")
         
@@ -240,6 +242,76 @@ class EmotionalChatEngineWithPlugins:
         # 如果没有找到具体城市，返回默认值（让API决定）
         return "当前城市" if "当前" in user_input or "这里" in user_input else None
     
+    def _detect_holiday_intent(self, user_input: str) -> Optional[Dict[str, str]]:
+        """检测用户是否在询问节假日信息，如果是则返回日期信息"""
+        # 出游、旅行相关关键词
+        travel_keywords = [
+            "出游", "旅行", "旅游", "出行", "出去玩", "去玩", "假期", "放假", 
+            "节假日", "节日", "周末", "工作日", "调休", "假期安排",
+            "travel", "trip", "vacation", "holiday", "weekend", "workday"
+        ]
+        
+        # 检查是否包含出游/节假日相关关键词
+        has_travel_keyword = any(keyword in user_input for keyword in travel_keywords)
+        if not has_travel_keyword:
+            return None
+        
+        # 尝试提取日期
+        date_patterns = [
+            r"(\d{4})[年\-/](\d{1,2})[月\-/](\d{1,2})[日]?",  # 2024-10-01, 2024/10/1, 2024年10月1日
+            r"(\d{4})(\d{2})(\d{2})",  # 20241001
+            r"(\d{1,2})[月\-/](\d{1,2})[日]?",  # 10月1日, 10/1
+            r"今天", r"明天", r"后天", r"大后天",
+            r"下周一", r"下周二", r"下周三", r"下周四", r"下周五", r"下周六", r"下周日",
+            r"这周", r"下周", r"这周末", r"下周末"
+        ]
+        
+        result = {"date": None, "year": None}
+        
+        # 提取具体日期
+        for pattern in date_patterns:
+            match = re.search(pattern, user_input)
+            if match:
+                if "今天" in user_input:
+                    from datetime import datetime
+                    result["date"] = datetime.now().strftime("%Y-%m-%d")
+                    return result
+                elif "明天" in user_input:
+                    from datetime import datetime, timedelta
+                    result["date"] = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+                    return result
+                elif "后天" in user_input:
+                    from datetime import datetime, timedelta
+                    result["date"] = (datetime.now() + timedelta(days=2)).strftime("%Y-%m-%d")
+                    return result
+                elif len(match.groups()) == 3:
+                    # 完整日期 YYYY-MM-DD
+                    year, month, day = match.groups()
+                    result["date"] = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+                    return result
+                elif len(match.groups()) == 2 and len(match.group(1)) == 4:
+                    # YYYYMMDD格式
+                    date_str = match.group(0)
+                    if len(date_str) == 8:
+                        result["date"] = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
+                        return result
+                elif len(match.groups()) == 2:
+                    # 月-日格式，需要补充年份
+                    month, day = match.groups()
+                    from datetime import datetime
+                    year = datetime.now().year
+                    result["date"] = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+                    return result
+        
+        # 提取年份（用于查询整年节假日）
+        year_match = re.search(r"(\d{4})年", user_input)
+        if year_match:
+            result["year"] = year_match.group(1)
+            return result
+        
+        # 如果只是提到出游但没有具体日期，返回今天（让用户知道今天是否适合出游）
+        return {"date": None, "year": None}
+    
     def _generate_response_with_plugins(self, user_input: str, session_id: str, 
                                        user_id: str = "anonymous",
                                        emotion_state: Optional[Dict] = None,
@@ -269,20 +341,23 @@ class EmotionalChatEngineWithPlugins:
             # 没有插件，使用普通模式
             return self._call_llm_normal(user_input, session_id, user_id, emotion_state)
         
-        # 检测天气意图
+        # 检测用户意图（仅用于辅助参数提取，不强制调用）
         weather_location = self._detect_weather_intent(user_input)
-        should_force_weather = weather_location is not None
-        print(f"[DEBUG] 天气意图检测: location={weather_location}, should_force={should_force_weather}")
+        holiday_info = self._detect_holiday_intent(user_input)
         
-        # 构建消息 - 明确指示模型使用工具
-        tools_description = "\n\n【重要】当用户询问天气、新闻等实时信息时，你必须调用相应的工具来获取数据。可用工具：\n"
+        print(f"[DEBUG] 意图检测 - 天气: location={weather_location}, 节假日: info={holiday_info}")
+        
+        # 构建消息 - 让大模型自己判断是否需要调用工具
+        tools_description = "\n\n【工具使用说明】当用户需要实时信息时，你可以调用以下工具获取数据：\n"
         for func in functions:
             tools_description += f"- {func.get('name', 'unknown')}: {func.get('description', '')}\n"
-        tools_description += "\n如果用户询问天气（如'今天天气'、'XX天气'、'天气怎么样'），必须调用get_weather工具。"
-        tools_description += "\n如果用户询问新闻（如'最近有什么科技新闻'、'健康新闻'、'娱乐新闻'等），必须调用get_latest_news工具，根据用户提到的类别设置category参数。"
         
-        if should_force_weather:
-            tools_description += f"\n【强制要求】用户正在询问天气，你必须立即调用get_weather工具，location参数为：{weather_location if weather_location != '当前城市' else '用户所在城市'}。"
+        tools_description += "\n【使用原则】\n"
+        tools_description += "1. 当用户询问天气相关信息时，调用get_weather工具获取实时天气数据。\n"
+        tools_description += "2. 当用户询问新闻时，调用get_latest_news工具获取最新新闻。\n"
+        tools_description += "3. 当用户提到出游、旅行、假期安排、节假日、工作日、调休等时，调用get_holiday_info工具查询节假日信息。\n"
+        tools_description += "4. 根据用户的具体需求，选择合适的工具和参数。\n"
+        tools_description += "5. 如果用户的问题不需要实时数据，直接回答即可，无需调用工具。"
         
         messages = [
             {
@@ -307,14 +382,9 @@ class EmotionalChatEngineWithPlugins:
             # 转换functions为tools格式（通义千问DashScope API使用tools格式）
             tools = [{"type": "function", "function": func} for func in functions]
             
-            # 如果检测到天气意图，强制调用get_weather工具
+            # 让模型自己决定是否调用工具（不强制）
             tool_choice = "auto"
-            if should_force_weather:
-                tool_choice = {
-                    "type": "function",
-                    "function": {"name": "get_weather"}
-                }
-                print(f"[DEBUG] 检测到天气查询意图，强制调用get_weather工具，城市: {weather_location}")
+            print(f"[DEBUG] 工具选择模式: auto（由模型决定是否调用工具）")
             
             # 优先尝试tools格式（通义千问）
             data = {
@@ -334,11 +404,9 @@ class EmotionalChatEngineWithPlugins:
                 print(f"[WARNING] 尝试tools格式失败 ({response.status_code}): {response.text[:200]}")
                 print(f"[DEBUG] 改用functions格式...")
                 
-                # 对于functions格式，也需要强制调用
+                # 对于functions格式，也让模型自己决定
                 function_call = "auto"
-                if should_force_weather:
-                    function_call = {"name": "get_weather"}
-                    print(f"[DEBUG] 强制调用get_weather (functions格式)")
+                print(f"[DEBUG] 函数调用模式: auto（由模型决定是否调用函数）")
                 
                 data = {
                     "model": self.model,
@@ -388,15 +456,26 @@ class EmotionalChatEngineWithPlugins:
                 print(f"[DEBUG] 检测到functions格式调用: {func_name}, 参数: {func_args}")
             
             if func_name:
-                # 如果强制调用天气但参数中没有location，添加默认值
+                # 辅助参数提取：如果模型调用了工具但参数不完整，尝试从用户输入中提取
                 if func_name == "get_weather" and "location" not in func_args:
                     if weather_location and weather_location != "当前城市":
                         func_args["location"] = weather_location
-                        print(f"[DEBUG] 自动添加location参数: {weather_location}")
-                    elif weather_location == "当前城市":
-                        # 尝试从用户输入中提取，或使用默认值
+                        print(f"[DEBUG] 辅助提取location参数: {weather_location}")
+                    elif weather_location == "当前城市" or not weather_location:
+                        # 如果无法提取，使用默认值或让API决定
                         func_args["location"] = "深圳"  # 默认值，可以根据需要修改
                         print(f"[DEBUG] 使用默认location: 深圳")
+                
+                # 辅助参数提取：节假日查询
+                if func_name == "get_holiday_info":
+                    if holiday_info:
+                        if holiday_info.get("date") and "date" not in func_args:
+                            func_args["date"] = holiday_info["date"]
+                            print(f"[DEBUG] 辅助提取date参数: {holiday_info['date']}")
+                        elif holiday_info.get("year") and "year" not in func_args:
+                            func_args["year"] = holiday_info["year"]
+                            print(f"[DEBUG] 辅助提取year参数: {holiday_info['year']}")
+                    # 如果模型没有提供参数，也不强制添加，让插件自己处理（插件有默认值）
                 
                 # 执行插件
                 print(f"[DEBUG] 执行插件: {func_name}, 参数: {func_args}")
@@ -457,6 +536,17 @@ class EmotionalChatEngineWithPlugins:
 3. 用温暖、关心的语气介绍这些新闻
 4. 可以询问用户对哪条新闻感兴趣，想了解更多
 5. 保持"心语"的陪伴者角色，让用户感受到你在分享有用的信息"""
+                elif func_name == "get_holiday_info":
+                    user_message_content = f"""用户询问了节假日信息，我已经查询到了以下数据：
+
+{plugin_result_text}
+
+请基于这些真实的节假日数据，用自然、温暖、陪伴式的语言回复用户。要求：
+1. 明确告诉用户该日期是否为节假日、工作日或周末
+2. 如果是节假日，说明是什么节日
+3. 结合用户提到的出游、旅行等需求，给出贴心的建议
+4. 用温暖、关心的语气，帮助用户规划行程
+5. 保持"心语"的陪伴者角色，让用户感受到你在关心他们的出行安排"""
                 else:
                     user_message_content = f"""用户询问了相关信息，我已经查询到了以下数据：
 
@@ -573,6 +663,26 @@ class EmotionalChatEngineWithPlugins:
                 news_text += "\n"
             
             return news_text
+        
+        elif plugin_name == "get_holiday_info":
+            if "error" in result:
+                return f"节假日查询失败: {result['error']}"
+            
+            date_str = result.get('date', '未知日期')
+            is_holiday = result.get('is_holiday', False)
+            holiday_name = result.get('holiday_name', '')
+            is_workday = result.get('is_workday', False)
+            is_weekend = result.get('is_weekend', False)
+            weekday = result.get('weekday', '')
+            
+            holiday_info = f"""日期：{date_str}
+是否为节假日：{'是' if is_holiday else '否'}
+节假日名称：{holiday_name if holiday_name else '无'}
+是否为工作日：{'是' if is_workday else '否'}
+是否为周末：{'是' if is_weekend else '否'}
+星期：{weekday}"""
+            
+            return holiday_info
         
         return json.dumps(result, ensure_ascii=False)
     

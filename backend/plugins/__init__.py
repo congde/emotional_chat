@@ -4,11 +4,13 @@
 from .base_plugin import BasePlugin
 from .weather_plugin import WeatherPlugin
 from .news_plugin import NewsPlugin
+from .holiday_plugin import HolidayPlugin
 from .plugin_manager import PluginManager
 
 __all__ = [
     "BasePlugin",
     "WeatherPlugin", 
     "NewsPlugin",
+    "HolidayPlugin",
     "PluginManager"
 ]
