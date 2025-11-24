@@ -9,7 +9,15 @@ from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 
 # 数据库配置
-DATABASE_URL = os.getenv("DATABASE_URL", "mysql+pymysql://root:emotional_chat_2025@localhost:3306/emotional_chat")
+# 从环境变量获取数据库URL，如果没有设置则从各个组件构建
+_default_db_url = (
+    f"mysql+pymysql://{os.getenv('MYSQL_USER', 'root')}:"
+    f"{os.getenv('MYSQL_PASSWORD', '')}@"
+    f"{os.getenv('MYSQL_HOST', 'localhost')}:"
+    f"{os.getenv('MYSQL_PORT', '3306')}/"
+    f"{os.getenv('MYSQL_DATABASE', 'emotional_chat')}"
+)
+DATABASE_URL = os.getenv("DATABASE_URL", _default_db_url)
 
 # 创建数据库引擎
 engine = create_engine(DATABASE_URL, echo=True)

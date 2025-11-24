@@ -6,6 +6,7 @@
 """
 
 import logging
+from datetime import datetime
 from typing import Dict, Optional
 from backend.services.advanced_sentiment_analyzer import AdvancedSentimentAnalyzer, get_analyzer
 from backend.services.emotion_trend_analyzer import EmotionTrendAnalyzer
@@ -291,7 +292,7 @@ class SentimentIntegratedChatService:
             
             return {
                 "user_id": user_id,
-                "report_date": __import__('datetime').datetime.now().isoformat(),
+                "report_date": datetime.now().isoformat(),
                 "analysis_period_days": days,
                 "trend_analysis": trend_report,
                 "emotion_profile": emotion_profile,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { Plus, Clock, Settings, Palette, User, Trash2 } from 'lucide-react';
 import { Sidebar as SidebarStyled } from '../styles/layout';
 import {

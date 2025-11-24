@@ -1,0 +1,13 @@
+# Bandit security scanner configuration
+# Skip certain tests for legitimate use cases
+
+[bandit]
+# Skip B104 (hardcoded_bind_all_interfaces) - we use 0.0.0.0 for Docker
+skips = B104
+
+# Exclude test files from security scanning
+exclude_dirs = tests,test,__pycache__,node_modules
+
+# Severity levels to report
+severity_level = medium
+
