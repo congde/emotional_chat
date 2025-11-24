@@ -1,50 +1,70 @@
 # Python 3.10+ 和 M 系列处理器优化版本
-# 使用官方 PyPI 源以获取最新版本: pip install -r requirements-py310.txt -i https://pypi.org/simple
+# 注意: 版本要求已调整为适配阿里云镜像源 (http://mirrors.cloud.aliyuncs.com/pypi/simple/)
+# 如需最新版本，请使用官方 PyPI 源: pip install -r requirements-py310.txt -i https://pypi.org/simple
 
 # 核心框架
-fastapi>=0.115.0
-uvicorn[standard]>=0.30.0
-# 使用 Pydantic v2 以获得更好的性能和 M 系列处理器支持
-pydantic>=2.0.0
-pydantic-settings>=2.0.0
-python-dotenv>=1.0.0
-requests>=2.31.0
+fastapi>=0.83.0
+uvicorn[standard]>=0.17.0
+# 使用 Pydantic v1 (与 Python 3.8 保持一致)
+# 代码中使用了 @validator 等 v1 API，如需升级到 v2 需要更新代码
+# 如需 Pydantic v2，请使用官方 PyPI 源并更新代码: pip install -r requirements-py310.txt -i https://pypi.org/simple
+pydantic>=1.9.2,<2.0.0
+# 注意: pydantic-settings 是 Pydantic v2 的独立包
+# 如果使用 Pydantic v1，可能不需要 pydantic-settings（设置管理是内置的）
+# 如果代码中使用了 pydantic-settings，请检查是否兼容 Pydantic v1
+# pydantic-settings>=2.0.0  # 仅在需要时取消注释（需要 Pydantic v2）
+python-dotenv>=0.20.0
+requests>=2.25.0
 
 # LLM和LangChain
-openai>=1.0.0
-langchain>=0.3.0
-langchain-openai>=0.2.0
-langchain-community>=0.3.0
+# 注意: langchain-openai 0.1.x 需要 openai>=1.26.0，因此必须使用 OpenAI 1.x
+# OpenAI 1.x API 与 0.x 基本兼容（OpenAI/AsyncOpenAI 类可用）
+openai>=1.26.0,<2.0.0
+# 注意: langchain 0.3.0+ 需要 Pydantic v2，由于使用 Pydantic v1，需要降级 langchain
+# langchain 0.2.x 支持 Pydantic v1，但可能功能较旧
+# 如果必须使用 langchain 0.3.0+，需要升级到 Pydantic v2 并更新代码
+langchain>=0.2.0,<0.3.0
+langchain-openai>=0.1.10,<0.2.0
+langchain-community>=0.0.1,<0.3.0
 pandas>=2.0.0
 
 # 向量数据库
-chromadb>=0.5.0
+# ChromaDB 0.5.x 可能有 API 变化，锁定 0.4.x 以保持兼容性
+chromadb>=0.4.22,<0.5.0
 sentence-transformers>=2.7.0
+# 注意: pysqlite3-binary 用于替代系统sqlite3以支持ChromaDB
+# 如果镜像源没有，可以尝试: pip install pysqlite3-binary --index-url https://pypi.org/simple
+pysqlite3-binary>=0.5.0
 
 # 数据库
 PyMySQL>=1.1.0
-sqlalchemy>=2.0.0
-alembic>=1.13.0
+# SQLAlchemy 2.x 有重大 API 变化，锁定 1.x 版本以保持兼容性
+sqlalchemy>=1.4.0,<2.0.0
+alembic>=1.8.0
 
 # 文档处理
 python-multipart>=0.0.9
+pypdf>=3.0.0
 
 # 依赖冲突修复
-idna>=3.7
-anyio>=4.0.0
+idna>=2.10
+anyio>=3.0.0
 sniffio>=1.3.0
+# 修复 TensorFlow 与 protobuf 版本冲突
+# TensorFlow 需要 protobuf <= 3.20.x
+protobuf>=3.19.0,<=3.20.3
 
 # 多模态功能依赖
 # 语音识别和合成
-openai-whisper>=20231117
+openai-whisper>=20230314
 pydub>=0.25.1
-noisereduce>=3.0.0
-librosa>=0.10.0
+noisereduce>=2.0.0
+librosa>=0.9.0
 soundfile>=0.12.0
 
 # 图像处理和分析
-Pillow>=10.0.0
-opencv-python>=4.9.0
+Pillow>=9.0.0
+opencv-python>=4.5.0
 deepface>=0.0.79
 # 注意: face-recognition 需要 dlib
 # 在 M 系列处理器上，建议使用 conda 安装 dlib: conda install -c conda-forge dlib
@@ -63,15 +83,17 @@ aliyun-python-sdk-ocr>=1.0.0
 gTTS>=2.5.0
 
 # 其他多模态依赖
-# 对于 M 系列处理器，numpy 1.26+ 包含 ARM64 优化
-numpy>=1.26.0
+# 注意: librosa 0.10.0 和 opencv-python 4.9.0 可能需要 numpy < 1.24
+# 对于 M 系列处理器，如果需要 numpy 1.26+，请测试兼容性
+# 当前限制为 < 1.24 以确保与 librosa/opencv 兼容
+numpy>=1.21.0,<1.24.0
 jieba>=0.42.1
 
 # 其他必要依赖
-beautifulsoup4>=4.12.0
-PyPDF2>=3.0.0
-feedparser>=6.0.0
+beautifulsoup4>=4.9.0
+PyPDF2>=2.0.0
+feedparser>=5.2.0
 
 # 额外依赖以支持 M 系列处理器
-typing-extensions>=4.8.0
+typing-extensions>=4.0.0
 

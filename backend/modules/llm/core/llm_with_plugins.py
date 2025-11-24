@@ -9,7 +9,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import requests
 
-# 尝试导入 LangChain
+# 导入 LangChain (Python 3.10+, langchain 0.2.x+)
 try:
     from langchain_openai import ChatOpenAI
     from langchain_core.prompts import ChatPromptTemplate
@@ -17,6 +17,9 @@ try:
     LANGCHAIN_AVAILABLE = True
 except ImportError:
     LANGCHAIN_AVAILABLE = False
+    ChatOpenAI = None
+    ChatPromptTemplate = None
+    StrOutputParser = None
 
 from backend.database import DatabaseManager, create_tables, get_db
 from backend.models import ChatRequest, ChatResponse

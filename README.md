@@ -270,15 +270,9 @@ cd /home/workSpace/emotional_chat
 # 检查Python版本
 python3 --version
 
-# 根据Python版本安装对应的依赖
-# Python 3.8 使用 requirements.txt
-# Python 3.10 使用 requirements-py310.txt
-
-# Python 3.8
+# 安装依赖（Python 3.10+）
 pip3 install --user -r requirements.txt
-
-# 或 Python 3.10
-# pip3 install --user -r requirements-py310.txt
+# 或 python3.10 -m pip install --user -r requirements.txt
 
 cd frontend && npm install && cd ..
 ```
@@ -460,9 +454,8 @@ backend/modules/
 ### 后端技术
 
 #### 核心框架
-- **Python 3.8 / 3.10**: 主要开发语言
-  - Python 3.8 使用 `requirements.txt`
-  - Python 3.10 使用 `requirements-py310.txt`
+- **Python 3.10+**: 主要开发语言
+  - 使用 `requirements.txt` 安装依赖
 - **FastAPI 0.83+**: 现代化的Web框架
 - **LangChain 0.1+**: 对话流管理和记忆管理
 - **Pydantic**: 数据验证和序列化
@@ -527,7 +520,7 @@ gcc --version
 **注意**：
 - `dlib`（face-recognition 的依赖）需要 CMake 编译，预计编译时间 10-30 分钟
 - `opencv-python` 也需要编译，预计编译时间 5-15 分钟
-- 如果不需要人脸识别功能，可以注释掉对应 requirements 文件（`requirements.txt` 或 `requirements-py310.txt`）中的 `face-recognition==1.3.0`
+- 如果不需要人脸识别功能，可以注释掉 `requirements.txt` 中的 `face-recognition>=1.3.0`
 
 #### 1.2 安装Python依赖
 ```bash
@@ -537,15 +530,8 @@ cd /home/emotional_chat
 # 检查Python版本
 python3 --version
 
-# 根据Python版本安装对应的依赖
-# Python 3.8 使用 requirements.txt
-# Python 3.10 使用 requirements-py310.txt
-
-# Python 3.8
+# 安装依赖（Python 3.10+）
 pip3 install --user -r requirements.txt
-
-# 或 Python 3.10
-# pip3 install --user -r requirements-py310.txt
 
 # 注意：如果遇到 dlib 编译失败，请确保已安装 CMake
 # 如果遇到版本冲突，请参考对应 requirements 文件中的注释说明
@@ -748,11 +734,9 @@ python3 --version
 # 检查依赖安装
 pip3 list | grep fastapi
 
-# 手动安装依赖（根据Python版本选择对应的requirements文件）
-# Python 3.8: pip3 install --user -r requirements.txt
-# Python 3.10: pip3 install --user -r requirements-py310.txt
+# 手动安装依赖（Python 3.10+）
 python3 --version  # 先检查版本
-pip3 install --user -r requirements.txt  # 或 requirements-py310.txt
+pip3 install --user -r requirements.txt
 
 # 检查MySQL连接
 python3 setup_database.py
@@ -1080,8 +1064,7 @@ emotional_chat/
 ├── test_agent.py                     # Agent测试脚本
 ├── test_sentiment_offline.py         # 离线情感测试
 ├── test_weather_plugin.py            # 天气插件测试
-├── requirements.txt                  # Python 3.8 依赖
-├── requirements-py310.txt            # Python 3.10 依赖
+├── requirements.txt                  # Python 3.10+ 依赖
 ├── Makefile                          # 命令行工具
 ├── Dockerfile                        # Docker镜像构建
 ├── docker-compose.yml               # Docker容器编排
@@ -1397,11 +1380,9 @@ curl http://localhost:8000/health
 **传统部署**：
 
 ```bash
-# 1. 安装依赖（根据Python版本选择对应的requirements文件）
-# Python 3.8: pip install -r requirements.txt
-# Python 3.10: pip install -r requirements-py310.txt
+# 1. 安装依赖（Python 3.10+）
 python --version  # 先检查版本
-pip install -r requirements.txt  # 或 requirements-py310.txt
+pip install -r requirements.txt
 
 # 2. 配置环境
 cp config.env.example config.env

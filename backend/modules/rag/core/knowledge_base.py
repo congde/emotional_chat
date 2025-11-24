@@ -10,21 +10,11 @@ from pathlib import Path
 import logging
 from datetime import datetime
 
-try:
-    from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader, TextLoader
-    from langchain_community.vectorstores import Chroma
-except ImportError:
-    # 兼容旧版本 langchain
-    from langchain.document_loaders import PyPDFLoader, DirectoryLoader, TextLoader
-    from langchain.vectorstores import Chroma
-
-try:
-    from langchain_openai import OpenAIEmbeddings
-except ImportError:
-    from langchain.embeddings import OpenAIEmbeddings
-
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.schema import Document
+# 使用兼容层统一处理 langchain 导入
+from .langchain_compat import (
+    PyPDFLoader, DirectoryLoader, TextLoader, Chroma,
+    OpenAIEmbeddings, RecursiveCharacterTextSplitter, Document
+)
 
 from backend.logging_config import get_logger
 from config import Config

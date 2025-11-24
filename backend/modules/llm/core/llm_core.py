@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-简化版LangChain聊天引擎（支持LCEL表达式，兼容Python 3.6+）
+简化版LangChain聊天引擎（支持LCEL表达式，Python 3.10+）
 """
 import os
 import json
@@ -9,7 +9,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import requests
 
-# 尝试导入 LangChain（如果可用）
+# 导入 LangChain (Python 3.10+, langchain 0.2.x+)
 try:
     from langchain_openai import ChatOpenAI
     from langchain_core.prompts import ChatPromptTemplate
@@ -17,6 +17,9 @@ try:
     LANGCHAIN_AVAILABLE = True
 except ImportError:
     LANGCHAIN_AVAILABLE = False
+    ChatOpenAI = None
+    ChatPromptTemplate = None
+    StrOutputParser = None
     print("提示: LangChain 模块未安装，将使用传统 HTTP 请求方式")
 
 # 数据库和模型

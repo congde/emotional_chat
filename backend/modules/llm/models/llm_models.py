@@ -210,6 +210,7 @@ class LLMStats(BaseModel):
         }
 
 
-# 更新前向引用
-LLMRequest.model_rebuild()
-LLMResponse.model_rebuild()
+# 更新前向引用（Pydantic v1 自动处理前向引用，不需要 model_rebuild）
+# 注意: model_rebuild() 是 Pydantic v2 的方法，v1 不需要
+# LLMRequest.model_rebuild()  # Pydantic v1 不需要此调用
+# LLMResponse.model_rebuild()  # Pydantic v1 不需要此调用

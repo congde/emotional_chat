@@ -7,13 +7,13 @@ RAG服务层
 from typing import List, Dict, Any, Optional
 import logging
 
+# 使用兼容层处理 langchain 导入
+from ..core.langchain_compat import Document
+
+# 导入 LangChain (Python 3.10+, langchain 0.2.x+)
 from langchain.chains import RetrievalQA
-try:
-    from langchain_openai import ChatOpenAI
-except ImportError:
-    from langchain.chat_models import ChatOpenAI
-from langchain.prompts import PromptTemplate
-from langchain.schema import Document
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import PromptTemplate
 
 from ..core.knowledge_base import KnowledgeBaseManager
 from backend.logging_config import get_logger

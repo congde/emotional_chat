@@ -1,11 +1,18 @@
 from typing import Dict, List, Tuple
 import re
-from langchain.schema import BaseMessage, HumanMessage, AIMessage
-from langchain.prompts import PromptTemplate
+
+# 导入 LangChain (Python 3.10+, langchain 0.2.x+)
 try:
+    from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
+    from langchain_core.prompts import PromptTemplate
     from langchain_openai import ChatOpenAI
 except ImportError:
-    from langchain.chat_models import ChatOpenAI
+    BaseMessage = None
+    HumanMessage = None
+    AIMessage = None
+    PromptTemplate = None
+    ChatOpenAI = None
+
 from config import Config
 
 class EmotionAnalyzer:

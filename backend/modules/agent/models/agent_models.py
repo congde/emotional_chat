@@ -51,9 +51,10 @@ class AgentRequest(BaseModel):
     available_tools: Optional[List[str]] = Field(None, description="可用工具列表")
     max_actions: int = Field(10, ge=1, le=50, description="最大动作数量")
     
-    @validator('user_message')
+    @validator('user_message', allow_reuse=True)
     def validate_user_message(cls, v):
-        if not v.strip():
+        """验证并清理用户消息"""
+        if not v or not v.strip():
             raise ValueError('用户消息不能为空')
         return v.strip()
 
@@ -197,5 +198,6 @@ class AgentStats(BaseModel):
         }
 
 
-# 更新前向引用
-AgentResponse.model_rebuild()
+# 更新前向引用（Pydantic v1 自动处理前向引用，不需要 model_rebuild）
+# 注意: model_rebuild() 是 Pydantic v2 的方法，v1 不需要
+# AgentResponse.model_rebuild()  # Pydantic v1 不需要此调用

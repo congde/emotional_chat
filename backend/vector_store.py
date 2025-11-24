@@ -6,18 +6,46 @@ sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import chromadb
 from chromadb.config import Settings
 import uuid
+import os
+import shutil
 from typing import List, Dict, Any, Optional
 from config import Config
+import logging
+
+logger = logging.getLogger(__name__)
 
 class VectorStore:
     def __init__(self):
-        # 禁用遥测以避免 Python 3.8 兼容性问题
+        # 禁用遥测
         settings = Settings(
             anonymized_telemetry=False,
             allow_reset=True
         )
+        
+        # 如果数据库目录存在但架构不匹配，删除并重建
+        db_path = Config.CHROMA_PERSIST_DIRECTORY
+        if os.path.exists(db_path):
+            try:
+                # 尝试创建客户端，如果失败则删除旧数据库
+                test_client = chromadb.PersistentClient(
+                    path=db_path,
+                    settings=settings
+                )
+                # 尝试获取集合列表，如果失败说明架构不匹配
+                try:
+                    test_client.list_collections()
+                except Exception as e:
+                    logger.warning(f"ChromaDB 数据库架构不匹配，将删除并重建: {e}")
+                    shutil.rmtree(db_path)
+                    logger.info(f"已删除旧数据库目录: {db_path}")
+            except Exception as e:
+                logger.warning(f"ChromaDB 初始化失败，将删除并重建: {e}")
+                if os.path.exists(db_path):
+                    shutil.rmtree(db_path)
+                    logger.info(f"已删除旧数据库目录: {db_path}")
+        
         self.client = chromadb.PersistentClient(
-            path=Config.CHROMA_PERSIST_DIRECTORY,
+            path=db_path,
             settings=settings
         )
         # 不使用自定义嵌入器，使用ChromaDB默认的嵌入函数
@@ -29,23 +57,31 @@ class VectorStore:
         default_ef = embedding_functions.DefaultEmbeddingFunction()
         
         # 创建集合，使用自定义嵌入函数
-        self.conversation_collection = self.client.get_or_create_collection(
-            name="conversations",
-            embedding_function=default_ef,
-            metadata={"hnsw:space": "cosine"}
-        )
-        
-        self.knowledge_collection = self.client.get_or_create_collection(
-            name="knowledge",
-            embedding_function=default_ef,
-            metadata={"hnsw:space": "cosine"}
-        )
-        
-        self.emotion_collection = self.client.get_or_create_collection(
-            name="emotions",
-            embedding_function=default_ef,
-            metadata={"hnsw:space": "cosine"}
-        )
+        try:
+            self.conversation_collection = self.client.get_or_create_collection(
+                name="conversations",
+                embedding_function=default_ef,
+                metadata={"hnsw:space": "cosine"}
+            )
+            
+            self.knowledge_collection = self.client.get_or_create_collection(
+                name="knowledge",
+                embedding_function=default_ef,
+                metadata={"hnsw:space": "cosine"}
+            )
+            
+            self.emotion_collection = self.client.get_or_create_collection(
+                name="emotions",
+                embedding_function=default_ef,
+                metadata={"hnsw:space": "cosine"}
+            )
+        except Exception as e:
+            logger.error(f"创建 ChromaDB 集合失败: {e}")
+            # 如果仍然失败，尝试重置数据库
+            if os.path.exists(db_path):
+                shutil.rmtree(db_path)
+                logger.info(f"已删除数据库目录，请重新启动服务: {db_path}")
+            raise
     
     def add_conversation(self, session_id: str, message: str, response: str, emotion: str = None):
         """存储对话记录"""
