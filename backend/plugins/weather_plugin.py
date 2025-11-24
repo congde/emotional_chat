@@ -3,6 +3,8 @@
 """
 import os
 import requests
+import time
+from urllib.parse import quote
 from typing import Dict, Any
 from .base_plugin import BasePlugin
 import logging
@@ -98,93 +100,186 @@ class WeatherPlugin(BasePlugin):
             'lang': 'zh_cn'
         }
         
-        try:
-            response = requests.get(self.base_url, params=params, timeout=10)
-            
-            if response.status_code != 200:
-                error_data = response.json() if response.text else {}
-                error_msg = error_data.get("message", f"天气查询失败，状态码: {response.status_code}")
-                logger.error(f"OpenWeatherMap API错误: {error_msg}")
-                return {"error": error_msg}
-            
-            data = response.json()
-            
-            return {
-                "location": data.get("name", location),
-                "temperature": round(data["main"]["temp"], 1),
-                "description": data["weather"][0]["description"] if data.get("weather") else "未知",
-                "humidity": data["main"].get("humidity", 0),
-                "wind_speed": round(data["wind"].get("speed", 0), 1),
-                "feels_like": round(data["main"].get("feels_like", data["main"]["temp"]), 1),
-                "pressure": data["main"].get("pressure", 0)
-            }
-        except requests.exceptions.RequestException as e:
-            logger.error(f"OpenWeatherMap API请求异常: {e}")
-            return {"error": f"网络请求失败: {str(e)}"}
-        except Exception as e:
-            logger.error(f"OpenWeatherMap API解析异常: {e}")
-            return {"error": f"数据解析失败: {str(e)}"}
+        # 重试配置
+        max_retries = 3
+        timeout = 20  # 增加超时时间到20秒
+        retry_delay = 2  # 初始重试延迟（秒）
+        
+        last_exception = None
+        for attempt in range(max_retries):
+            try:
+                logger.debug(f"OpenWeatherMap API请求 (尝试 {attempt + 1}/{max_retries}): {location}")
+                response = requests.get(self.base_url, params=params, timeout=timeout)
+                
+                if response.status_code != 200:
+                    error_data = response.json() if response.text else {}
+                    error_msg = error_data.get("message", f"天气查询失败，状态码: {response.status_code}")
+                    logger.warning(f"OpenWeatherMap API错误: {error_msg}")
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay * (attempt + 1))  # 指数退避
+                        continue
+                    return {"error": error_msg}
+                
+                data = response.json()
+                
+                logger.debug(f"OpenWeatherMap API查询成功: {location}")
+                return {
+                    "location": data.get("name", location),
+                    "temperature": round(data["main"]["temp"], 1),
+                    "description": data["weather"][0]["description"] if data.get("weather") else "未知",
+                    "humidity": data["main"].get("humidity", 0),
+                    "wind_speed": round(data["wind"].get("speed", 0), 1),
+                    "feels_like": round(data["main"].get("feels_like", data["main"]["temp"]), 1),
+                    "pressure": data["main"].get("pressure", 0)
+                }
+                
+            except requests.exceptions.Timeout as e:
+                last_exception = e
+                logger.warning(f"OpenWeatherMap API请求超时 (尝试 {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay * (attempt + 1))  # 指数退避
+                    continue
+                    
+            except requests.exceptions.ConnectionError as e:
+                last_exception = e
+                logger.warning(f"OpenWeatherMap API连接错误 (尝试 {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay * (attempt + 1))  # 指数退避
+                    continue
+                    
+            except requests.exceptions.RequestException as e:
+                last_exception = e
+                logger.warning(f"OpenWeatherMap API请求异常 (尝试 {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay * (attempt + 1))  # 指数退避
+                    continue
+                    
+            except Exception as e:
+                logger.error(f"OpenWeatherMap API解析异常: {e}")
+                # 解析错误通常不需要重试
+                return {"error": f"数据解析失败: {str(e)}"}
+        
+        # 所有重试都失败了
+        error_msg = "网络请求失败"
+        if last_exception:
+            if isinstance(last_exception, requests.exceptions.Timeout):
+                error_msg = "网络请求超时，请稍后重试"
+            elif isinstance(last_exception, requests.exceptions.ConnectionError):
+                error_msg = "无法连接到天气服务，请检查网络连接"
+            else:
+                error_msg = f"网络请求失败: {str(last_exception)}"
+        
+        logger.error(f"OpenWeatherMap API请求最终失败: {error_msg}")
+        return {"error": error_msg}
     
     def _query_free_api(self, location: str) -> Dict[str, Any]:
         """使用免费的wttr.in API查询（无需API密钥）"""
-        try:
-            # wttr.in 是一个免费的天气服务，支持多种格式
-            # 使用JSON格式获取数据
-            url = f"https://wttr.in/{location}?format=j1&lang=zh"
-            headers = {
-                "User-Agent": "Mozilla/5.0 (compatible; WeatherBot/1.0)"
-            }
-            
-            response = requests.get(url, headers=headers, timeout=10)
-            
-            if response.status_code != 200:
-                logger.error(f"wttr.in API错误: {response.status_code}")
-                return {"error": f"天气查询失败，状态码: {response.status_code}"}
-            
-            data = response.json()
-            
-            # 解析wttr.in的JSON格式
-            current = data.get("current_condition", [{}])[0]
-            location_info = data.get("nearest_area", [{}])[0]
-            
-            # 获取城市名称
-            city_name = location_info.get("areaName", [{}])[0].get("value", location)
-            
-            # 温度（摄氏度）
-            temp_c = float(current.get("temp_C", 0))
-            
-            # 天气描述
-            weather_desc = current.get("weatherDesc", [{}])[0].get("value", "未知")
-            
-            # 湿度
-            humidity = int(current.get("humidity", 0))
-            
-            # 风速（km/h）
-            wind_speed_kmh = float(current.get("windspeedKmph", 0))
-            wind_speed_ms = round(wind_speed_kmh / 3.6, 1)  # 转换为m/s
-            
-            # 体感温度
-            feels_like = float(current.get("FeelsLikeC", temp_c))
-            
-            # 气压
-            pressure = int(current.get("pressure", 0))
-            
-            return {
-                "location": city_name,
-                "temperature": round(temp_c, 1),
-                "description": weather_desc,
-                "humidity": humidity,
-                "wind_speed": wind_speed_ms,
-                "feels_like": round(feels_like, 1),
-                "pressure": pressure,
-                "note": "使用免费的wttr.in API"
-            }
-        except requests.exceptions.RequestException as e:
-            logger.error(f"wttr.in API请求异常: {e}")
-            return {"error": f"网络请求失败: {str(e)}"}
-        except Exception as e:
-            logger.error(f"wttr.in API解析异常: {e}")
-            return {"error": f"数据解析失败: {str(e)}"}
+        # 重试配置
+        max_retries = 3
+        timeout = 20  # 增加超时时间到20秒
+        retry_delay = 2  # 初始重试延迟（秒）
+        
+        # 正确编码城市名称（处理中文等特殊字符）
+        encoded_location = quote(location)
+        url = f"https://wttr.in/{encoded_location}?format=j1&lang=zh"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (compatible; WeatherBot/1.0)",
+            "Accept": "application/json"
+        }
+        
+        # 重试逻辑
+        last_exception = None
+        for attempt in range(max_retries):
+            try:
+                logger.debug(f"wttr.in API请求 (尝试 {attempt + 1}/{max_retries}): {location}")
+                response = requests.get(url, headers=headers, timeout=timeout)
+                
+                if response.status_code != 200:
+                    logger.warning(f"wttr.in API错误: 状态码 {response.status_code}")
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay * (attempt + 1))  # 指数退避
+                        continue
+                    return {"error": f"天气查询失败，状态码: {response.status_code}"}
+                
+                data = response.json()
+                
+                # 解析wttr.in的JSON格式
+                current = data.get("current_condition", [{}])[0]
+                location_info = data.get("nearest_area", [{}])[0]
+                
+                # 获取城市名称
+                city_name = location_info.get("areaName", [{}])[0].get("value", location)
+                
+                # 温度（摄氏度）
+                temp_c = float(current.get("temp_C", 0))
+                
+                # 天气描述
+                weather_desc = current.get("weatherDesc", [{}])[0].get("value", "未知")
+                
+                # 湿度
+                humidity = int(current.get("humidity", 0))
+                
+                # 风速（km/h）
+                wind_speed_kmh = float(current.get("windspeedKmph", 0))
+                wind_speed_ms = round(wind_speed_kmh / 3.6, 1)  # 转换为m/s
+                
+                # 体感温度
+                feels_like = float(current.get("FeelsLikeC", temp_c))
+                
+                # 气压
+                pressure = int(current.get("pressure", 0))
+                
+                logger.debug(f"wttr.in API查询成功: {location} -> {city_name}")
+                return {
+                    "location": city_name,
+                    "temperature": round(temp_c, 1),
+                    "description": weather_desc,
+                    "humidity": humidity,
+                    "wind_speed": wind_speed_ms,
+                    "feels_like": round(feels_like, 1),
+                    "pressure": pressure,
+                    "note": "使用免费的wttr.in API"
+                }
+                
+            except requests.exceptions.Timeout as e:
+                last_exception = e
+                logger.warning(f"wttr.in API请求超时 (尝试 {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay * (attempt + 1))  # 指数退避
+                    continue
+                    
+            except requests.exceptions.ConnectionError as e:
+                last_exception = e
+                logger.warning(f"wttr.in API连接错误 (尝试 {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay * (attempt + 1))  # 指数退避
+                    continue
+                    
+            except requests.exceptions.RequestException as e:
+                last_exception = e
+                logger.warning(f"wttr.in API请求异常 (尝试 {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay * (attempt + 1))  # 指数退避
+                    continue
+                    
+            except Exception as e:
+                last_exception = e
+                logger.error(f"wttr.in API解析异常: {e}")
+                # 解析错误通常不需要重试
+                return {"error": f"数据解析失败: {str(e)}"}
+        
+        # 所有重试都失败了
+        error_msg = "网络请求失败"
+        if last_exception:
+            if isinstance(last_exception, requests.exceptions.Timeout):
+                error_msg = "网络请求超时，请稍后重试"
+            elif isinstance(last_exception, requests.exceptions.ConnectionError):
+                error_msg = "无法连接到天气服务，请检查网络连接"
+            else:
+                error_msg = f"网络请求失败: {str(last_exception)}"
+        
+        logger.error(f"wttr.in API请求最终失败: {error_msg}")
+        return {"error": error_msg}
     
     def _query_qweather(self, location: str) -> Dict[str, Any]:
         """使用和风天气API查询（需要API密钥）"""
