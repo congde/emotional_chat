@@ -1,4 +1,12 @@
 import sys
+import os
+from pathlib import Path
+
+# 加载环境变量配置
+from dotenv import load_dotenv
+env_path = Path(__file__).parent.parent / 'config.env'
+load_dotenv(env_path)
+
 # 使用内置sqlite3替代pysqlite3-binary (Windows不支持pysqlite3-binary)
 sys.modules['pysqlite3'] = __import__('sqlite3')
 
@@ -8,7 +16,6 @@ from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import Message
-import os
 import json
 import uuid
 import shutil

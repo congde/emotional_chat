@@ -158,6 +158,8 @@ class EmotionalChatEngineWithPlugins:
                 )
         except Exception as e:
             print(f"数据库操作失败: {e}")
+            import traceback
+            traceback.print_exc()
         
         # 生成回应（支持插件调用）
         plugin_used = None
@@ -184,10 +186,12 @@ class EmotionalChatEngineWithPlugins:
                     user_id=user_id,
                     role="assistant",
                     content=response_text,
-                    emotion="empathetic"
+                    emotion=emotion_data.get("emotion", "neutral")
                 )
         except Exception as e:
             print(f"保存消息失败: {e}")
+            import traceback
+            traceback.print_exc()
         
         # 保存到向量数据库
         if self.vector_store:

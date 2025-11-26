@@ -378,7 +378,7 @@ class EnhancedChatService:
                     user_id=user_id,
                     role="assistant",
                     content=bot_response,
-                    emotion="empathetic"
+                    emotion=emotion
                 )
                 
         except Exception as e:

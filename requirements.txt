@@ -47,6 +47,8 @@ pypdf>=3.0.0
 idna>=2.10
 anyio>=3.0.0
 sniffio>=1.3.0
+# 修复 OpenAI SDK 与新版 httpx 的 proxies 参数兼容性问题
+httpx>=0.25.0,<0.28.0
 # 修复 TensorFlow 与 protobuf 版本冲突
 # TensorFlow 需要 protobuf <= 3.20.x
 protobuf>=3.19.0,<=3.20.3

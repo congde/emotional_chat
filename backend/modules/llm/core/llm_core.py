@@ -435,7 +435,7 @@ class SimpleEmotionalChatEngine:
                 user_id=user_id,
                 role="assistant",
                 content=response_text,
-                emotion="empathetic"
+                emotion=emotion_data.get("emotion", "neutral")
             )
         
         # 保存对话到向量数据库（长期记忆）

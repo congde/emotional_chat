@@ -299,10 +299,9 @@ class ChatService:
                 "input_metadata": preprocessed.get("metadata") if preprocessed else None
             }
         
-        # 5.1. 保存会话和消息到数据库（如果RAG分支没有保存）
-        # 注意：llm_with_plugins.py 的 chat 方法已经保存了消息，这里不再重复保存
+        # 5.1. 保存会话和消息到数据库
+        # RAG分支需要手动保存消息，因为没有调用 llm_with_plugins.py 的 chat 方法
         if rag_result and rag_result.get("use_rag"):
-            # RAG分支只需要确保会话存在
             try:
                 with DatabaseManager() as db:
                     # 如果是新会话，创建会话记录
@@ -310,8 +309,25 @@ class ChatService:
                         print(f"ChatService创建新会话: {session_id} for user: {user_id}")
                         db.create_session(session_id, user_id)
                         print(f"ChatService会话创建完成")
-                    # 消息已经在 llm_with_plugins.py 中保存，这里不再重复保存
-                    print(f"ChatService RAG分支：消息已在llm引擎中保存，跳过重复保存")
+                    
+                    # RAG分支需要保存用户消息和AI回复
+                    print(f"ChatService RAG分支：保存用户消息和AI回复")
+                    db.save_message(
+                        session_id=session_id,
+                        user_id=user_id,
+                        role="user",
+                        content=message,
+                        emotion=emotion,
+                        emotion_intensity=emotion_intensity
+                    )
+                    db.save_message(
+                        session_id=session_id,
+                        user_id=user_id,
+                        role="assistant",
+                        content=response.response,
+                        emotion=emotion
+                    )
+                    print(f"ChatService RAG分支：消息保存完成")
                     
             except Exception as e:
                 print(f"ChatService数据库操作失败: {e}")
