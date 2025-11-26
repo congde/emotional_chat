@@ -1,10 +1,13 @@
+import sys
+# 使用内置sqlite3替代pysqlite3-binary (Windows不支持pysqlite3-binary)
+sys.modules['pysqlite3'] = __import__('sqlite3')
+
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import Message
-import sys
 import os
 import json
 import uuid
