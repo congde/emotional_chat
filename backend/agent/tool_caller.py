@@ -200,6 +200,93 @@ class ToolCaller:
             },
             category="calendar"
         )
+        
+        # ========== 文档中提到的核心工具 ==========
+        
+        # 使用延迟导入包装器，避免循环依赖
+        def _lazy_import_agent_tools(func_name):
+            """延迟导入 agent_tools 中的函数"""
+            def wrapper(*args, **kwargs):
+                import importlib.util
+                import os
+                # 获取项目根目录
+                current_dir = os.path.dirname(os.path.abspath(__file__))
+                project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
+                file_path = os.path.join(project_root, 'backend/agent/tools/agent_tools.py')
+                spec = importlib.util.spec_from_file_location('agent_tools', file_path)
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                func = getattr(module, func_name)
+                return func(*args, **kwargs)
+            return wrapper
+        
+        get_user_mood_trend = _lazy_import_agent_tools('get_user_mood_trend')
+        play_meditation_audio = _lazy_import_agent_tools('play_meditation_audio')
+        set_daily_reminder = _lazy_import_agent_tools('set_daily_reminder')
+        search_mental_health_resources = _lazy_import_agent_tools('search_mental_health_resources')
+        send_follow_up_message = _lazy_import_agent_tools('send_follow_up_message')
+        
+        # 1. 获取用户情绪趋势
+        self.registry.register(
+            name="get_user_mood_trend",
+            description="获取近N天情绪变化曲线，判断是否需干预",
+            function=get_user_mood_trend,
+            parameters={
+                "user_id": {"type": "string", "required": True, "description": "用户ID"},
+                "days": {"type": "int", "required": False, "default": 7, "description": "查询天数，默认7天"}
+            },
+            category="emotion"
+        )
+        
+        # 2. 播放冥想音频
+        self.registry.register(
+            name="play_meditation_audio",
+            description="播放冥想音频，缓解焦虑",
+            function=play_meditation_audio,
+            parameters={
+                "genre": {"type": "string", "required": True, "description": "音频类型（sleep/anxiety/relaxation/breathing）"},
+                "user_id": {"type": "string", "required": False, "description": "用户ID（可选）"}
+            },
+            category="resource"
+        )
+        
+        # 3. 设置每日提醒
+        self.registry.register(
+            name="set_daily_reminder",
+            description="设置每日提醒，养成作息习惯",
+            function=set_daily_reminder,
+            parameters={
+                "time": {"type": "string", "required": True, "description": "提醒时间，格式 HH:MM"},
+                "message": {"type": "string", "required": True, "description": "提醒消息内容"},
+                "user_id": {"type": "string", "required": True, "description": "用户ID"}
+            },
+            category="scheduler"
+        )
+        
+        # 4. 搜索心理健康资源
+        self.registry.register(
+            name="search_mental_health_resources",
+            description="检索专业心理文章，提供知识支持",
+            function=search_mental_health_resources,
+            parameters={
+                "query": {"type": "string", "required": True, "description": "搜索关键词"},
+                "resource_type": {"type": "string", "required": False, "description": "资源类型（article/video/exercise），可选"}
+            },
+            category="resource"
+        )
+        
+        # 5. 发送回访消息
+        self.registry.register(
+            name="send_follow_up_message",
+            description="发送回访消息，验证效果",
+            function=send_follow_up_message,
+            parameters={
+                "user_id": {"type": "string", "required": True, "description": "用户ID"},
+                "days_ago": {"type": "int", "required": False, "default": 1, "description": "回访几天前的对话，默认1天前"},
+                "custom_message": {"type": "string", "required": False, "description": "自定义消息内容（可选）"}
+            },
+            category="communication"
+        )
     
     async def call(
         self, 
