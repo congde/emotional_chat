@@ -30,9 +30,8 @@ pandas>=2.0.0
 # ChromaDB 0.5.x 可能有 API 变化，锁定 0.4.x 以保持兼容性
 chromadb>=0.4.22,<0.5.0
 sentence-transformers>=2.7.0
-# 注意: pysqlite3-binary 用于替代系统sqlite3以支持ChromaDB
-# 如果镜像源没有，可以尝试: pip install pysqlite3-binary --index-url https://pypi.org/simple
-pysqlite3-binary>=0.5.0
+# 注意: pysqlite3-binary 在 Windows 上不可用，已在代码中使用内置 sqlite3 替代
+# 参见 backend/main.py 开头的 sys.modules['pysqlite3'] = __import__('sqlite3')
 
 # 数据库
 PyMySQL>=1.1.0
