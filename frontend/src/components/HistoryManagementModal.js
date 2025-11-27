@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Search, Trash2, RotateCcw } from 'lucide-react';
+import { X, Search, Trash2 } from 'lucide-react';
 import ChatAPI from '../services/ChatAPI';
 import { formatRelativeTime } from '../utils/formatters';
 import {

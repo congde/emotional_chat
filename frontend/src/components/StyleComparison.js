@@ -139,23 +139,7 @@ const EnhancedBubble = styled.div`
   }
 `;
 
-const EnhancedButton = styled(motion.button)`
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  border: none;
-  padding: 14px 28px;
-  border-radius: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
-  transition: all 0.3s ease;
-  margin-top: 20px;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
-  }
-`;
+// EnhancedButton removed - not used
 
 // ========== 无特效版本（传统风格） ==========
 const PlainContainer = styled.div`
@@ -221,20 +205,7 @@ const PlainBubble = styled.div`
   line-height: 1.5;
 `;
 
-const PlainButton = styled.button`
-  background: #667eea;
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 4px;
-  font-weight: 500;
-  cursor: pointer;
-  margin-top: 20px;
-
-  &:hover {
-    background: #5568d3;
-  }
-`;
+// PlainButton removed - not used
 
 // ========== 通用样式 ==========
 const Title = styled.h1`

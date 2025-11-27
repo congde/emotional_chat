@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { Plus, Clock, Settings, Palette, User, Trash2, FolderOpen } from 'lucide-react';
+import { Plus, Clock, Settings, Palette, Trash2, FolderOpen } from 'lucide-react';
 import { Sidebar as SidebarStyled } from '../styles/layout';
 import {
   SidebarHeader,
@@ -16,10 +16,7 @@ import {
   HistoryItemActions,
   DeleteButton,
   HistoryItemTitle,
-  HistoryItemTime,
-  HistoryItemPreview,
   HistoryItemMeta,
-  MessageCountBadge,
   EmptyHistoryState,
   EmptyHistoryIcon,
   EmptyHistoryText
@@ -41,19 +38,17 @@ const Sidebar = ({
     <SidebarStyled
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: 0.3 }}
     >
       <SidebarHeader>
-        <UserAvatar>
-          <User size={20} />
-        </UserAvatar>
-        <UserName>情感伙伴</UserName>
+        <UserAvatar>🤖</UserAvatar>
+        <UserName>情感聊天</UserName>
       </SidebarHeader>
 
       <NewChatButton
         onClick={onNewChat}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.99 }}
       >
         <Plus size={16} />
         新对话
@@ -61,8 +56,8 @@ const Sidebar = ({
 
       <SettingsButton
         onClick={onOpenPersonalization}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.99 }}
       >
         <Settings size={16} />
         个性化配置
@@ -70,46 +65,37 @@ const Sidebar = ({
 
       <SettingsButton
         onClick={onOpenStyleComparison}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.99 }}
       >
         <Palette size={16} />
         样式对比演示
       </SettingsButton>
 
       <HistorySection>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <HistoryTitle>
-            <Clock size={16} />
+            <Clock size={14} />
             历史对话
           </HistoryTitle>
           {historySessions.length > 0 && onOpenHistoryManagement && (
             <button
               onClick={onOpenHistoryManagement}
               style={{
-                padding: '6px 12px',
-                fontSize: '0.85rem',
-                background: 'rgba(102, 126, 234, 0.1)',
-                color: '#667eea',
-                border: '1px solid rgba(102, 126, 234, 0.3)',
-                borderRadius: '8px',
+                padding: '4px 8px',
+                fontSize: '12px',
+                background: 'transparent',
+                color: '#888',
+                border: 'none',
+                borderRadius: '4px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                fontWeight: '500',
-                transition: 'all 0.2s',
-                marginLeft: 'auto'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.background = 'rgba(102, 126, 234, 0.15)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.background = 'rgba(102, 126, 234, 0.1)';
+                gap: '4px',
               }}
               title="管理对话记录"
             >
-              <FolderOpen size={14} />
+              <FolderOpen size={12} />
               管理
             </button>
           )}
@@ -119,8 +105,8 @@ const Sidebar = ({
             <EmptyHistoryState>
               <EmptyHistoryIcon>💬</EmptyHistoryIcon>
               <EmptyHistoryText>
-                <div style={{ fontWeight: 600, marginBottom: 8 }}>还没有历史对话</div>
-                <div>开始一段新的对话吧！</div>
+                <div style={{ fontWeight: 500, marginBottom: 4 }}>还没有历史对话</div>
+                <div>开始一段新的对话吧</div>
               </EmptyHistoryText>
             </EmptyHistoryState>
           ) : (
@@ -134,28 +120,15 @@ const Sidebar = ({
                     e.preventDefault();
                     onLoadSession(session.session_id);
                   }}
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
+                  exit={{ opacity: 0, y: -5 }}
+                  transition={{ duration: 0.15 }}
                 >
                   <HistoryItemContent>
                     <HistoryItemTitle>{session.title || '新对话'}</HistoryItemTitle>
-                    {session.preview && (
-                      <HistoryItemPreview>{session.preview}</HistoryItemPreview>
-                    )}
                     <HistoryItemMeta>
-                      <HistoryItemTime>
-                        {formatRelativeTime(session.updated_at)}
-                      </HistoryItemTime>
-                      {session.message_count !== undefined && session.message_count > 0 && (
-                        <>
-                          <span>•</span>
-                          <MessageCountBadge>
-                            {session.message_count} 条消息
-                          </MessageCountBadge>
-                        </>
-                      )}
+                      <span>{formatRelativeTime(session.updated_at)}</span>
                     </HistoryItemMeta>
                   </HistoryItemContent>
                   <HistoryItemActions>

@@ -1,117 +1,139 @@
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { emotionColors } from '../constants/emotions';
-import { spin, pulse } from './animations';
 
+// 顶部对话标题栏
+export const ChatHeader = styled.div`
+  padding: 16px 60px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fff;
+  
+  @media (max-width: 768px) {
+    padding: 12px 16px;
+  }
+`;
+
+export const ChatTitle = styled.h2`
+  font-size: 16px;
+  font-weight: 500;
+  color: #1a1a1a;
+  margin: 0 0 4px 0;
+`;
+
+export const ChatSubtitle = styled.p`
+  font-size: 12px;
+  color: #bbb;
+  margin: 0;
+`;
+
+// 隐藏旧的 Header 组件
 export const Header = styled.div`
-  background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
-  color: white;
-  padding: 20px;
-  text-align: center;
-  position: relative;
+  display: none;
 `;
 
 export const Title = styled.h1`
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin-bottom: 5px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
+  display: none;
 `;
 
 export const Subtitle = styled.p`
-  font-size: 0.9rem;
-  opacity: 0.9;
+  display: none;
 `;
 
 export const MessageBubble = styled(motion.div)`
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
   ${props => props.isUser ? 'flex-direction: row-reverse;' : ''}
 `;
 
 export const Avatar = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: ${props => props.isUser ? '#667eea' : '#ff6b6b'};
-  color: white;
+  background: ${props => props.isUser ? '#6366f1' : '#f5f5f5'};
+  color: ${props => props.isUser ? 'white' : '#666'};
   flex-shrink: 0;
+  font-size: 14px;
 `;
 
 export const MessageWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  max-width: 70%;
-  
-  @media (max-width: 768px) {
-    max-width: 85%;
-  }
+  max-width: calc(100% - 50px);
 `;
 
 export const MessageContent = styled.div`
   padding: 12px 16px;
-  border-radius: 18px;
-  background: ${props => props.isUser ? '#667eea' : '#f8f9fa'};
-  color: ${props => props.isUser ? 'white' : '#333'};
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  position: relative;
-  line-height: 1.6;
+  border-radius: ${props => props.isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px'};
+  background: ${props => props.isUser ? '#f5f5f5' : 'transparent'};
+  color: #1a1a1a;
+  line-height: 1.7;
   word-wrap: break-word;
+  font-size: 15px;
   
-  /* AI消息根据情绪添加左边框 */
-  ${props => !props.isUser && props.emotion && props.emotion !== 'neutral' && `
-    border-left: 4px solid ${emotionColors[props.emotion] || emotionColors.neutral};
-    padding-left: 16px;
+  ${props => props.isUser && `
+    background: #f5f5f5;
   `}
   
-  &::before {
-    content: '';
-    position: absolute;
-    top: 10px;
-    ${props => props.isUser ? 'right: -8px;' : 'left: -8px;'}
-    width: 0;
-    height: 0;
-    border: 8px solid transparent;
-    border-${props => props.isUser ? 'left' : 'right'}-color: ${props => props.isUser ? '#667eea' : '#f8f9fa'};
+  ${props => !props.isUser && props.emotion && props.emotion !== 'neutral' && `
+    border-left: 3px solid ${emotionColors[props.emotion] || emotionColors.neutral};
+    padding-left: 16px;
+  `}
+`;
+
+// 思考状态指示器
+export const ThinkingStatus = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 12px;
+  
+  svg {
+    color: #6366f1;
   }
 `;
 
 export const FeedbackButtons = styled.div`
   display: flex;
-  gap: 6px;
-  margin-top: 6px;
-  opacity: 0.6;
+  gap: 8px;
+  margin-top: 8px;
+  opacity: 0;
   transition: opacity 0.2s;
   
-  &:hover {
+  ${MessageBubble}:hover & {
     opacity: 1;
   }
 `;
 
 export const FeedbackButton = styled(motion.button)`
   background: transparent;
-  border: 1px solid #ddd;
+  border: 1px solid #e5e5e5;
   border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 0.75rem;
+  padding: 4px 10px;
+  font-size: 12px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 4px;
-  color: #666;
-  transition: all 0.2s;
+  color: #888;
+  transition: all 0.15s;
   
   &:hover {
-    background: rgba(102, 126, 234, 0.1);
-    border-color: #667eea;
-    color: #667eea;
+    background: #f5f5f5;
+    border-color: #ddd;
+    color: #666;
   }
 `;
 
@@ -119,24 +141,17 @@ export const EmotionTag = styled.span`
   display: inline-block;
   background: ${props => emotionColors[props.emotion] || emotionColors.neutral};
   color: white;
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
   margin-left: 8px;
   font-weight: 500;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
-  
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
-  }
 `;
 
 export const MessageTimestamp = styled.div`
-  font-size: 0.7rem;
-  color: ${props => props.isUser ? 'rgba(255, 255, 255, 0.7)' : '#999'};
-  margin-top: 4px;
+  font-size: 11px;
+  color: #bbb;
+  margin-top: 6px;
   text-align: ${props => props.isUser ? 'right' : 'left'};
 `;
 
@@ -144,53 +159,73 @@ export const Suggestions = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 16px;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
 `;
 
 export const SuggestionChip = styled(motion.button)`
-  background: rgba(102, 126, 234, 0.1);
-  border: 1px solid rgba(102, 126, 234, 0.3);
-  color: #667eea;
-  padding: 6px 12px;
-  border-radius: 15px;
-  font-size: 0.8rem;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  color: #666;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   
   &:hover {
-    background: rgba(102, 126, 234, 0.2);
-    transform: translateY(-1px);
+    background: #f5f5f5;
+    border-color: #6366f1;
+    color: #6366f1;
   }
 `;
 
 export const WelcomeMessage = styled(motion.div)`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
   text-align: center;
-  color: #666;
-  padding: 40px 20px;
+  padding: 60px 20px;
   
   h3 {
-    margin-bottom: 10px;
-    color: #333;
+    font-size: 28px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 16px;
   }
   
   p {
-    line-height: 1.6;
+    font-size: 14px;
+    color: #999;
+    line-height: 1.8;
+    max-width: 360px;
   }
 `;
 
 export const LoadingIndicator = styled(motion.div)`
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   color: #666;
-  font-size: 0.9rem;
-  padding: 12px 18px;
-  background: #f8f9fa;
-  border-radius: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  font-size: 13px;
+  padding: 8px 16px;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  max-width: 900px;
+  margin: 0 auto;
   
   .spinner {
     animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
   
   .dots span {
@@ -204,6 +239,11 @@ export const LoadingIndicator = styled(motion.div)`
   
   .dots span:nth-child(3) {
     animation-delay: 0.4s;
+  }
+  
+  @keyframes pulse {
+    0%, 80%, 100% { opacity: 0.3; }
+    40% { opacity: 1; }
   }
 `;
 

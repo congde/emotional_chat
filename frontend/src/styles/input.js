@@ -1,78 +1,145 @@
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 
-export const MessageInput = styled.input`
-  flex: 1;
+export const InputWrapper = styled.div`
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+`;
+
+export const InputBox = styled.div`
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 16px;
   padding: 12px 16px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 25px;
-  font-size: 1rem;
-  outline: none;
   transition: all 0.2s ease;
   
-  &:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  &:focus-within {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  }
+`;
+
+export const MessageInput = styled.textarea`
+  width: 100%;
+  border: none;
+  font-size: 15px;
+  outline: none;
+  resize: none;
+  min-height: 24px;
+  max-height: 200px;
+  line-height: 1.5;
+  color: #1a1a1a;
+  background: transparent;
+  
+  &::placeholder {
+    color: #bbb;
+  }
+`;
+
+export const InputActions = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+`;
+
+export const LeftActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`;
+
+export const RightActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+export const ActionButton = styled(motion.button)`
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  
+  &:hover {
+    background: #f5f5f5;
+    color: #666;
+  }
+  
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+`;
+
+export const FeatureButton = styled(motion.button)`
+  padding: 6px 12px;
+  border-radius: 16px;
+  background: ${props => props.active ? '#f0f0ff' : 'transparent'};
+  border: 1px solid ${props => props.active ? '#6366f1' : '#e5e5e5'};
+  color: ${props => props.active ? '#6366f1' : '#666'};
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  
+  &:hover {
+    background: #f5f5f5;
+    border-color: #ddd;
   }
 `;
 
 export const AttachmentButton = styled(motion.button)`
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: transparent;
   border: none;
-  color: white;
+  color: #888;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   
   &:hover {
-    transform: scale(1.05);
+    background: #f5f5f5;
+    color: #666;
   }
   
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
-    transform: none;
-  }
-  
-  @media (max-width: 768px) {
-    width: 48px;
-    height: 48px;
   }
 `;
 
 export const SendButton = styled(motion.button)`
-  width: 50px;
-  height: 50px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: ${props => props.disabled ? '#e5e5e5' : '#6366f1'};
   border: none;
   color: white;
-  cursor: pointer;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  transition: all 0.15s ease;
   
   &:hover:not(:disabled) {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-  }
-  
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-  }
-  
-  @media (max-width: 768px) {
-    width: 48px;
-    height: 48px;
+    background: #5558e3;
   }
 `;
 
@@ -84,7 +151,10 @@ export const AttachmentsPreview = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
 `;
 
 export const AttachmentItem = styled(motion.div)`
@@ -92,23 +162,23 @@ export const AttachmentItem = styled(motion.div)`
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: rgba(102, 126, 234, 0.1);
-  border: 1px solid rgba(102, 126, 234, 0.3);
-  border-radius: 20px;
-  font-size: 0.9rem;
-  color: #667eea;
+  background: #f5f5f5;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #666;
 `;
 
 export const AttachmentIcon = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #6366f1;
 `;
 
 export const RemoveAttachmentButton = styled.button`
   background: none;
   border: none;
-  color: #ff6b6b;
+  color: #999;
   cursor: pointer;
   padding: 2px;
   border-radius: 50%;
@@ -117,7 +187,8 @@ export const RemoveAttachmentButton = styled.button`
   justify-content: center;
   
   &:hover {
-    background: rgba(255, 107, 107, 0.1);
+    background: #eee;
+    color: #666;
   }
 `;
 
@@ -126,12 +197,15 @@ export const URLPreview = styled(motion.div)`
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: rgba(0, 184, 148, 0.1);
-  border: 1px solid rgba(0, 184, 148, 0.3);
-  border-radius: 20px;
-  font-size: 0.9rem;
-  color: #00b894;
-  margin-bottom: 10px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #16a34a;
+  margin-bottom: 12px;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
 `;
 
 export const URLText = styled.span`
@@ -144,7 +218,7 @@ export const URLText = styled.span`
 export const URLButton = styled.button`
   background: none;
   border: none;
-  color: #00b894;
+  color: #16a34a;
   cursor: pointer;
   padding: 2px;
   border-radius: 4px;
@@ -153,7 +227,44 @@ export const URLButton = styled.button`
   justify-content: center;
   
   &:hover {
-    background: rgba(0, 184, 148, 0.1);
+    background: rgba(22, 163, 74, 0.1);
+  }
+`;
+
+// 快捷功能按钮区域
+export const QuickActions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 16px;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+`;
+
+export const QuickActionButton = styled(motion.button)`
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  color: #666;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  
+  &:hover {
+    background: #f5f5f5;
+    border-color: #6366f1;
+    color: #6366f1;
+  }
+  
+  svg {
+    width: 16px;
+    height: 16px;
   }
 `;
 

@@ -1,11 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { Heart, User, Bot, Loader2, Paperclip, Send, Link, ExternalLink, X, MessageSquarePlus } from 'lucide-react';
+import { User, Bot, Loader2, Paperclip, Send, Link, ExternalLink, X, Sparkles, Mic, PenLine, Image, Music, Languages, Presentation, MoreHorizontal } from 'lucide-react';
 import {
   ChatContainer as ChatContainerStyled,
-  Header,
-  Title,
-  Subtitle,
   MessagesContainer,
   MessageBubble,
   Avatar,
@@ -19,9 +16,15 @@ import {
   SuggestionChip,
   WelcomeMessage,
   LoadingIndicator,
-  InputContainer,
-  InputRow,
+  InputContainer
+} from '../styles';
+import {
+  InputWrapper,
+  InputBox,
   MessageInput,
+  InputActions,
+  LeftActions,
+  RightActions,
   AttachmentButton,
   SendButton,
   FileInput,
@@ -31,12 +34,27 @@ import {
   RemoveAttachmentButton,
   URLPreview,
   URLText,
-  URLButton
-} from '../styles';
+  URLButton,
+  FeatureButton,
+  QuickActions,
+  QuickActionButton
+} from '../styles/input';
 import { emotionLabels } from '../constants/emotions';
 import { formatTimestamp, formatFileSize } from '../utils/formatters';
 import TypewriterComponent from './TypewriterText';
 import { getFileIcon } from '../utils/fileUtils';
+
+// 获取问候语
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 6) return '夜深了';
+  if (hour < 9) return '早上好';
+  if (hour < 12) return '上午好';
+  if (hour < 14) return '中午好';
+  if (hour < 18) return '下午好';
+  if (hour < 22) return '晚上好';
+  return '夜深了';
+};
 
 const ChatContainer = ({
   messages,
@@ -59,35 +77,38 @@ const ChatContainer = ({
   onSuggestionClick,
   onOpenFeedbackModal
 }) => {
+  const [deepThinkActive, setDeepThinkActive] = useState(false);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      onSendMessage();
+    }
+    if (onTabNavigation) {
+      onTabNavigation(e);
+    }
+  };
+
   return (
     <ChatContainerStyled
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.5 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
     >
-      <Header>
-        <Title>
-          <Heart size={24} />
-          情感聊天机器人
-        </Title>
-        <Subtitle>温暖陪伴，理解倾听</Subtitle>
-      </Header>
-
       <MessagesContainer>
         <AnimatePresence initial={false}>
           {messages.length === 0 ? (
             <WelcomeMessage
               key="welcome"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              transition={{ delay: 0.5 }}
+              transition={{ delay: 0.2 }}
             >
-              <h3>👋 你好！我是你的情感支持伙伴</h3>
+              <h3>{getGreeting()}，小草</h3>
               <p>
-                我在这里倾听你的心声，理解你的感受。<br/>
-                无论是开心、难过、焦虑还是困惑，我都愿意陪伴你。<br/>
-                请随意分享你的想法和感受吧！
+                我是你的情感支持伙伴，随时倾听你的心声。<br/>
+                无论开心、难过还是困惑，都可以和我聊聊。
               </p>
             </WelcomeMessage>
           ) : (
@@ -95,13 +116,13 @@ const ChatContainer = ({
               <MessageBubble
                 key={message.id}
                 isUser={message.role === 'user'}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
               >
                 <Avatar isUser={message.role === 'user'}>
-                  {message.role === 'user' ? <User size={20} /> : <Bot size={20} />}
+                  {message.role === 'user' ? <User size={18} /> : <Bot size={18} />}
                 </Avatar>
                 <MessageWrapper>
                   <MessageContent 
@@ -111,9 +132,9 @@ const ChatContainer = ({
                     {message.role === 'assistant' && !message.isHistory ? (
                       <TypewriterComponent
                         text={message.content}
-                        speed={message.emotion === 'sad' ? 40 : message.emotion === 'angry' ? 20 : message.emotion === 'happy' ? 25 : 30}
+                        speed={30}
                         showCursor={true}
-                        cursorColor={message.emotion === 'sad' ? '#74b9ff' : message.emotion === 'angry' ? '#ff7675' : message.emotion === 'happy' ? '#00b894' : '#333'}
+                        cursorColor="#6366f1"
                         isUser={false}
                       />
                     ) : (
@@ -132,10 +153,9 @@ const ChatContainer = ({
                     <FeedbackButtons>
                       <FeedbackButton
                         onClick={() => onOpenFeedbackModal(message)}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                       >
-                        <MessageSquarePlus size={14} />
                         反馈
                       </FeedbackButton>
                     </FeedbackButtons>
@@ -150,9 +170,9 @@ const ChatContainer = ({
           <LoadingIndicator
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
+            exit={{ opacity: 0 }}
           >
-            <Loader2 size={18} className="spinner" />
+            <Loader2 size={16} className="spinner" />
             <span>正在思考中</span>
             <span className="dots">
               <span>.</span>
@@ -168,10 +188,10 @@ const ChatContainer = ({
               {suggestions.map((suggestion, index) => (
                 <SuggestionChip
                   key={index}
-                  initial={{ opacity: 0, scale: 0.8 }}
+                  initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ delay: index * 0.1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ delay: index * 0.05 }}
                   onClick={() => onSuggestionClick(suggestion)}
                 >
                   {suggestion}
@@ -192,7 +212,7 @@ const ChatContainer = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
           >
-            <Link size={16} />
+            <Link size={14} />
             <URLText>{detectedURLs[0]}</URLText>
             <URLButton onClick={() => window.open(detectedURLs[0], '_blank')}>
               <ExternalLink size={14} />
@@ -207,15 +227,15 @@ const ChatContainer = ({
               {attachments.map((attachment) => (
                 <AttachmentItem
                   key={attachment.id}
-                  initial={{ opacity: 0, scale: 0.8 }}
+                  initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
                 >
                   <AttachmentIcon>
                     {getFileIcon(attachment.type)}
                   </AttachmentIcon>
                   <span>{attachment.name}</span>
-                  <span>({formatFileSize(attachment.size)})</span>
+                  <span style={{ color: '#999' }}>({formatFileSize(attachment.size)})</span>
                   <RemoveAttachmentButton
                     onClick={() => onRemoveAttachment(attachment.id)}
                   >
@@ -227,45 +247,62 @@ const ChatContainer = ({
           </AttachmentsPreview>
         )}
 
-        <InputRow>
-          <MessageInput
-            ref={inputRef}
-            type="text"
-            value={inputValue}
-            onChange={onInputChange}
-            onKeyPress={onKeyPress}
-            onKeyDown={onTabNavigation}
-            placeholder="分享你的想法和感受..."
-            disabled={isLoading}
-            aria-label="消息输入框"
-            aria-describedby="input-hint"
-          />
-          <AttachmentButton
-            ref={attachmentButtonRef}
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading}
-            onKeyDown={onTabNavigation}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            aria-label="添加附件"
-            title="添加附件 (图片、PDF、文档)"
-          >
-            <Paperclip size={20} />
-          </AttachmentButton>
-          <SendButton
-            ref={sendButtonRef}
-            onClick={onSendMessage}
-            disabled={(!inputValue.trim() && attachments.length === 0) || isLoading}
-            onKeyDown={onTabNavigation}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            aria-label="发送消息"
-            aria-disabled={(!inputValue.trim() && attachments.length === 0) || isLoading}
-            title="发送消息 (Enter)"
-          >
-            <Send size={20} />
-          </SendButton>
-        </InputRow>
+        <InputWrapper>
+          <InputBox>
+            <MessageInput
+              ref={inputRef}
+              value={inputValue}
+              onChange={onInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder="发消息或输入 / 选择技能"
+              disabled={isLoading}
+              rows={1}
+            />
+            <InputActions>
+              <LeftActions>
+                <AttachmentButton
+                  ref={attachmentButtonRef}
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isLoading}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="添加附件"
+                >
+                  <Paperclip size={18} />
+                </AttachmentButton>
+                <FeatureButton
+                  active={deepThinkActive}
+                  onClick={() => setDeepThinkActive(!deepThinkActive)}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Sparkles size={14} />
+                  深度思考
+                </FeatureButton>
+              </LeftActions>
+              <RightActions>
+                <AttachmentButton
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="语音输入"
+                >
+                  <Mic size={18} />
+                </AttachmentButton>
+                <SendButton
+                  ref={sendButtonRef}
+                  onClick={onSendMessage}
+                  disabled={(!inputValue.trim() && attachments.length === 0) || isLoading}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="发送消息"
+                >
+                  <Send size={16} />
+                </SendButton>
+              </RightActions>
+            </InputActions>
+          </InputBox>
+
+        </InputWrapper>
 
         <FileInput
           ref={fileInputRef}

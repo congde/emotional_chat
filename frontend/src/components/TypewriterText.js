@@ -74,6 +74,7 @@ const TypewriterComponent = ({
       setIsComplete(true);
       onComplete();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex, text, speed, isComplete, onComplete, isPaused]);
 
   // 添加点击暂停/恢复功能

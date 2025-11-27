@@ -4,13 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, 
   User, 
-  Heart, 
   Zap, 
   MessageCircle, 
   Settings, 
   Sparkles,
   Check,
-  ChevronRight,
   Bot
 } from 'lucide-react';
 import axios from 'axios';
@@ -192,23 +190,7 @@ const Input = styled.input`
   }
 `;
 
-const TextArea = styled.textarea`
-  width: 100%;
-  padding: 12px 16px;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  font-size: 1rem;
-  min-height: 80px;
-  font-family: inherit;
-  resize: vertical;
-  transition: all 0.2s;
-  
-  &:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-  }
-`;
+// TextArea removed - not used
 
 const SliderGroup = styled.div`
   margin-bottom: 24px;
@@ -378,6 +360,7 @@ const PersonalizationPanel = ({ isOpen, onClose, userId }) => {
       loadConfig();
       loadRoleTemplates();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, userId]);
 
   const loadRoleTemplates = async () => {
