@@ -67,7 +67,7 @@ class EmotionAnalysis(Base):
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(String(100), index=True)
     user_id = Column(String(100), index=True)
-    message_id = Column(Integer)  # 关联到chat_messages.id
+    message_id = Column(BigInteger)  # 关联到chat_messages.id
     emotion = Column(String(50))
     intensity = Column(Float)
     keywords = Column(Text)  # JSON格式存储关键词
