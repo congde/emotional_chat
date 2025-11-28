@@ -5,6 +5,11 @@ export const AppContainer = styled.div`
   min-height: 100vh;
   background: #f5f5f5;
   display: flex;
+  transition: background 0.3s ease;
+
+  body[data-theme='dark'] & {
+    background: #1a1a2e;
+  }
 `;
 
 export const Sidebar = styled(motion.div)`
@@ -16,6 +21,12 @@ export const Sidebar = styled(motion.div)`
   height: 100vh;
   position: sticky;
   top: 0;
+  transition: background 0.3s ease, border-color 0.3s ease;
+  
+  body[data-theme='dark'] & {
+    background: #16213e;
+    border-right-color: #2a2a3e;
+  }
   
   @media (max-width: 768px) {
     display: none;
@@ -29,6 +40,11 @@ export const ChatContainer = styled(motion.div)`
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
+  transition: background 0.3s ease;
+
+  body[data-theme='dark'] & {
+    background: #1a1a2e;
+  }
 `;
 
 export const MessagesContainer = styled.div`
@@ -38,6 +54,11 @@ export const MessagesContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 20px;
+  transition: background 0.3s ease;
+  
+  body[data-theme='dark'] & {
+    background: #1a1a2e;
+  }
   
   @media (max-width: 768px) {
     padding: 20px;
@@ -50,6 +71,11 @@ export const InputContainer = styled.div`
   flex-direction: column;
   gap: 12px;
   background: #fff;
+  transition: background 0.3s ease;
+  
+  body[data-theme='dark'] & {
+    background: #1a1a2e;
+  }
   
   @media (max-width: 768px) {
     padding: 16px;

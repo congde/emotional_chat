@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { Plus, Clock, Settings, Palette, Trash2, FolderOpen } from 'lucide-react';
+import { Plus, Clock, Settings, Moon, Sun, Trash2, FolderOpen } from 'lucide-react';
 import { Sidebar as SidebarStyled } from '../styles/layout';
 import {
   SidebarHeader,
@@ -31,7 +31,8 @@ const Sidebar = ({
   onLoadSession,
   onDeleteSession,
   onOpenPersonalization,
-  onOpenStyleComparison,
+  onToggleTheme,
+  theme,
   onOpenHistoryManagement
 }) => {
   return (
@@ -64,12 +65,12 @@ const Sidebar = ({
       </SettingsButton>
 
       <SettingsButton
-        onClick={onOpenStyleComparison}
+        onClick={onToggleTheme}
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.99 }}
       >
-        <Palette size={16} />
-        样式对比演示
+        {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+        {theme === 'dark' ? '浅色模式' : '深色模式'}
       </SettingsButton>
 
       <HistorySection>

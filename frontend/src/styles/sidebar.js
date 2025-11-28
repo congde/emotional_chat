@@ -7,6 +7,11 @@ export const SidebarHeader = styled.div`
   align-items: center;
   gap: 12px;
   border-bottom: 1px solid #f0f0f0;
+  transition: border-color 0.3s ease;
+
+  body[data-theme='dark'] & {
+    border-bottom-color: #2a2a3e;
+  }
 `;
 
 export const UserAvatar = styled.div`
@@ -25,6 +30,11 @@ export const UserName = styled.div`
   font-weight: 600;
   color: #1a1a1a;
   font-size: 16px;
+  transition: color 0.3s ease;
+
+  body[data-theme='dark'] & {
+    color: #e0e0e0;
+  }
 `;
 
 export const NewChatButton = styled(motion.button)`
@@ -66,6 +76,15 @@ export const SettingsButton = styled(motion.button)`
     background: #f5f5f5;
     color: #333;
   }
+
+  body[data-theme='dark'] & {
+    color: #b0b0b0;
+    
+    &:hover {
+      background: #2a2a3e;
+      color: #e0e0e0;
+    }
+  }
 `;
 
 export const HistorySection = styled.div`
@@ -93,6 +112,11 @@ export const HistoryTitle = styled.div`
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 12px 12px 8px;
+  transition: color 0.3s ease;
+
+  body[data-theme='dark'] & {
+    color: #666;
+  }
 `;
 
 export const HistoryList = styled.div`
@@ -114,6 +138,14 @@ export const HistoryItem = styled(motion.div)`
   
   &:hover {
     background: ${props => props.active ? '#f0f0ff' : '#f5f5f5'};
+  }
+
+  body[data-theme='dark'] & {
+    background: ${props => props.active ? '#2a2a4e' : 'transparent'};
+    
+    &:hover {
+      background: ${props => props.active ? '#2a2a4e' : '#2a2a3e'};
+    }
   }
 `;
 
@@ -158,6 +190,11 @@ export const HistoryItemTitle = styled.div`
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: color 0.3s ease;
+
+  body[data-theme='dark'] & {
+    color: #e0e0e0;
+  }
 `;
 
 export const HistoryItemTime = styled.div`
@@ -181,6 +218,11 @@ export const HistoryItemMeta = styled.div`
   margin-top: 4px;
   font-size: 11px;
   color: #bbb;
+  transition: color 0.3s ease;
+
+  body[data-theme='dark'] & {
+    color: #666;
+  }
 `;
 
 export const MessageCountBadge = styled.span`
@@ -202,6 +244,11 @@ export const EmptyHistoryState = styled.div`
   padding: 40px 20px;
   color: #bbb;
   text-align: center;
+  transition: color 0.3s ease;
+
+  body[data-theme='dark'] & {
+    color: #666;
+  }
 `;
 
 export const EmptyHistoryIcon = styled.div`

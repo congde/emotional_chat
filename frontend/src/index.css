@@ -13,6 +13,11 @@ body {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
   overflow-x: hidden;
+  transition: background 0.3s ease;
+}
+
+body[data-theme='dark'] {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
 }
 
 code {
@@ -62,4 +67,14 @@ code {
 ::-moz-selection {
   background: rgba(102, 126, 234, 0.3);
   color: #333;
+}
+
+body[data-theme='dark'] ::selection {
+  background: rgba(102, 126, 234, 0.5);
+  color: #fff;
+}
+
+body[data-theme='dark'] ::-moz-selection {
+  background: rgba(102, 126, 234, 0.5);
+  color: #fff;
 }

@@ -4,10 +4,8 @@ import Sidebar from './components/Sidebar';
 import ChatContainer from './components/ChatContainer';
 import FeedbackModal from './components/FeedbackModal';
 import PersonalizationPanel from './components/PersonalizationPanel';
-import StyleComparison from './components/StyleComparison';
 import HistoryManagementModal from './components/HistoryManagementModal';
-import { motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { useTheme } from './contexts/ThemeContext';
 import { useChat, useFileUpload, useKeyboard, useSession, useFeedback, useURLDetection } from './hooks';
 
 function App() {
@@ -25,8 +23,10 @@ function App() {
   // UI状态
   const [inputValue, setInputValue] = useState('');
   const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
-  const [showStyleComparison, setShowStyleComparison] = useState(false);
   const [showHistoryManagement, setShowHistoryManagement] = useState(false);
+  
+  // 主题管理
+  const { theme, toggleTheme } = useTheme();
 
   // Refs
   const inputRef = useRef(null);
@@ -159,40 +159,10 @@ function App() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // 如果显示样式对比页面
-  if (showStyleComparison) {
-    return (
-      <>
-        <motion.button
-          onClick={() => setShowStyleComparison(false)}
-          style={{
-            position: 'fixed',
-            top: '20px',
-            left: '20px',
-            zIndex: 1001,
-            padding: '12px 24px',
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            border: '2px solid #667eea',
-            borderRadius: '12px',
-            color: '#667eea',
-            fontWeight: '600',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
-          }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <X size={18} />
-          返回聊天
-        </motion.button>
-        <StyleComparison />
-      </>
-    );
-  }
+  // 应用主题到body
+  useEffect(() => {
+    document.body.setAttribute('data-theme', theme);
+  }, [theme]);
 
   return (
     <AppContainer>
@@ -204,7 +174,8 @@ function App() {
         onLoadSession={handleLoadSession}
         onDeleteSession={handleDeleteSession}
         onOpenPersonalization={() => setShowPersonalizationPanel(true)}
-        onOpenStyleComparison={() => setShowStyleComparison(true)}
+        onToggleTheme={toggleTheme}
+        theme={theme}
         onOpenHistoryManagement={() => setShowHistoryManagement(true)}
       />
 

@@ -18,6 +18,16 @@ export const InputBox = styled.div`
     border-color: #6366f1;
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
   }
+
+  body[data-theme='dark'] & {
+    background: #2a2a3e;
+    border-color: #3a3a4e;
+    
+    &:focus-within {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+  }
 `;
 
 export const MessageInput = styled.textarea`
@@ -31,9 +41,19 @@ export const MessageInput = styled.textarea`
   line-height: 1.5;
   color: #1a1a1a;
   background: transparent;
+  transition: color 0.3s ease;
   
   &::placeholder {
     color: #bbb;
+    transition: color 0.3s ease;
+  }
+
+  body[data-theme='dark'] & {
+    color: #e0e0e0;
+    
+    &::placeholder {
+      color: #666;
+    }
   }
 `;
 
@@ -44,6 +64,11 @@ export const InputActions = styled.div`
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid #f0f0f0;
+  transition: border-color 0.3s ease;
+
+  body[data-theme='dark'] & {
+    border-top-color: #2a2a3e;
+  }
 `;
 
 export const LeftActions = styled.div`
@@ -80,6 +105,15 @@ export const ActionButton = styled(motion.button)`
     opacity: 0.4;
     cursor: not-allowed;
   }
+
+  body[data-theme='dark'] & {
+    color: #999;
+    
+    &:hover {
+      background: #2a2a3e;
+      color: #b0b0b0;
+    }
+  }
 `;
 
 export const FeatureButton = styled(motion.button)`
@@ -98,6 +132,17 @@ export const FeatureButton = styled(motion.button)`
   &:hover {
     background: #f5f5f5;
     border-color: #ddd;
+  }
+
+  body[data-theme='dark'] & {
+    background: ${props => props.active ? '#2a2a4e' : 'transparent'};
+    border-color: ${props => props.active ? '#6366f1' : '#3a3a4e'};
+    color: ${props => props.active ? '#6366f1' : '#b0b0b0'};
+    
+    &:hover {
+      background: #2a2a3e;
+      border-color: #4a4a5e;
+    }
   }
 `;
 
@@ -166,6 +211,12 @@ export const AttachmentItem = styled(motion.div)`
   border-radius: 8px;
   font-size: 13px;
   color: #666;
+  transition: background 0.3s ease, color 0.3s ease;
+
+  body[data-theme='dark'] & {
+    background: #2a2a3e;
+    color: #b0b0b0;
+  }
 `;
 
 export const AttachmentIcon = styled.div`
@@ -265,6 +316,18 @@ export const QuickActionButton = styled(motion.button)`
   svg {
     width: 16px;
     height: 16px;
+  }
+
+  body[data-theme='dark'] & {
+    background: #2a2a3e;
+    border-color: #3a3a4e;
+    color: #b0b0b0;
+    
+    &:hover {
+      background: #3a3a4e;
+      border-color: #6366f1;
+      color: #6366f1;
+    }
   }
 `;
 
