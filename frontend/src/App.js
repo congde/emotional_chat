@@ -24,6 +24,7 @@ function App() {
   const [inputValue, setInputValue] = useState('');
   const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
   const [showHistoryManagement, setShowHistoryManagement] = useState(false);
+  const [deepThinkActive, setDeepThinkActive] = useState(false);
   
   // 主题管理
   const { theme, toggleTheme } = useTheme();
@@ -94,14 +95,15 @@ function App() {
 
   // 发送消息
   const sendMessage = useCallback(async () => {
-    await sendMessageHook(inputValue, attachments, setInputValue, setAttachments, setDetectedURLs);
+    await sendMessageHook(inputValue, attachments, setInputValue, setAttachments, setDetectedURLs, deepThinkActive);
     loadHistorySessions(); // 刷新历史会话列表
     setTimeout(() => inputRef.current?.focus(), 100);
-  }, [inputValue, attachments, sendMessageHook, setInputValue, setAttachments, setDetectedURLs, loadHistorySessions]);
+  }, [inputValue, attachments, sendMessageHook, setInputValue, setAttachments, setDetectedURLs, loadHistorySessions, deepThinkActive]);
 
   // 新建对话
   const startNewChat = useCallback(() => {
     startNewChatHook(setMessages, setSessionId, setSuggestions, setAttachments, setDetectedURLs);
+    setDeepThinkActive(false); // 重置深度思考状态
   }, [startNewChatHook, setSessionId, setMessages, setSuggestions, setAttachments, setDetectedURLs]);
 
   // 加载会话历史
@@ -199,6 +201,8 @@ function App() {
         onRemoveAttachment={removeAttachment}
         onSuggestionClick={handleSuggestionClick}
         onOpenFeedbackModal={openFeedbackModal}
+        deepThinkActive={deepThinkActive}
+        onDeepThinkChange={setDeepThinkActive}
       />
 
       <PersonalizationPanel

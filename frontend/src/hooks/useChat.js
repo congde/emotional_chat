@@ -13,7 +13,7 @@ export const useChat = (currentUserId) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
-  const sendMessage = useCallback(async (inputValue, attachments, setInputValue, setAttachments, setDetectedURLs) => {
+  const sendMessage = useCallback(async (inputValue, attachments, setInputValue, setAttachments, setDetectedURLs, deepThinking = false) => {
     if ((!inputValue.trim() && attachments.length === 0) || isLoading) return;
 
     const userMessage = inputValue.trim();
@@ -59,6 +59,7 @@ export const useChat = (currentUserId) => {
       formData.append('message', userMessage);
       formData.append('session_id', sessionId || '');
       formData.append('user_id', currentUserId);
+      formData.append('deep_thinking', deepThinking ? 'true' : 'false'); // 添加深度思考参数
       
       // 添加URL内容
       if (urlContents.length > 0) {

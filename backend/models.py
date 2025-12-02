@@ -21,6 +21,7 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = None
     user_id: Optional[str] = None
     context: Optional[Dict[str, Any]] = None
+    deep_thinking: Optional[bool] = False  # 深度思考模式
 
 class ChatResponse(BaseModel):
     response: str

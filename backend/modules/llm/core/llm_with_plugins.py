@@ -174,7 +174,8 @@ class EmotionalChatEngineWithPlugins:
                 "intensity": emotion_data["intensity"]
             },
             plugin_used_ref=[plugin_used],
-            plugin_result_ref=[plugin_result]
+            plugin_result_ref=[plugin_result],
+            deep_thinking=request.deep_thinking or False
         )
         
         # 保存助手消息
@@ -320,7 +321,8 @@ class EmotionalChatEngineWithPlugins:
                                        user_id: str = "anonymous",
                                        emotion_state: Optional[Dict] = None,
                                        plugin_used_ref: List = None, 
-                                       plugin_result_ref: List = None):
+                                       plugin_result_ref: List = None,
+                                       deep_thinking: bool = False):
         """
         使用 Function Calling 生成回应
         如果模型决定调用插件，则执行插件并基于结果生成最终回复
@@ -338,12 +340,32 @@ class EmotionalChatEngineWithPlugins:
         # 获取个性化系统Prompt
         system_prompt = self._get_personalized_system_prompt(user_id, user_input, emotion_state)
         
+        # 深度思考模式：在系统提示中添加深度思考指导
+        if deep_thinking:
+            deep_thinking_instruction = """
+            
+【深度思考模式已启用】
+请对用户的输入进行更深入的思考和分析：
+1. 仔细分析用户问题的核心和潜在意图
+2. 考虑多个角度和可能性
+3. 提供更全面、更有深度的回答
+4. 如果涉及情感问题，请进行更深入的情感理解和共情
+5. 考虑回答的长远影响和不同场景下的适用性
+
+请给出经过深入思考的回应。"""
+            system_prompt += deep_thinking_instruction
+            print("[DEBUG] 深度思考模式已启用")
+        
+        # 根据深度思考模式调整temperature和max_tokens
+        temperature = 0.5 if deep_thinking else 0.7  # 深度思考时降低temperature，使回答更稳定
+        max_tokens = 2000 if deep_thinking else 1000  # 深度思考时允许更长的回答
+        
         # 获取函数列表
         functions = self.plugin_manager.get_function_schemas()
         
         if not functions:
             # 没有插件，使用普通模式
-            return self._call_llm_normal(user_input, session_id, user_id, emotion_state)
+            return self._call_llm_normal(user_input, session_id, user_id, emotion_state, deep_thinking)
         
         # 检测用户意图（仅用于辅助参数提取，不强制调用）
         weather_location = self._detect_weather_intent(user_input)
@@ -396,7 +418,8 @@ class EmotionalChatEngineWithPlugins:
                 "messages": messages,
                 "tools": tools,
                 "tool_choice": tool_choice,  # 强制调用或让模型决定
-                "temperature": 0.7
+                "temperature": temperature,
+                "max_tokens": max_tokens
             }
             
             print(f"[DEBUG] 发送API请求，tool_choice: {tool_choice}")
@@ -417,7 +440,8 @@ class EmotionalChatEngineWithPlugins:
                     "messages": messages,
                     "functions": functions,
                     "function_call": function_call,
-                    "temperature": 0.7
+                    "temperature": temperature,
+                    "max_tokens": max_tokens
                 }
                 response = requests.post(api_url, headers=headers, json=data, timeout=30)
             
@@ -575,7 +599,8 @@ class EmotionalChatEngineWithPlugins:
                     json={
                         "model": self.model,
                         "messages": messages,
-                        "temperature": 0.7
+                        "temperature": temperature,
+                        "max_tokens": max_tokens
                     },
                     timeout=30
                 )
@@ -758,7 +783,8 @@ class EmotionalChatEngineWithPlugins:
     
     def _call_llm_normal(self, user_input: str, session_id: str, 
                         user_id: str = "anonymous", 
-                        emotion_state: Optional[Dict] = None) -> str:
+                        emotion_state: Optional[Dict] = None,
+                        deep_thinking: bool = False) -> str:
         """不使用插件的普通聊天"""
         # 获取历史
         db_manager = DatabaseManager()
@@ -770,6 +796,25 @@ class EmotionalChatEngineWithPlugins:
         
         # 获取个性化系统Prompt
         system_prompt = self._get_personalized_system_prompt(user_id, user_input, emotion_state)
+        
+        # 深度思考模式：在系统提示中添加深度思考指导
+        if deep_thinking:
+            deep_thinking_instruction = """
+            
+【深度思考模式已启用】
+请对用户的输入进行更深入的思考和分析：
+1. 仔细分析用户问题的核心和潜在意图
+2. 考虑多个角度和可能性
+3. 提供更全面、更有深度的回答
+4. 如果涉及情感问题，请进行更深入的情感理解和共情
+5. 考虑回答的长远影响和不同场景下的适用性
+
+请给出经过深入思考的回应。"""
+            system_prompt += deep_thinking_instruction
+        
+        # 根据深度思考模式调整temperature和max_tokens
+        temperature = 0.5 if deep_thinking else 0.7  # 深度思考时降低temperature，使回答更稳定
+        max_tokens = 2000 if deep_thinking else 1000  # 深度思考时允许更长的回答
         
         # 构建完整Prompt（包含历史对话）
         if history_text:
@@ -787,7 +832,8 @@ class EmotionalChatEngineWithPlugins:
             data = {
                 "model": self.model,
                 "messages": [{"role": "system", "content": full_prompt}],
-                "temperature": 0.7
+                "temperature": temperature,
+                "max_tokens": max_tokens
             }
             
             response = requests.post(api_url, headers=headers, json=data, timeout=30)

@@ -75,9 +75,10 @@ const ChatContainer = ({
   onFileUpload,
   onRemoveAttachment,
   onSuggestionClick,
-  onOpenFeedbackModal
+  onOpenFeedbackModal,
+  deepThinkActive,
+  onDeepThinkChange
 }) => {
-  const [deepThinkActive, setDeepThinkActive] = useState(false);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -272,7 +273,7 @@ const ChatContainer = ({
                 </AttachmentButton>
                 <FeatureButton
                   active={deepThinkActive}
-                  onClick={() => setDeepThinkActive(!deepThinkActive)}
+                  onClick={() => onDeepThinkChange && onDeepThinkChange(!deepThinkActive)}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >

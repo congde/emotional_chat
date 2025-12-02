@@ -366,6 +366,7 @@ async def chat_with_attachments(
     session_id: str = Form(None),
     user_id: str = Form(...),
     url_contents: str = Form(None),
+    deep_thinking: str = Form("false"),  # 接收字符串形式的布尔值
     files: List[UploadFile] = File(default=[])
 ):
     """带附件的聊天接口"""
@@ -427,11 +428,15 @@ async def chat_with_attachments(
             for url_content in url_contents_list:
                 enhanced_message += f"\n链接: {url_content['url']}\n标题: {url_content['title']}\n内容: {url_content['content'][:500]}...\n"
         
+        # 处理深度思考参数（将字符串转换为布尔值）
+        deep_thinking_bool = deep_thinking.lower() in ('true', '1', 'yes', 'on')
+        
         # 创建聊天请求
         chat_request = ChatRequest(
             message=enhanced_message,
             session_id=session_id,
-            user_id=user_id
+            user_id=user_id,
+            deep_thinking=deep_thinking_bool
         )
         
         # 调用聊天引擎
