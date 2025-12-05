@@ -214,6 +214,8 @@ python init_rag_knowledge.py
 ## 🚀 快速开始
 
 > 💡 **提示**: 完整详细的安装指南请查看 [快速开始详细指南](#快速开始详细指南)
+> 
+> 🍎 **MacBook 用户**: 查看专门的 [MacBook 配置指南](docs/MACBOOK_SETUP.md) 或运行快速配置脚本 `./setup_macbook.sh`
 
 ### 快速启动（3步）
 
@@ -245,6 +247,40 @@ nano config.env
 # 启动所有服务
 docker-compose up -d
 ```
+
+### 🍎 MacBook 用户快速配置
+
+对于 macOS 用户，我们提供了专门的配置指南和脚本：
+
+**方式一：使用自动配置脚本（推荐）**
+```bash
+# 运行自动配置脚本
+./setup_macbook.sh
+```
+
+**方式二：手动配置**
+```bash
+# 1. 安装 Homebrew（如果未安装）
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# 2. 安装系统依赖
+brew install python@3.10 mysql node cmake
+
+# 3. 创建虚拟环境
+python3 -m venv venv
+source venv/bin/activate
+
+# 4. 安装 Python 依赖
+pip install -r requirements.txt
+
+# 5. 配置环境变量
+cp config.env.example config.env
+nano config.env
+
+# 后续步骤与 Linux 相同
+```
+
+📖 **详细文档**: 查看 [MacBook 配置指南](docs/MACBOOK_SETUP.md) 获取完整的 macOS 安装说明、常见问题解决方案和性能优化建议。
 
 ---
 
@@ -1510,6 +1546,7 @@ make run              # 启动后端服务
 
 ### 核心模块文档
 - **生产部署**: [docs/生产部署指南.md](docs/生产部署指南.md) - 从开发到生产的完整部署方案 🚀 **新增**
+- **MacBook配置**: [docs/MACBOOK_SETUP.md](docs/MACBOOK_SETUP.md) - macOS 用户专用配置指南 🍎 **新增**
 - **Agent模块**: [AGENT_README.md](AGENT_README.md) - Agent智能核心详细文档
 - **RAG系统**: [docs/RAG实施步骤.md](docs/RAG实施步骤.md) - RAG知识库实施指南
 - **记忆系统**: [docs/记忆系统架构.md](docs/记忆系统架构.md) - 记忆系统架构说明
