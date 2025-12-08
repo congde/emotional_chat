@@ -105,13 +105,16 @@ class ContextCompactionStrategy:
         
         if storage_path and os.path.exists(storage_path):
             with open(storage_path, 'r', encoding='utf-8') as f:
-                content = f.read()
+                stored_data = json.load(f)
+            
+            # 从存储的JSON中提取内容
+            stored_content = stored_data.get("content", "")
             
             # 根据类型恢复
             if storage_path.endswith("_file_content.json"):
-                expanded["result"]["content"] = content
+                expanded["result"]["content"] = stored_content
             elif storage_path.endswith("_search_results.json"):
-                expanded["result"]["results"] = json.loads(content)
+                expanded["result"]["results"] = json.loads(stored_content) if isinstance(stored_content, str) else stored_content
             
             expanded["result"]["compacted"] = False
             expanded["result"]["expanded_at"] = datetime.now().isoformat()
