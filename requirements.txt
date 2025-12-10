@@ -1,6 +1,11 @@
 # Python 3.10+ 版本依赖
 # 注意: 版本要求已调整为适配阿里云镜像源 (http://mirrors.cloud.aliyuncs.com/pypi/simple/)
 # 如需最新版本，请使用官方 PyPI 源: pip install -r requirements.txt -i https://pypi.org/simple
+#
+# ⚠️ Python 3.13 用户注意:
+# - 推荐使用 Python 3.10 或 3.11 以获得最佳兼容性
+# - 如果使用 Python 3.13，某些依赖可能有版本冲突警告，但通常可以正常运行
+# - 详细说明请查看 INSTALL_GUIDE_PYTHON313.md
 
 # 核心框架
 # 注意: chromadb 需要 fastapi>=0.95.2，因此移除上限约束
@@ -24,12 +29,16 @@ openai>=1.26.0,<2.0.0
 langchain>=0.2.0,<0.3.0
 langchain-openai>=0.1.10,<0.2.0
 langchain-community>=0.0.1,<0.3.0
+langchain-core>=0.2.43,<0.3.0
+langchain-text-splitters>=0.2.0,<0.3.0
+langsmith>=0.1.17,<0.2.0
 pandas>=2.0.0
 
 # 向量数据库
 # ChromaDB 0.5.x 可能有 API 变化，锁定 0.4.x 以保持兼容性
 chromadb>=0.4.22,<0.5.0
 sentence-transformers>=2.7.0
+transformers>=4.0.0
 # 注意: pysqlite3-binary 在 Windows 上不可用，已在代码中使用内置 sqlite3 替代
 # 参见 backend/main.py 开头的 sys.modules['pysqlite3'] = __import__('sqlite3')
 
@@ -38,6 +47,7 @@ PyMySQL>=1.1.0
 # SQLAlchemy 2.x 有重大 API 变化，锁定 1.x 版本以保持兼容性
 sqlalchemy>=1.4.0,<2.0.0
 alembic>=1.8.0
+mako>=1.0.0  # Alembic 依赖
 
 # 文档处理
 python-multipart>=0.0.9
@@ -51,30 +61,34 @@ sniffio>=1.3.0
 httpx>=0.25.0,<0.28.0
 # 修复 TensorFlow 与 protobuf 版本冲突
 # TensorFlow 需要 protobuf <= 3.20.x
+# 注意: 某些新包可能需要 protobuf > 3.20，如果遇到冲突可以放宽此约束
 protobuf>=3.19.0,<=3.20.3
+tenacity>=8.1.0,<9.0.0  # langchain 依赖
 
-# 多模态功能依赖
+# 多模态功能依赖（可选，如果安装失败可以跳过）
 # 语音识别和合成
-openai-whisper>=20230314
+# 注意: openai-whisper 在 Windows 上可能需要编译，如果失败可以注释掉
+# openai-whisper>=20230314
 pydub>=0.25.1
-noisereduce>=2.0.0
-librosa>=0.9.0
-soundfile>=0.12.0
+# noisereduce>=2.0.0  # 可选，如果安装失败可以注释
+# librosa>=0.9.0  # 可选，如果安装失败可以注释
+# soundfile>=0.12.0  # 可选，如果安装失败可以注释
 
 # 图像处理和分析
 Pillow>=9.0.0
 opencv-python>=4.5.0
-deepface>=0.0.79
+# deepface>=0.0.79  # 可选，如果安装失败可以注释
 # 注意: face-recognition 需要 dlib，而 dlib 需要编译
 # 编译 dlib 需要以下系统依赖（Alibaba Cloud Linux / CentOS）:
 #   yum install -y python310-devel cmake gcc gcc-c++ make
 # 或者如果不需要人脸识别功能，可以注释掉这一行
 # 如果遇到 "Python.h: No such file or directory" 错误，请安装 python310-devel
-face-recognition>=1.3.0
-pytesseract>=0.3.10
+# face-recognition>=1.3.0  # 可选，Windows 上编译困难，可以注释
+# pytesseract>=0.3.10  # 可选，需要系统安装 Tesseract OCR
 
 # 阿里云SDK
 aliyun-python-sdk-core>=2.15.0
+jmespath>=0.9.3,<1.0.0  # aliyun-python-sdk-core 依赖（注意版本约束）
 # 注意: aliyun-python-sdk-nls-cloud-api 在镜像源中可能不可用，需要从官方 PyPI 安装
 # aliyun-python-sdk-nls-cloud-api>=1.0.0
 # 如果镜像源没有，可以尝试: pip3.10 install aliyun-python-sdk-nls-cloud-api -i https://pypi.org/simple
@@ -85,16 +99,21 @@ aliyun-python-sdk-ocr>=1.0.0
 gTTS>=2.5.0
 
 # 其他多模态依赖
-# 注意: librosa 0.10.0 和 opencv-python 4.9.0 可能需要 numpy < 1.24
-# 对于 Python 3.10，如果需要 numpy 1.26+，请测试兼容性
-# 当前限制为 < 1.24 以确保与 librosa/opencv 兼容
-numpy>=1.21.0,<1.24.0
+# 注意: Python 3.13 需要 numpy >= 1.26
+# 对于 Python 3.10-3.12，可以使用 numpy < 1.24
+# 这里使用更宽松的版本约束，让 pip 自动选择兼容版本
+# 如果遇到 numpy 版本冲突，请手动安装: pip install "numpy>=1.26.0"
+# 注意: langchain 0.2.x 要求 numpy < 2.0.0，但 Python 3.13 通常安装 numpy 2.2.6
+# 虽然有版本警告，但通常可以正常运行
+numpy>=1.21.0
 jieba>=0.42.1
 
 # 其他必要依赖
 beautifulsoup4>=4.9.0
+soupsieve>=2.0  # beautifulsoup4 依赖
 PyPDF2>=2.0.0
 feedparser>=5.2.0
+sgmllib3k>=1.0.0  # feedparser 依赖
 
 # 额外依赖
 typing-extensions>=4.0.0

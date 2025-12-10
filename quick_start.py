@@ -5,9 +5,14 @@
 """
 
 # 使用pysqlite3替代系统sqlite3以支持ChromaDB
-import pysqlite3 as sqlite3
+# Windows不支持pysqlite3-binary，使用内置sqlite3作为后备
 import sys
-sys.modules['sqlite3'] = sqlite3
+try:
+    import pysqlite3 as sqlite3
+    sys.modules['sqlite3'] = sqlite3
+except ImportError:
+    # Windows或未安装pysqlite3时，使用内置sqlite3
+    sys.modules['pysqlite3'] = __import__('sqlite3')
 
 import os
 import subprocess

@@ -1,7 +1,12 @@
 # 使用 pysqlite3-binary 替换 sqlite3 以支持 ChromaDB
-__import__('pysqlite3')
+# Windows不支持pysqlite3-binary，使用内置sqlite3作为后备
 import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+try:
+    __import__('pysqlite3')
+    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+except ImportError:
+    # Windows或未安装pysqlite3时，使用内置sqlite3
+    sys.modules['pysqlite3'] = __import__('sqlite3')
 
 import chromadb
 from chromadb.config import Settings
