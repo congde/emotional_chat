@@ -40,7 +40,9 @@ chromadb>=0.4.22,<0.5.0
 sentence-transformers>=2.7.0
 transformers>=4.0.0
 # 注意: pysqlite3-binary 在 Windows 上不可用，已在代码中使用内置 sqlite3 替代
-# 参见 backend/main.py 开头的 sys.modules['pysqlite3'] = __import__('sqlite3')
+# macOS/Linux 用户应安装 pysqlite3-binary 以获得更好的 ChromaDB 支持
+# 如果安装失败，代码会自动回退到内置 sqlite3
+pysqlite3-binary>=0.5.0; sys_platform != "win32"
 
 # 数据库
 PyMySQL>=1.1.0
