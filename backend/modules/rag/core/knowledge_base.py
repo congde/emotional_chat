@@ -16,6 +16,8 @@ from .langchain_compat import (
     OpenAIEmbeddings, RecursiveCharacterTextSplitter, Document
 )
 
+from .chunking_selector import ChunkingStrategySelector
+
 from backend.logging_config import get_logger
 from config import Config
 
@@ -25,12 +27,21 @@ logger = get_logger(__name__)
 class KnowledgeBaseManager:
     """心理健康知识库管理器"""
     
-    def __init__(self, persist_directory: str = "./chroma_db/psychology_kb"):
+    def __init__(
+        self,
+        persist_directory: str = "./chroma_db/psychology_kb",
+        chunking_strategy: str = "auto",
+        chunk_size: int = 500,
+        chunk_overlap: int = 50
+    ):
         """
         初始化知识库管理器
         
         Args:
             persist_directory: 向量数据库持久化目录
+            chunking_strategy: 分块策略（auto/recursive/structure/sentence/small_big/parent_child）
+            chunk_size: 块大小（字符数）
+            chunk_overlap: 块重叠（字符数）
         """
         self.persist_directory = persist_directory
         # 暂时禁用嵌入功能，使用简单的文本匹配
@@ -41,15 +52,25 @@ class KnowledgeBaseManager:
         # 确保目录存在
         Path(persist_directory).mkdir(parents=True, exist_ok=True)
         
-        # 文档分块器配置
+        # 文档分块器配置（保持向后兼容）
         self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=500,
-            chunk_overlap=50,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
             length_function=len,
             separators=["\n\n", "\n", "。", "！", "？", "；", ".", "!", "?", ";", " ", ""]
         )
         
-        logger.info(f"知识库管理器初始化完成，持久化目录: {persist_directory}")
+        # 初始化策略选择器
+        self.chunking_strategy = chunking_strategy
+        self.chunk_size = chunk_size
+        self.chunk_overlap = chunk_overlap
+        self.strategy_selector = ChunkingStrategySelector(
+            default_strategy=chunking_strategy,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap
+        )
+        
+        logger.info(f"知识库管理器初始化完成，持久化目录: {persist_directory}, 分块策略: {chunking_strategy}")
     
     def load_pdf_documents(self, pdf_path: str) -> List[Document]:
         """
@@ -117,24 +138,55 @@ class KnowledgeBaseManager:
             logger.error(f"加载文本文档失败: {e}")
             raise
     
-    def split_documents(self, documents: List[Document]) -> List[Document]:
+    def split_documents(
+        self,
+        documents: List[Document],
+        strategy: Optional[str] = None
+    ) -> List[Document]:
         """
         分割文档为小块
         
         Args:
             documents: 原始文档列表
+            strategy: 分块策略（可选，如果为None则使用初始化时的策略）
             
         Returns:
             分割后的文档块列表
         """
         try:
             logger.info(f"开始分割文档，共 {len(documents)} 个文档")
-            chunks = self.text_splitter.split_documents(documents)
+            
+            # 如果指定了策略或使用auto策略，使用策略选择器
+            use_strategy_selector = (
+                strategy is not None or
+                self.chunking_strategy == "auto" or
+                self.chunking_strategy not in ["recursive", "character", "sentence"]
+            )
+            
+            if use_strategy_selector:
+                # 使用策略选择器
+                actual_strategy = strategy or self.chunking_strategy
+                chunks = self.strategy_selector.split_documents(
+                    documents,
+                    strategy=actual_strategy
+                )
+            else:
+                # 使用传统分块器（向后兼容）
+                chunks = self.text_splitter.split_documents(documents)
+            
             logger.info(f"文档分割完成，共 {len(chunks)} 个文档块")
             return chunks
         except Exception as e:
             logger.error(f"文档分割失败: {e}")
-            raise
+            # 如果策略选择器失败，回退到传统分块器
+            logger.warning("策略选择器失败，回退到传统分块器")
+            try:
+                chunks = self.text_splitter.split_documents(documents)
+                logger.info(f"使用传统分块器完成分割，共 {len(chunks)} 个文档块")
+                return chunks
+            except Exception as e2:
+                logger.error(f"传统分块器也失败: {e2}")
+                raise
     
     def create_vectorstore(self, chunks: List[Document]) -> Chroma:
         """

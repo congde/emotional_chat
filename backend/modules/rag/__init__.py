@@ -4,6 +4,15 @@ RAG模块
 """
 
 from .core.knowledge_base import KnowledgeBaseManager, PsychologyKnowledgeLoader
+from .core.chunking_strategies import (
+    CharacterTextSplitter,
+    SentenceTextSplitter,
+    MarkdownStructureSplitter,
+    DialogueSplitter,
+    SmallBigChunking,
+    ParentChildChunking
+)
+from .core.chunking_selector import ChunkingStrategySelector
 from .services.rag_service import RAGService, RAGIntegrationService
 from .models.rag_models import RAGRequest, RAGResponse, KnowledgeSearchRequest
 from .routers.rag_router import router as rag_router
@@ -11,6 +20,13 @@ from .routers.rag_router import router as rag_router
 __all__ = [
     "KnowledgeBaseManager",
     "PsychologyKnowledgeLoader",
+    "CharacterTextSplitter",
+    "SentenceTextSplitter",
+    "MarkdownStructureSplitter",
+    "DialogueSplitter",
+    "SmallBigChunking",
+    "ParentChildChunking",
+    "ChunkingStrategySelector",
     "RAGService",
     "RAGIntegrationService",
     "RAGRequest",

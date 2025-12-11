@@ -100,6 +100,10 @@ class DocumentUploadRequest(BaseModel):
     auto_chunk: bool = Field(True, description="是否自动分块")
     chunk_size: int = Field(500, ge=100, le=2000, description="分块大小")
     chunk_overlap: int = Field(50, ge=0, le=200, description="分块重叠")
+    chunking_strategy: str = Field(
+        "auto",
+        description="分块策略: auto/recursive/structure/sentence/dialogue/small_big/parent_child"
+    )
 
 
 class KnowledgeBaseStats(BaseModel):
@@ -126,6 +130,10 @@ class RAGConfig(BaseModel):
     max_context_length: int = Field(4000, ge=1000, le=8000, description="最大上下文长度")
     chunk_size: int = Field(500, ge=100, le=2000, description="文档分块大小")
     chunk_overlap: int = Field(50, ge=0, le=200, description="分块重叠大小")
+    chunking_strategy: str = Field(
+        "auto",
+        description="分块策略: auto/recursive/structure/sentence/dialogue/small_big/parent_child"
+    )
     embedding_model: str = Field("text-embedding-v1", description="嵌入模型")
 
 
