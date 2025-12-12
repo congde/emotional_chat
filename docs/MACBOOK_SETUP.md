@@ -30,6 +30,7 @@ mysql -u root -p -e "CREATE DATABASE emotional_chat CHARACTER SET utf8mb4 COLLAT
 # 4. 安装依赖和初始化
 source venv/bin/activate
 make install
+# 注意: 如果遇到 pysqlite3-binary 相关错误，可以忽略（代码会自动使用内置 sqlite3）
 make db-upgrade
 make rag-init
 
@@ -313,8 +314,9 @@ pip install --upgrade pip
 # 安装依赖（可能需要 10-30 分钟，特别是编译 dlib 和 opencv-python）
 pip install -r requirements.txt
 
-# Mac Python 3.10 用户：确保安装 pysqlite3-binary（解决 SQLite3 兼容性问题）
-pip install pysqlite3-binary
+# 可选：Mac Python 3.10 用户可尝试安装 pysqlite3-binary（解决 SQLite3 兼容性问题）
+# 如果安装失败（找不到版本），可以跳过，代码会自动使用内置 sqlite3
+# pip install pysqlite3-binary || echo "pysqlite3-binary 安装失败，将使用内置 sqlite3"
 ```
 
 **注意编译过程**：
@@ -588,17 +590,19 @@ pip install -r requirements.txt
 
 **解决方案**：
 
-**方法一：安装 pysqlite3-binary（推荐）**
+**方法一：安装 pysqlite3-binary（可选，推荐）**
 ```bash
 # 激活虚拟环境
 source venv/bin/activate
 
-# 安装 pysqlite3-binary
-pip install pysqlite3-binary
+# 尝试安装 pysqlite3-binary（如果找不到版本可以跳过）
+pip install pysqlite3-binary || echo "⚠️ pysqlite3-binary 安装失败，将使用内置 sqlite3"
 
-# 验证安装
-python -c "import pysqlite3; print(pysqlite3.sqlite_version)"
+# 验证安装（如果安装成功）
+python -c "import pysqlite3; print(pysqlite3.sqlite_version)" 2>/dev/null || echo "将使用内置 sqlite3"
 ```
+
+**注意**：如果 `pysqlite3-binary` 安装失败（找不到匹配版本），这是正常的，代码会自动使用内置的 `sqlite3`，不影响使用。
 
 **方法二：使用项目内置的兼容性模块（已自动处理）**
 项目已包含 `backend/utils/sqlite_compat.py` 模块，会自动处理 SQLite3 兼容性问题。

@@ -37,7 +37,12 @@ help:
 
 # 传统 pip 安装方式（兼容性保留）
 install:
+	@echo "📦 安装 Python 依赖..."
 	cd $(ROOT_DIR) && pip install -r requirements.txt
+	@echo ""
+	@echo "💡 提示: pysqlite3-binary 是可选的（已从 requirements.txt 中移除）"
+	@echo "   如果遇到 SQLite3 兼容性问题，可以尝试: pip install pysqlite3-binary"
+	@echo "   如果安装失败，代码会自动使用内置 sqlite3，不影响使用"
 
 # uv 安装方式（推荐，更快）
 install-uv:
