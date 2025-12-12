@@ -4,15 +4,23 @@
 自动完成数据库初始化、RAG知识库初始化，并启动服务
 """
 
-# 使用pysqlite3替代系统sqlite3以支持ChromaDB
-# Windows不支持pysqlite3-binary，使用内置sqlite3作为后备
+# 使用 SQLite3 兼容性模块（处理 Mac Python 3.10 兼容性问题）
 import sys
+import os
+# 添加项目根目录到 Python 路径
+project_root = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, project_root)
+
 try:
-    import pysqlite3 as sqlite3
-    sys.modules['sqlite3'] = sqlite3
+    from backend.utils.sqlite_compat import setup_sqlite3
+    setup_sqlite3()
 except ImportError:
-    # Windows或未安装pysqlite3时，使用内置sqlite3
-    sys.modules['pysqlite3'] = __import__('sqlite3')
+    # 如果模块还未创建，使用回退方案
+    try:
+        import pysqlite3 as sqlite3
+        sys.modules['sqlite3'] = sqlite3
+    except ImportError:
+        sys.modules['pysqlite3'] = __import__('sqlite3')
 
 import os
 import subprocess

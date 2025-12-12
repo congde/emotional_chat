@@ -312,6 +312,9 @@ pip install --upgrade pip
 
 # 安装依赖（可能需要 10-30 分钟，特别是编译 dlib 和 opencv-python）
 pip install -r requirements.txt
+
+# Mac Python 3.10 用户：确保安装 pysqlite3-binary（解决 SQLite3 兼容性问题）
+pip install pysqlite3-binary
 ```
 
 **注意编译过程**：
@@ -574,7 +577,67 @@ pip install -r requirements.txt
 # 大部分包已经支持 Apple Silicon
 ```
 
-### 7. ChromaDB 问题
+### 7. SQLite3 兼容性问题（Mac Python 3.10）
+
+**问题**：Mac 上 Python 3.10 的 SQLite3 版本过旧，导致 ChromaDB 无法正常工作
+
+**症状**：
+- 启动时出现 `sqlite3` 相关错误
+- ChromaDB 初始化失败
+- 错误信息包含 "SQLite version" 或 "pysqlite3"
+
+**解决方案**：
+
+**方法一：安装 pysqlite3-binary（推荐）**
+```bash
+# 激活虚拟环境
+source venv/bin/activate
+
+# 安装 pysqlite3-binary
+pip install pysqlite3-binary
+
+# 验证安装
+python -c "import pysqlite3; print(pysqlite3.sqlite_version)"
+```
+
+**方法二：使用项目内置的兼容性模块（已自动处理）**
+项目已包含 `backend/utils/sqlite_compat.py` 模块，会自动处理 SQLite3 兼容性问题。
+如果仍然遇到问题，可以手动测试：
+
+```bash
+# 激活虚拟环境
+source venv/bin/activate
+
+# 测试 SQLite3 兼容性
+python -c "from backend.utils.sqlite_compat import setup_sqlite3; setup_sqlite3()"
+```
+
+**方法三：重新编译 Python（高级）**
+如果上述方法都不行，可以重新编译 Python 3.10 并链接到更新的 SQLite3：
+
+```bash
+# 安装更新的 SQLite3
+brew install sqlite
+
+# 重新安装 Python 3.10（会链接到新的 SQLite3）
+brew reinstall python@3.10
+
+# 重新创建虚拟环境
+rm -rf venv
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+**验证修复**：
+```bash
+# 检查 SQLite3 版本
+python -c "import sqlite3; print('SQLite版本:', sqlite3.sqlite_version)"
+
+# 应该显示 3.35 或更高版本
+```
+
+### 8. ChromaDB 问题
 
 **问题**：ChromaDB 初始化失败
 
@@ -587,9 +650,11 @@ chmod 755 chroma_db
 # 清理并重新初始化
 rm -rf chroma_db/*
 python init_rag_knowledge.py
+
+# 如果仍然失败，检查 SQLite3 兼容性（见上面的问题 7）
 ```
 
-### 8. 依赖冲突
+### 9. 依赖冲突
 
 **问题**：包版本冲突
 

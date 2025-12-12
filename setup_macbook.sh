@@ -216,6 +216,17 @@ pip install --upgrade pip setuptools wheel || {
     print_warning "pip 升级失败，但可以继续"
 }
 
+# Mac Python 3.10 SQLite3 兼容性修复
+print_info "检查并修复 SQLite3 兼容性问题..."
+if python3 -c "import sqlite3; v=sqlite3.sqlite_version.split('.'); exit(0 if int(v[0])>3 or (int(v[0])==3 and int(v[1])>=35) else 1)" 2>/dev/null; then
+    print_success "SQLite3 版本符合要求"
+else
+    print_warning "SQLite3 版本可能过旧，安装 pysqlite3-binary..."
+    pip install pysqlite3-binary || {
+        print_warning "pysqlite3-binary 安装失败，将使用内置 sqlite3（可能影响 ChromaDB）"
+    }
+fi
+
 # 8. 配置环境变量
 print_info "步骤 8/8: 配置环境变量..."
 if [ ! -f "config.env" ]; then

@@ -7,8 +7,9 @@ from dotenv import load_dotenv
 env_path = Path(__file__).parent.parent / 'config.env'
 load_dotenv(env_path)
 
-# 使用内置sqlite3替代pysqlite3-binary (Windows不支持pysqlite3-binary)
-sys.modules['pysqlite3'] = __import__('sqlite3')
+# 使用 SQLite3 兼容性模块（处理 Mac Python 3.10 兼容性问题）
+from backend.utils.sqlite_compat import setup_sqlite3
+setup_sqlite3()
 
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
