@@ -4,9 +4,15 @@
 
 本文档详细说明了心语（HeartTalk）情感陪伴机器人的RAG（检索增强生成）系统实施过程，展示如何将专业心理健康知识库集成到AI对话系统中。
 
+同时，本文档也说明了向量数据库在项目中的双重应用：
+1. **RAG知识库系统**：存储专业心理健康知识，用于检索增强生成
+2. **用户记忆系统**：存储用户对话记忆，实现个性化陪伴
+
 ---
 
 ## 3.1 技术架构
+
+### 3.1.1 RAG知识库系统架构
 
 ```
 RAG知识库系统
@@ -25,11 +31,37 @@ RAG知识库系统
     └── 自动识别并使用RAG增强回复
 ```
 
-**核心组件：**
-- **向量存储**: ChromaDB
-- **嵌入模型**: OpenAI text-embedding-ada-002
-- **LLM模型**: GPT-4
-- **文档处理**: LangChain + PyPDF
+### 3.1.2 用户记忆系统架构
+
+```
+用户记忆系统
+├── 向量数据库层 (vector_store.py)
+│   ├── VectorStore - ChromaDB封装
+│   └── user_memories 集合 - 用户记忆向量存储
+│
+├── 记忆管理层 (memory_manager.py)
+│   ├── MemoryManager - 记忆管理器（基础版）
+│   └── EnhancedMemoryManager - 增强版记忆管理器
+│
+├── 上下文组装层 (context_assembler.py)
+│   └── ContextAssembler - 整合记忆到对话上下文
+│
+└── 对话服务层 (enhanced_chat_service.py)
+    └── EnhancedChatService - 完整对话流程（包含记忆检索和存储）
+```
+
+### 3.1.3 向量数据库的双重应用
+
+项目中的 ChromaDB 向量数据库同时服务于两个系统：
+
+| 系统 | 集合名称 | 用途 | 数据来源 |
+|------|---------|------|---------|
+| **RAG知识库** | `psychology_kb` | 存储专业心理健康知识 | PDF文档、内置知识库 |
+| **用户记忆** | `user_memories` | 存储用户对话记忆 | 用户对话历史 |
+
+**核心区别：**
+- **RAG知识库**：静态知识，所有用户共享，用于提供专业建议
+- **用户记忆**：动态记忆，每个用户独立，用于个性化陪伴
 
 ---
 
@@ -1019,17 +1051,456 @@ kb_manager = KnowledgeBaseManager(
 
 ---
 
-## 3.9 结论
+## 3.9 用户记忆系统集成
 
-通过RAG技术，"心语"情感陪伴机器人实现了从**"情感倾听者"到"专业心理助手"**的升级：
+### 3.9.1 系统概述
+
+用户记忆系统是"心语"机器人的核心功能之一，通过向量数据库实现用户对话历史的语义记忆，让AI能够"记住"用户之前说过的话，实现真正的个性化陪伴。
+
+**与RAG系统的区别：**
+
+| 特性 | RAG知识库系统 | 用户记忆系统 |
+|------|--------------|------------|
+| **数据来源** | 专业心理健康知识（静态） | 用户对话历史（动态） |
+| **数据归属** | 所有用户共享 | 每个用户独立 |
+| **更新频率** | 低频（知识库更新时） | 高频（每次对话） |
+| **检索目的** | 提供专业建议 | 个性化陪伴 |
+| **存储集合** | `psychology_kb` | `user_memories` |
+
+### 3.9.2 核心模块说明
+
+#### 1. 向量数据库封装 (`backend/vector_store.py`)
+
+```python
+class VectorStore:
+    """向量数据库封装 - 统一管理ChromaDB"""
+    
+    def __init__(self):
+        # 初始化ChromaDB客户端
+        self.client = chromadb.PersistentClient(
+            path=Config.CHROMA_PERSIST_DIRECTORY,
+            settings=Settings(anonymized_telemetry=False)
+        )
+        
+        # 创建多个集合
+        self.conversation_collection = ...  # 对话记录
+        self.knowledge_collection = ...     # 知识库（RAG）
+        self.emotion_collection = ...       # 情绪示例
+        self.memory_collection = ...        # 用户记忆（由MemoryManager创建）
+```
+
+**关键点：**
+- 使用同一个ChromaDB实例，但通过不同的集合（Collection）隔离数据
+- RAG知识库和用户记忆使用不同的集合，互不干扰
+
+#### 2. 记忆管理器 (`backend/memory_manager.py`)
+
+```python
+class MemoryManager:
+    """记忆管理器 - 统一管理用户的长期记忆"""
+    
+    def __init__(self):
+        self.vector_store = VectorStore()
+        self.extractor = MemoryExtractor()
+        
+        # 创建专门的记忆集合
+        self.memory_collection = self.vector_store.client.get_or_create_collection(
+            name="user_memories",
+            embedding_function=default_ef,
+            metadata={"hnsw:space": "cosine"}
+        )
+    
+    def store_memory(self, user_id: str, session_id: str, memory: Dict) -> Dict:
+        """存储记忆到向量数据库"""
+        memory_text = f"{memory.get('summary', '')} {memory.get('content', '')}"
+        
+        metadata = {
+            "user_id": user_id,
+            "session_id": session_id,
+            "type": memory.get("type", "other"),
+            "emotion": memory.get("emotion", "neutral"),
+            "importance": float(memory.get("importance", 0.5)),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # 存储到向量数据库
+        self.memory_collection.add(
+            documents=[memory_text],
+            metadatas=[metadata],
+            ids=[memory_id]
+        )
+    
+    def retrieve_memories(self, user_id: str, query: str, n_results: int = 3) -> List[Dict]:
+        """检索相关记忆"""
+        # 查询向量数据库
+        results = self.memory_collection.query(
+            query_texts=[query],
+            n_results=n_results * 2,
+            where={"user_id": user_id}  # 只检索该用户的记忆
+        )
+        
+        # 过滤和排序
+        memories = []
+        for i, doc in enumerate(results["documents"][0]):
+            # 过滤重要性、时间等
+            # ...
+            memories.append({
+                "content": doc,
+                "metadata": results["metadatas"][0][i],
+                "similarity": 1 - (results["distances"][0][i] / 2)
+            })
+        
+        return memories[:n_results]
+```
+
+**关键功能：**
+- **智能提取**：通过`MemoryExtractor`判断哪些对话值得存储为长期记忆
+- **语义检索**：基于向量相似度检索相关记忆
+- **时间衰减**：支持按时间范围过滤记忆
+- **重要性过滤**：只检索重要性达到阈值的记忆
+
+#### 3. 上下文组装器 (`backend/context_assembler.py`)
+
+```python
+class ContextAssembler:
+    """上下文组装器 - 整合所有上下文信息"""
+    
+    def assemble_context(self, user_id: str, session_id: str, 
+                        current_message: str, ...) -> Dict:
+        """组装完整上下文"""
+        # 1. 检索相关记忆
+        memories = self.memory_manager.retrieve_memories(
+            user_id=user_id,
+            query=current_message,
+            n_results=3
+        )
+        
+        # 2. 获取情绪趋势
+        emotion_trend = self.memory_manager.get_user_emotion_trend(user_id, days=7)
+        
+        # 3. 组装上下文
+        context = {
+            "memories": {
+                "recent_events": [...],
+                "concerns": [...],
+                "all": memories
+            },
+            "emotion_context": {
+                "current_emotion": emotion,
+                "trend": emotion_trend
+            },
+            "chat_history": recent_history
+        }
+        
+        return context
+```
+
+**关键功能：**
+- 在生成回复前检索相关记忆
+- 将记忆整合到Prompt中
+- 支持情绪趋势分析
+
+#### 4. 增强聊天服务 (`backend/services/enhanced_chat_service.py`)
+
+```python
+class EnhancedChatService:
+    """增强版聊天服务 - 完整对话流程"""
+    
+    async def chat(self, request: ChatRequest) -> ChatResponse:
+        """处理聊天请求"""
+        user_id = request.user_id
+        message = request.message
+        
+        # ============ 第6步：组装增强上下文 ============
+        context = await self.context_assembler.assemble_context(
+            user_id=user_id,
+            session_id=session_id,
+            current_message=message,
+            chat_history=chat_history,
+            emotion=emotion
+        )
+        # ↑ 这里会检索相关记忆
+        
+        # ============ 第7步：构建增强Prompt ============
+        enhanced_prompt = self.context_assembler.build_prompt_context(
+            context, system_prompt
+        )
+        # ↑ Prompt中包含检索到的记忆
+        
+        # ============ 第9步：生成回复 ============
+        response = await self._generate_response(...)
+        
+        # ============ 第12步：处理并存储记忆 ============
+        await self.memory_manager.process_conversation(
+            session_id=session_id,
+            user_id=user_id,
+            user_message=message,
+            bot_response=response.response,
+            emotion=emotion
+        )
+        # ↑ 对话结束后，提取并存储新记忆
+        
+        return response
+```
+
+### 3.9.3 完整调用链
+
+```
+用户发送消息
+    ↓
+enhanced_chat_service.chat()
+    ↓
+context_assembler.assemble_context()
+    ↓
+memory_manager.retrieve_memories()
+    ↓
+vector_store.memory_collection.query()  ← 向量数据库查询
+    ↓
+返回相关记忆（如："我记得你之前说工作压力很大"）
+    ↓
+context_assembler.build_prompt_context()
+    ↓
+将记忆注入Prompt（如："历史记忆：用户之前提到工作压力大...")
+    ↓
+LLM生成回复（基于记忆上下文）
+    ↓
+memory_manager.process_conversation()
+    ↓
+memory_extractor.extract_memories()  ← 判断是否值得存储
+    ↓
+memory_manager.store_memory()
+    ↓
+vector_store.memory_collection.add()  ← 存储新记忆到向量数据库
+```
+
+### 3.9.4 记忆存储流程
+
+**步骤1：对话发生**
+```python
+# 用户发送消息
+user_message = "最近工作压力好大，每天都加班到很晚。"
+bot_response = "我理解你现在的压力状况..."
+```
+
+**步骤2：记忆提取**
+```python
+# MemoryExtractor判断是否值得存储
+if should_extract_memory(user_message, emotion, intensity):
+    memories = extract_memories(
+        user_message, bot_response, emotion, intensity
+    )
+    # 返回：
+    # {
+    #     "type": "concern",
+    #     "content": "工作压力大，经常加班",
+    #     "emotion": "压力大",
+    #     "importance": 0.8
+    # }
+```
+
+**步骤3：向量化存储**
+```python
+# 存储到向量数据库
+memory_text = "工作压力大，经常加班"
+metadata = {
+    "user_id": "user123",
+    "type": "concern",
+    "emotion": "压力大",
+    "importance": 0.8,
+    "timestamp": "2025-01-16T15:30:00"
+}
+
+memory_collection.add(
+    documents=[memory_text],
+    metadatas=[metadata],
+    ids=["user123_abc123"]
+)
+```
+
+### 3.9.5 记忆检索流程
+
+**步骤1：用户发送新消息**
+```python
+user_message = "项目快上线了，这周又要天天熬夜了。"
+```
+
+**步骤2：向量相似度检索**
+```python
+# 将用户消息向量化
+query_vector = embedding_model.encode(user_message)
+
+# 在向量数据库中检索
+results = memory_collection.query(
+    query_embeddings=[query_vector],
+    n_results=5,
+    where={"user_id": "user123"}  # 只检索该用户的记忆
+)
+
+# 返回相似记忆：
+# [
+#     {
+#         "content": "工作压力大，经常加班",
+#         "similarity": 0.85,
+#         "metadata": {
+#             "emotion": "压力大",
+#             "timestamp": "2025-01-10T..."
+#         }
+#     },
+#     ...
+# ]
+```
+
+**步骤3：过滤和排序**
+```python
+# 按重要性、时间、相似度综合排序
+filtered_memories = filter_and_sort(
+    results,
+    min_importance=0.5,
+    days_limit=7
+)
+```
+
+**步骤4：注入Prompt**
+```python
+# 构建记忆上下文
+memory_context = """
+历史记忆：
+1. [2025-01-10] [压力大] 工作压力大，经常加班
+2. [2025-01-12] [压力大] 感觉快撑不住了
+"""
+
+prompt = f"""
+你是"心语"，一个温暖的心理陪伴者。
+
+{memory_context}
+
+当前输入：{user_message}
+
+请结合历史记忆，用共情、支持的语气回应。
+"""
+```
+
+### 3.9.6 记忆系统与RAG系统的协同
+
+在实际对话中，两个系统可以协同工作：
+
+```python
+# 完整对话流程
+async def chat_with_rag_and_memory(user_message: str, user_id: str):
+    # 1. 检索用户记忆（个性化）
+    memories = memory_manager.retrieve_memories(
+        user_id=user_id,
+        query=user_message
+    )
+    
+    # 2. 判断是否需要RAG（专业性）
+    if rag_service.should_use_rag(user_message, emotion):
+        # 检索专业知识
+        knowledge = rag_service.ask_with_context(
+            question=user_message,
+            conversation_history=chat_history
+        )
+    else:
+        knowledge = None
+    
+    # 3. 组装完整上下文
+    context = {
+        "user_memories": memories,      # 个性化记忆
+        "professional_knowledge": knowledge,  # 专业知识
+        "chat_history": chat_history
+    }
+    
+    # 4. 生成回复
+    response = llm.generate(context)
+    
+    # 5. 存储新记忆
+    memory_manager.process_conversation(...)
+    
+    return response
+```
+
+**协同效果示例：**
+
+**用户：** "我最近总是失眠，怎么办？"
+
+**系统处理：**
+1. **记忆检索**：发现用户之前提到"工作压力大" → 关联到失眠原因
+2. **RAG检索**：检索"改善睡眠的科学方法" → 提供专业建议
+3. **生成回复**：
+   ```
+   我记得你之前提到工作压力很大，经常加班。
+   失眠常常与压力和过度思考有关。
+   
+   我想分享一个经过科学验证的方法——正念身体扫描练习：
+   [详细步骤...]
+   ```
+
+### 3.9.7 关键文件位置
+
+| 文件路径 | 功能说明 |
+|---------|---------|
+| `backend/vector_store.py` | 向量数据库封装，管理所有ChromaDB集合 |
+| `backend/memory_manager.py` | 记忆管理器，负责记忆的存储和检索 |
+| `backend/context_assembler.py` | 上下文组装器，整合记忆到对话上下文 |
+| `backend/services/enhanced_chat_service.py` | 增强聊天服务，完整对话流程 |
+| `backend/services/enhanced_memory_manager.py` | 增强版记忆管理器（支持短期+长期记忆） |
+| `backend/memory_extractor.py` | 记忆提取器，判断哪些对话值得存储 |
+
+### 3.9.8 验证记忆系统
+
+**方法1：查看向量数据库**
+```python
+from backend.vector_store import VectorStore
+
+vector_store = VectorStore()
+# 查看记忆集合
+results = vector_store.memory_collection.get(limit=10)
+print(f"共有 {len(results['ids'])} 条记忆")
+```
+
+**方法2：测试记忆检索**
+```python
+from backend.memory_manager import MemoryManager
+
+memory_manager = MemoryManager()
+
+# 检索记忆
+memories = memory_manager.retrieve_memories(
+    user_id="test_user",
+    query="工作压力大，又要熬夜了",
+    n_results=3
+)
+
+for mem in memories:
+    print(f"- {mem['content']} (相似度: {mem['similarity']:.2f})")
+```
+
+**方法3：查看完整调用链**
+```python
+# 在 enhanced_chat_service.py 中添加日志
+logger.info(f"检索到 {len(memories)} 条相关记忆")
+logger.info(f"存储了 {len(stored_memories)} 条新记忆")
+```
+
+---
+
+## 3.10 结论
+
+通过RAG技术和用户记忆系统，"心语"情感陪伴机器人实现了从**"情感倾听者"到"专业心理助手"**的升级：
 
 1. **知识驱动**: 基于权威心理学知识库，而非仅依赖LLM的训练数据
 2. **专业可信**: 引用知识来源，提供科学依据，增强用户信任
 3. **实用可操作**: 提供详细的步骤指导，用户可以立即实践
 4. **智能触发**: 自动识别需要专业知识的场景，无缝集成到对话流程
 5. **持续扩展**: 支持上传PDF文档，不断丰富知识库内容
+6. **个性化记忆**: 通过向量数据库实现用户对话历史的语义记忆，让AI"记住"用户
+7. **协同工作**: RAG知识库和用户记忆系统协同，既提供专业建议，又实现个性化陪伴
 
-RAG系统让AI不仅能共情用户情绪，更能提供科学、专业、可操作的心理健康建议，真正成为用户的专业心理陪伴助手。
+**双重向量数据库应用：**
+- **RAG知识库系统**：存储专业心理健康知识，提供科学、专业的建议
+- **用户记忆系统**：存储用户对话记忆，实现个性化、有记忆的陪伴
+
+两个系统通过同一个ChromaDB实例的不同集合实现，既保证了数据隔离，又实现了资源共享。RAG系统让AI不仅能共情用户情绪，更能提供科学、专业、可操作的心理健康建议；记忆系统让AI能够"记住"用户，实现真正的个性化陪伴。两者结合，真正成为用户的专业心理陪伴助手。
 
 ---
 
@@ -1042,6 +1513,12 @@ RAG系统让AI不仅能共情用户情绪，更能提供科学、专业、可操
 ---
 
 ## 更新日志
+
+### v2.1 (2025-01-XX)
+- ✨ 新增用户记忆系统集成说明
+- ✨ 说明向量数据库的双重应用（RAG知识库 + 用户记忆）
+- ✨ 添加记忆系统调用链和集成流程
+- 📝 更新文档，补充记忆系统与RAG系统的协同工作说明
 
 ### v2.0 (2025-01-XX)
 - ✨ 新增多种分块策略支持（基础分块、结构感知、高级分块）
