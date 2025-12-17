@@ -216,6 +216,51 @@ class MemoryItem(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+class ABTestExperiment(Base):
+    """A/B测试实验表"""
+    __tablename__ = "ab_test_experiments"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    experiment_id = Column(String(100), unique=True, index=True)  # 实验唯一标识
+    name = Column(String(200))  # 实验名称
+    description = Column(Text)  # 实验描述
+    groups = Column(Text)  # 实验组列表（JSON格式），如 ["A", "B"]
+    weights = Column(Text)  # 各组权重（JSON格式），如 [0.5, 0.5]
+    start_date = Column(DateTime)  # 开始时间
+    end_date = Column(DateTime, nullable=True)  # 结束时间
+    enabled = Column(Boolean, default=True)  # 是否启用
+    metadata = Column(Text)  # 额外元数据（JSON格式）
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class ABTestEvent(Base):
+    """A/B测试事件表"""
+    __tablename__ = "ab_test_events"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(100), index=True)
+    experiment_id = Column(String(100), index=True)
+    group = Column(String(50), index=True)  # 实验组（A/B/C等）
+    event_type = Column(String(50), index=True)  # 事件类型
+    event_data = Column(Text)  # 事件数据（JSON格式）
+    session_id = Column(String(100), index=True, nullable=True)
+    
+    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class ABTestGroupAssignment(Base):
+    """A/B测试分组分配表"""
+    __tablename__ = "ab_test_group_assignments"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(100), index=True)
+    experiment_id = Column(String(100), index=True)
+    group = Column(String(50), index=True)  # 分配的组
+    
+    assigned_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 class UserPersonalization(Base):
     """用户个性化配置表 - 存储用户的AI伙伴定制设置"""
     __tablename__ = "user_personalizations"
