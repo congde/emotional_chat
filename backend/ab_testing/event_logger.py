@@ -50,7 +50,10 @@ class EventLogger:
             self.file_path = kwargs.get("file_path", "logs/ab_test_events.jsonl")
             # 确保目录存在
             import os
-            os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
+            dir_path = os.path.dirname(self.file_path)
+            # 如果dir_path为空字符串或"."，说明文件在当前目录，不需要创建目录
+            if dir_path and dir_path != ".":
+                os.makedirs(dir_path, exist_ok=True)
         elif storage_backend == "database":
             self.db_session = kwargs.get("db_session")
         elif storage_backend == "redis":
