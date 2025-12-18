@@ -212,8 +212,12 @@ class SentimentClassifier:
         response_emotion, confidence = self.detect_emotion(ai_response)
         
         # 2. 检查是否是严重不兼容的组合
-        for forbidden in self.FORBIDDEN_COMBINATIONS:
-            if (user_emotion in forbidden and response_emotion in forbidden):
+        # 只有当用户情绪和回复情绪分别匹配禁止组合中的两个不同值时，才判定为错配
+        for forbidden_pair in self.FORBIDDEN_COMBINATIONS:
+            emotion1, emotion2 = forbidden_pair
+            # 检查是否匹配禁止组合（考虑顺序）
+            if (user_emotion == emotion1 and response_emotion == emotion2) or \
+               (user_emotion == emotion2 and response_emotion == emotion1):
                 reason = f"严重情感错配：用户{user_emotion}，AI回复{response_emotion}"
                 logger.warning(f"⚠️ {reason}")
                 return False, reason
