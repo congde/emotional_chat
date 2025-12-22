@@ -122,7 +122,7 @@ async def create_experiment(request: ExperimentCreateRequest):
                 start_date=start_date,
                 end_date=end_date,
                 enabled=request.enabled,
-                metadata=json.dumps(request.metadata or {})
+                extra_metadata=json.dumps(request.metadata or {})
             )
             db.add(experiment)
             db.commit()

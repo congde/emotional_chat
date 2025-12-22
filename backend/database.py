@@ -229,7 +229,7 @@ class ABTestExperiment(Base):
     start_date = Column(DateTime)  # 开始时间
     end_date = Column(DateTime, nullable=True)  # 结束时间
     enabled = Column(Boolean, default=True)  # 是否启用
-    metadata = Column(Text)  # 额外元数据（JSON格式）
+    extra_metadata = Column(Text)  # 额外元数据（JSON格式）
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
