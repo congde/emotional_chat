@@ -10,16 +10,12 @@ import os
 project_root = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, project_root)
 
+# SQLite3 兼容性设置
 try:
     from backend.utils.sqlite_compat import setup_sqlite3
     setup_sqlite3()
 except ImportError:
-    # 如果模块还未创建，使用回退方案
-    try:
-        import pysqlite3 as sqlite3
-        sys.modules['sqlite3'] = sqlite3
-    except ImportError:
-        sys.modules['pysqlite3'] = __import__('sqlite3')
+    pass  # 使用默认 sqlite3
 
 import uvicorn
 import os
