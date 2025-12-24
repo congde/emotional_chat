@@ -3,19 +3,11 @@
 启动后端服务的脚本
 自动构建本地知识库并启动服务
 """
-# 使用 SQLite3 兼容性模块（处理 Mac Python 3.10 兼容性问题）
 import sys
 import os
 # 添加项目根目录到 Python 路径
 project_root = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, project_root)
-
-# SQLite3 兼容性设置
-try:
-    from backend.utils.sqlite_compat import setup_sqlite3
-    setup_sqlite3()
-except ImportError:
-    pass  # 使用默认 sqlite3
 
 import uvicorn
 import os
