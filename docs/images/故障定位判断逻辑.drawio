@@ -1,0 +1,79 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="故障定位判断逻辑" id="fault-diagnosis-flow">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- 开始节点 -->
+        <mxCell id="start" value="查看监控指标&#xa;(健康状态/性能指标/系统资源)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="440" y="40" width="280" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- 判断节点1 -->
+        <mxCell id="judge1" value="响应延迟飙升&#xa;但成功率正常？" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="450" y="140" width="260" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- 判断节点2 -->
+        <mxCell id="judge2" value="成功率骤降&#xa;且集中在某一接口？" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="450" y="280" width="260" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- 判断节点3 -->
+        <mxCell id="judge3" value="所有指标正常&#xa;但用户反馈异常？" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="450" y="420" width="260" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- 结果1：资源问题 -->
+        <mxCell id="result1" value="问题分析：&#xa;• 资源不足（CPU/内存）&#xa;• 大模型推理耗时增加&#xa;&#xa;解决方向：&#xa;扩容/优化模型调用" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;fontSize=11;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="780" y="120" width="240" height="120" as="geometry" />
+        </mxCell>
+        
+        <!-- 结果2：代码/服务问题 -->
+        <mxCell id="result2" value="问题分析：&#xa;• 该模块代码bug&#xa;• 依赖服务故障&#xa;&#xa;解决方向：&#xa;查看错误日志，定位具体模块" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;fontSize=11;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="780" y="260" width="240" height="120" as="geometry" />
+        </mxCell>
+        
+        <!-- 结果3：前端/网络问题 -->
+        <mxCell id="result3" value="问题分析：&#xa;• 前端交互问题&#xa;• 网络问题&#xa;&#xa;解决方向：&#xa;检查前端日志和网络连接" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;fontSize=11;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="780" y="400" width="240" height="120" as="geometry" />
+        </mxCell>
+        
+        <!-- 其他情况 -->
+        <mxCell id="other" value="继续深入排查&#xa;或联系技术支持" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="450" y="560" width="260" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- 连接线 -->
+        <mxCell id="edge1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="start" target="judge1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge2" value="是" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#d79b00;endArrow=block;endFill=1;fontSize=11;" edge="1" parent="1" source="judge1" target="result1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge3" value="否" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;fontSize=11;" edge="1" parent="1" source="judge1" target="judge2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge4" value="是" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#d79b00;endArrow=block;endFill=1;fontSize=11;" edge="1" parent="1" source="judge2" target="result2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge5" value="否" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;fontSize=11;" edge="1" parent="1" source="judge2" target="judge3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge6" value="是" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#d79b00;endArrow=block;endFill=1;fontSize=11;" edge="1" parent="1" source="judge3" target="result3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge7" value="否" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;fontSize=11;" edge="1" parent="1" source="judge3" target="other">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

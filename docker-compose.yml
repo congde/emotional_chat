@@ -3,7 +3,13 @@ version: '3.8'
 services:
   # 后端API服务
   backend:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # 使用国内镜像源加速构建（可选：aliyun, tsinghua, ustc, 留空使用官方源）
+        APT_MIRROR: aliyun
+        PIP_MIRROR: aliyun
     ports:
       - "8000:8000"
     environment:
