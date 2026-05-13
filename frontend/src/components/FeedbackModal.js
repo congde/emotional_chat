@@ -55,7 +55,7 @@ const FeedbackModal = ({
             </label>
             <FeedbackTypeButtons>
               <TypeButton
-                active={feedbackType === 'helpful'}
+                $active={feedbackType === 'helpful'}
                 onClick={() => onTypeChange('helpful')}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -63,7 +63,7 @@ const FeedbackModal = ({
                 ✅ 有帮助
               </TypeButton>
               <TypeButton
-                active={feedbackType === 'irrelevant'}
+                $active={feedbackType === 'irrelevant'}
                 onClick={() => onTypeChange('irrelevant')}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -71,7 +71,7 @@ const FeedbackModal = ({
                 ❌ 答非所问
               </TypeButton>
               <TypeButton
-                active={feedbackType === 'lack_empathy'}
+                $active={feedbackType === 'lack_empathy'}
                 onClick={() => onTypeChange('lack_empathy')}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -79,7 +79,7 @@ const FeedbackModal = ({
                 😐 缺乏共情
               </TypeButton>
               <TypeButton
-                active={feedbackType === 'overstepping'}
+                $active={feedbackType === 'overstepping'}
                 onClick={() => onTypeChange('overstepping')}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -87,7 +87,7 @@ const FeedbackModal = ({
                 ⚠️ 越界建议
               </TypeButton>
               <TypeButton
-                active={feedbackType === 'other'}
+                $active={feedbackType === 'other'}
                 onClick={() => onTypeChange('other')}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -103,7 +103,7 @@ const FeedbackModal = ({
               {[1, 2, 3, 4, 5].map((star) => (
                 <StarButton
                   key={star}
-                  active={feedbackRating >= star}
+                  $active={feedbackRating >= star}
                   onClick={() => onRatingChange(star)}
                 >
                   {feedbackRating >= star ? '★' : '☆'}

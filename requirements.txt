@@ -52,9 +52,10 @@ sqlalchemy>=1.4.0,<2.0.0
 alembic>=1.8.0
 mako>=1.0.0  # Alembic 依赖
 
-# 文档处理
+# 文档处理（文件上传需要 python-multipart）
 python-multipart>=0.0.9
-pypdf>=3.0.0
+PyPDF2>=2.0.0
+pypdf>=3.0.0  # PyPDF2 的后续版本，RAG 模块 PyPDFLoader 依赖
 
 # 依赖冲突修复
 idna>=2.10
@@ -114,7 +115,6 @@ jieba>=0.42.1
 # 其他必要依赖
 beautifulsoup4>=4.9.0
 soupsieve>=2.0  # beautifulsoup4 依赖
-PyPDF2>=2.0.0
 feedparser>=5.2.0
 sgmllib3k>=1.0.0  # feedparser 依赖
 

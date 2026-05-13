@@ -8,6 +8,7 @@ export const useChat = (currentUserId) => {
   const [sessionId, setSessionId] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const messagesEndRef = useRef(null);
+  const abortRef = useRef(null);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -53,66 +54,63 @@ export const useChat = (currentUserId) => {
     };
     setMessages(prev => [...prev, newUserMessage]);
 
-    try {
-      // 准备FormData用于文件上传
-      const formData = new FormData();
-      formData.append('message', userMessage);
-      formData.append('session_id', sessionId || '');
-      formData.append('user_id', currentUserId);
-      formData.append('deep_thinking', deepThinking ? 'true' : 'false'); // 添加深度思考参数
-      
-      // 添加URL内容
-      if (urlContents.length > 0) {
-        formData.append('url_contents', JSON.stringify(urlContents));
-      }
-
-      // 添加文件附件
-      attachments.forEach((attachment, index) => {
-        formData.append(`file_${index}`, attachment.file, attachment.name);
-      });
-
-      const response = await ChatAPI.sendMessageWithAttachments(formData);
-
-      setSessionId(response.session_id);
-      setSuggestions(response.suggestions || []);
-
-      // 添加机器人回复
-      const botMessage = {
-        id: Date.now() + 1,
-        role: 'assistant',
-        content: response.response,
-        emotion: response.emotion,
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, botMessage]);
-
-      // 清空附件和URL
-      setAttachments([]);
-      setDetectedURLs([]);
-
-    } catch (error) {
-      console.error('发送消息失败:', error);
-      
-      // 用户友好的错误提示
-      let errorMsg = '抱歉，我现在无法回应。';
-      if (error.response?.status === 500) {
-        errorMsg += '服务器遇到了一些问题，请稍后再试。';
-      } else if (error.message === 'Network Error') {
-        errorMsg += '网络连接似乎有问题，请检查网络设置。';
-      } else {
-        errorMsg += '请稍后再试。';
-      }
-      
-      const errorMessage = {
-        id: Date.now() + 1,
-        role: 'assistant',
-        content: errorMsg,
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
+    // 准备FormData
+    const formData = new FormData();
+    formData.append('message', userMessage);
+    formData.append('session_id', sessionId || '');
+    formData.append('user_id', currentUserId);
+    formData.append('deep_thinking', deepThinking ? 'true' : 'false');
+    if (urlContents.length > 0) {
+      formData.append('url_contents', JSON.stringify(urlContents));
     }
+    attachments.forEach((attachment) => {
+      formData.append('files', attachment.file, attachment.name);
+    });
+
+    // 预插入空的 AI 消息占位
+    const botMsgId = Date.now() + 1;
+    setMessages(prev => [...prev, {
+      id: botMsgId,
+      role: 'assistant',
+      content: '',
+      streaming: true,
+      timestamp: new Date()
+    }]);
+
+    // 使用流式 API
+    abortRef.current = ChatAPI.sendMessageStreaming(formData, {
+      onToken: (token) => {
+        setMessages(prev => prev.map(msg =>
+          msg.id === botMsgId
+            ? { ...msg, content: msg.content + token }
+            : msg
+        ));
+      },
+      onDone: (data) => {
+        setSessionId(data.session_id);
+        setSuggestions(data.suggestions || []);
+        setMessages(prev => prev.map(msg =>
+          msg.id === botMsgId
+            ? { ...msg, streaming: false, emotion: data.emotion }
+            : msg
+        ));
+        setAttachments([]);
+        setDetectedURLs([]);
+        setIsLoading(false);
+        abortRef.current = null;
+      },
+      onError: (errMsg) => {
+        console.error('流式消息失败:', errMsg);
+        setMessages(prev => prev.map(msg =>
+          msg.id === botMsgId
+            ? { ...msg, content: msg.content || `抱歉，我现在无法回应。${errMsg}`, streaming: false }
+            : msg
+        ));
+        setIsLoading(false);
+        abortRef.current = null;
+      }
+    });
+
   }, [isLoading, sessionId, currentUserId]);
 
   return {

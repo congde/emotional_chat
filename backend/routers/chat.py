@@ -4,6 +4,7 @@
 """
 
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi.responses import StreamingResponse
 from typing import List, Optional
 from backend.models import ChatRequest, ChatResponse
 from backend.services.chat_service import ChatService
@@ -16,6 +17,7 @@ import sys
 import PyPDF2
 import requests
 from bs4 import BeautifulSoup
+import asyncio
 
 # 添加项目根目录到Python路径
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -235,6 +237,7 @@ async def chat_with_attachments(
     session_id: str = Form(None),
     user_id: str = Form(...),
     url_contents: str = Form(None),
+    deep_thinking: str = Form("false"),
     files: List[UploadFile] = File(default=[])
 ):
     """带附件的聊天接口（支持文件上传）"""
@@ -289,7 +292,7 @@ async def chat_with_attachments(
         if file_contents:
             enhanced_message += "\n\n[附件内容]:\n"
             for file_content in file_contents:
-                content_preview = file_content['content'][:500] if file_content['content'] else "[空内容]"
+                content_preview = file_content['content'][:2000] if file_content['content'] else "[空内容]"
                 enhanced_message += f"\n文件: {file_content['filename']}\n内容: {content_preview}...\n"
         
         if url_contents_list:
@@ -312,6 +315,158 @@ async def chat_with_attachments(
     except Exception as e:
         logger.error(f"带附件聊天接口错误: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/stream")
+async def chat_stream(
+    message: str = Form(...),
+    session_id: str = Form(None),
+    user_id: str = Form(...),
+    url_contents: str = Form(None),
+    deep_thinking: str = Form("false"),
+    files: List[UploadFile] = File(default=[])
+):
+    """
+    流式聊天接口（SSE），支持文件附件。
+    逐 token 返回 LLM 输出，大幅改善长任务体验。
+    """
+    # ---- 1. 处理附件（同步阶段） ----
+    file_contents = []
+    try:
+        if files:
+            for file in files:
+                if not file.filename or not is_allowed_file(file.filename):
+                    raise HTTPException(status_code=400, detail=f"不支持的文件类型: {file.filename}")
+                file_id = str(uuid.uuid4())
+                file_extension = Path(file.filename).suffix
+                file_path = UPLOAD_DIR / f"{file_id}{file_extension}"
+                file_content = await file.read()
+                if len(file_content) > MAX_FILE_SIZE:
+                    raise HTTPException(status_code=400, detail=f"文件过大: {file.filename}")
+                with open(file_path, "wb") as buffer:
+                    buffer.write(file_content)
+                content = ""
+                if file_extension.lower() == '.pdf':
+                    content = extract_text_from_pdf(file_path)
+                elif file_extension.lower() in ['.jpg', '.jpeg', '.png', '.gif']:
+                    content = extract_text_from_image(file_path)
+                elif file_extension.lower() == '.txt':
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                file_contents.append({"filename": file.filename, "content": content})
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"附件处理失败: {e}")
+
+    # ---- 2. 构建增强消息 ----
+    enhanced_message = message
+    if file_contents:
+        enhanced_message += "\n\n[附件内容]:\n"
+        for fc in file_contents:
+            preview = fc['content'][:3000] if fc['content'] else "[空内容]"
+            enhanced_message += f"\n文件: {fc['filename']}\n内容: {preview}\n"
+    url_contents_list = []
+    if url_contents:
+        try:
+            url_contents_list = json.loads(url_contents)
+        except json.JSONDecodeError:
+            pass
+    if url_contents_list:
+        enhanced_message += "\n\n[URL内容]:\n"
+        for uc in url_contents_list:
+            enhanced_message += f"\n链接: {uc.get('url','')}\n标题: {uc.get('title','')}\n内容: {uc.get('content','')[:500]}\n"
+
+    # ---- 3. SSE 流式生成 ----
+    async def event_stream():
+        engine = chat_service.chat_engine
+        try:
+            # 发送开始信号
+            yield f"data: {json.dumps({'type':'start'})}\n\n"
+
+            # 尝试流式调用 LangChain chain
+            if hasattr(engine, 'chain') and engine.chain is not None:
+                from backend.database import DatabaseManager
+                # 构建历史
+                sid = session_id or str(uuid.uuid4())
+                db_manager = DatabaseManager()
+                with db_manager as db:
+                    recent = db.get_session_messages(sid, limit=10)
+                    history_text = ""
+                    for msg in list(reversed(recent[-5:])):
+                        history_text += f"{'用户' if msg.role == 'user' else '心语'}: {msg.content}\n"
+                # 长期记忆
+                long_term = ""
+                if hasattr(engine, 'vector_store') and engine.vector_store:
+                    try:
+                        similar = engine.vector_store.search_similar_conversations(
+                            query=enhanced_message[:200], session_id=None, n_results=2
+                        )
+                        if similar and similar.get('documents'):
+                            long_term = "\n相关历史参考：\n"
+                            for doc in similar['documents'][0][:2]:
+                                long_term += f"- {doc[:100]}\n"
+                    except Exception:
+                        pass
+
+                full_response = ""
+                async for chunk in engine.chain.astream({
+                    "long_term_memory": long_term,
+                    "history": history_text.strip(),
+                    "input": enhanced_message
+                }):
+                    token = chunk if isinstance(chunk, str) else str(chunk)
+                    if token:
+                        full_response += token
+                        yield f"data: {json.dumps({'type':'token','content':token})}\n\n"
+
+                # 分析情绪
+                emotion = "neutral"
+                suggestions = []
+                try:
+                    emotion_data = engine.analyze_emotion(enhanced_message)
+                    emotion = emotion_data.get("emotion", "neutral")
+                    if hasattr(engine, '_get_emotion_suggestions'):
+                        suggestions = engine._get_emotion_suggestions(emotion)
+                except Exception:
+                    pass
+
+                # 保存到数据库
+                try:
+                    with DatabaseManager() as db:
+                        if not session_id:
+                            db.create_session(sid, user_id)
+                        db.save_message(session_id=sid, user_id=user_id, role="user",
+                                        content=message, emotion=emotion)
+                        db.save_message(session_id=sid, user_id=user_id, role="assistant",
+                                        content=full_response, emotion=emotion)
+                except Exception as e:
+                    logger.error(f"流式保存消息失败: {e}")
+
+                # 发送完成信号（含元数据）
+                yield f"data: {json.dumps({'type':'done','session_id':sid,'emotion':emotion,'suggestions':suggestions})}\n\n"
+            else:
+                # Fallback: 非流式
+                chat_request = ChatRequest(message=enhanced_message, session_id=session_id, user_id=user_id)
+                response = await chat_service.chat(chat_request, use_memory_system=True)
+                yield f"data: {json.dumps({'type':'token','content':response.response})}\n\n"
+                yield f"data: {json.dumps({'type':'done','session_id':response.session_id,'emotion':response.emotion,'suggestions':response.suggestions})}\n\n"
+
+        except Exception as e:
+            logger.error(f"流式生成失败: {e}")
+            yield f"data: {json.dumps({'type':'error','content':f'生成出错: {str(e)}'})}\n\n"
+
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
 
 
 @router.post("/parse-url")

@@ -32,6 +32,71 @@ class ChatAPI {
     }
   }
 
+  /**
+   * 流式发送消息（SSE），支持附件。
+   * @param {FormData} formData 包含 message, user_id, session_id, files 等
+   * @param {function} onToken  每收到一个 token 时回调 (tokenString)
+   * @param {function} onDone   完成时回调 ({session_id, emotion, suggestions})
+   * @param {function} onError  出错时回调 (errorString)
+   * @returns {function} abort  调用可取消请求
+   */
+  static sendMessageStreaming(formData, { onToken, onDone, onError }) {
+    const controller = new AbortController();
+
+    (async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/chat/stream`, {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          onError && onError(`服务器错误 (${response.status}): ${errText}`);
+          return;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); // keep incomplete line
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const payload = line.slice(6).trim();
+            if (payload === '[DONE]') continue;
+            try {
+              const data = JSON.parse(payload);
+              if (data.type === 'token' && data.content) {
+                onToken && onToken(data.content);
+              } else if (data.type === 'done') {
+                onDone && onDone(data);
+              } else if (data.type === 'error') {
+                onError && onError(data.content || '未知错误');
+              }
+            } catch {
+              // ignore parse errors for partial data
+            }
+          }
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          onError && onError(err.message || '网络错误');
+        }
+      }
+    })();
+
+    return () => controller.abort();
+  }
+
   static async submitFeedback(feedbackData) {
     try {
       const response = await axios.post(`${API_BASE_URL}/feedback`, feedbackData, {
@@ -174,6 +239,27 @@ class ChatAPI {
     } catch (error) {
       console.error('健康检查失败:', error);
       throw error;
+    }
+  }
+
+  // Skills/Tools
+  static async getAvailableSkills() {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/agent/tools`);
+      return response.data;
+    } catch (error) {
+      console.error('获取技能列表失败:', error);
+      // Return default skills if API is unavailable
+      return {
+        tools: [
+          { name: 'search_memory', category: 'memory', description: '搜索历史记忆和对话' },
+          { name: 'get_emotion_log', category: 'emotion', description: '查看情绪变化趋势' },
+          { name: 'recommend_meditation', category: 'resource', description: '推荐冥想和放松资源' },
+          { name: 'psychological_assessment', category: 'assessment', description: '心理状态快速评估' },
+          { name: 'set_reminder', category: 'scheduler', description: '设置提醒和日程' },
+          { name: 'get_user_mood_trend', category: 'emotion', description: '分析近期情绪模式' },
+        ]
+      };
     }
   }
 

@@ -2,30 +2,32 @@ import styled from 'styled-components';
 import { motion } from 'framer-motion';
 
 export const InputWrapper = styled.div`
-  max-width: 800px;
+  max-width: 820px;
   margin: 0 auto;
   width: 100%;
 `;
 
 export const InputBox = styled.div`
-  background: #fff;
-  border: 1px solid #e5e5e5;
-  border-radius: 16px;
-  padding: 12px 16px;
-  transition: all 0.2s ease;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 20px;
+  padding: 14px 18px;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   
   &:focus-within {
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    border-color: rgba(99, 102, 241, 0.4);
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08);
   }
 
   body[data-theme='dark'] & {
-    background: #2a2a3e;
-    border-color: #3a3a4e;
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
     
     &:focus-within {
-      border-color: #6366f1;
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+      border-color: rgba(99, 102, 241, 0.5);
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
     }
   }
 `;
@@ -34,25 +36,27 @@ export const MessageInput = styled.textarea`
   width: 100%;
   border: none;
   font-size: 15px;
+  font-family: inherit;
   outline: none;
   resize: none;
   min-height: 24px;
   max-height: 200px;
   line-height: 1.5;
-  color: #1a1a1a;
+  color: #1a1a2e;
   background: transparent;
-  transition: color 0.3s ease;
+  transition: color 0.3s ease, height 0.1s ease;
+  overflow-y: auto;
   
   &::placeholder {
-    color: #bbb;
+    color: #cbd5e1;
     transition: color 0.3s ease;
   }
 
   body[data-theme='dark'] & {
-    color: #e0e0e0;
+    color: #f1f5f9;
     
     &::placeholder {
-      color: #666;
+      color: #475569;
     }
   }
 `;
@@ -61,13 +65,13 @@ export const InputActions = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #f0f0f0;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.04);
   transition: border-color 0.3s ease;
 
   body[data-theme='dark'] & {
-    border-top-color: #2a2a3e;
+    border-top-color: rgba(255, 255, 255, 0.04);
   }
 `;
 
@@ -86,10 +90,10 @@ export const RightActions = styled.div`
 export const ActionButton = styled(motion.button)`
   width: 36px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: 10px;
   background: transparent;
   border: none;
-  color: #888;
+  color: #94a3b8;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -97,8 +101,8 @@ export const ActionButton = styled(motion.button)`
   transition: all 0.15s ease;
   
   &:hover {
-    background: #f5f5f5;
-    color: #666;
+    background: rgba(99, 102, 241, 0.06);
+    color: #6366f1;
   }
   
   &:disabled {
@@ -107,41 +111,44 @@ export const ActionButton = styled(motion.button)`
   }
 
   body[data-theme='dark'] & {
-    color: #999;
+    color: #64748b;
     
     &:hover {
-      background: #2a2a3e;
-      color: #b0b0b0;
+      background: rgba(99, 102, 241, 0.1);
+      color: #818cf8;
     }
   }
 `;
 
 export const FeatureButton = styled(motion.button)`
-  padding: 6px 12px;
-  border-radius: 16px;
-  background: ${props => props.active ? '#f0f0ff' : 'transparent'};
-  border: 1px solid ${props => props.active ? '#6366f1' : '#e5e5e5'};
-  color: ${props => props.active ? '#6366f1' : '#666'};
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: ${props => props.$active ? 'rgba(99, 102, 241, 0.1)' : 'transparent'};
+  border: 1px solid ${props => props.$active ? 'rgba(99, 102, 241, 0.3)' : 'rgba(0, 0, 0, 0.08)'};
+  color: ${props => props.$active ? '#6366f1' : '#94a3b8'};
   font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 6px;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
   
   &:hover {
-    background: #f5f5f5;
-    border-color: #ddd;
+    background: rgba(99, 102, 241, 0.06);
+    border-color: rgba(99, 102, 241, 0.2);
+    color: #6366f1;
   }
 
   body[data-theme='dark'] & {
-    background: ${props => props.active ? '#2a2a4e' : 'transparent'};
-    border-color: ${props => props.active ? '#6366f1' : '#3a3a4e'};
-    color: ${props => props.active ? '#6366f1' : '#b0b0b0'};
+    background: ${props => props.$active ? 'rgba(99, 102, 241, 0.15)' : 'transparent'};
+    border-color: ${props => props.$active ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255, 255, 255, 0.08)'};
+    color: ${props => props.$active ? '#818cf8' : '#64748b'};
     
     &:hover {
-      background: #2a2a3e;
-      border-color: #4a4a5e;
+      background: rgba(99, 102, 241, 0.1);
+      border-color: rgba(99, 102, 241, 0.3);
+      color: #818cf8;
     }
   }
 `;
@@ -149,10 +156,10 @@ export const FeatureButton = styled(motion.button)`
 export const AttachmentButton = styled(motion.button)`
   width: 36px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: 10px;
   background: transparent;
   border: none;
-  color: #888;
+  color: #94a3b8;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -160,31 +167,53 @@ export const AttachmentButton = styled(motion.button)`
   transition: all 0.15s ease;
   
   &:hover {
-    background: #f5f5f5;
-    color: #666;
+    background: rgba(99, 102, 241, 0.06);
+    color: #6366f1;
   }
   
   &:disabled {
     opacity: 0.4;
     cursor: not-allowed;
   }
+
+  body[data-theme='dark'] & {
+    color: #64748b;
+    
+    &:hover {
+      background: rgba(99, 102, 241, 0.1);
+      color: #818cf8;
+    }
+  }
 `;
 
 export const SendButton = styled(motion.button)`
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: ${props => props.disabled ? '#e5e5e5' : '#6366f1'};
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: ${props => props.disabled
+    ? 'rgba(0, 0, 0, 0.06)'
+    : 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)'
+  };
   border: none;
-  color: white;
+  color: ${props => props.disabled ? '#cbd5e1' : '#ffffff'};
   cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
+  box-shadow: ${props => props.disabled ? 'none' : '0 2px 8px rgba(99, 102, 241, 0.3)'};
   
   &:hover:not(:disabled) {
-    background: #5558e3;
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+    transform: translateY(-1px);
+  }
+
+  body[data-theme='dark'] & {
+    background: ${props => props.disabled
+      ? 'rgba(255, 255, 255, 0.06)'
+      : 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)'
+    };
+    color: ${props => props.disabled ? '#475569' : '#ffffff'};
   }
 `;
 
@@ -197,7 +226,7 @@ export const AttachmentsPreview = styled.div`
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 12px;
-  max-width: 800px;
+  max-width: 820px;
   margin-left: auto;
   margin-right: auto;
 `;
@@ -206,16 +235,18 @@ export const AttachmentItem = styled(motion.div)`
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  background: #f5f5f5;
-  border-radius: 8px;
+  padding: 8px 14px;
+  background: rgba(99, 102, 241, 0.06);
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  border-radius: 12px;
   font-size: 13px;
-  color: #666;
+  color: #475569;
   transition: background 0.3s ease, color 0.3s ease;
 
   body[data-theme='dark'] & {
-    background: #2a2a3e;
-    color: #b0b0b0;
+    background: rgba(99, 102, 241, 0.1);
+    border-color: rgba(99, 102, 241, 0.15);
+    color: #94a3b8;
   }
 `;
 
@@ -229,7 +260,7 @@ export const AttachmentIcon = styled.div`
 export const RemoveAttachmentButton = styled.button`
   background: none;
   border: none;
-  color: #999;
+  color: #94a3b8;
   cursor: pointer;
   padding: 2px;
   border-radius: 50%;
@@ -238,8 +269,8 @@ export const RemoveAttachmentButton = styled.button`
   justify-content: center;
   
   &:hover {
-    background: #eee;
-    color: #666;
+    background: rgba(239, 68, 68, 0.08);
+    color: #ef4444;
   }
 `;
 
@@ -247,14 +278,14 @@ export const URLPreview = styled(motion.div)`
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: 8px;
+  padding: 8px 14px;
+  background: rgba(16, 185, 129, 0.06);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  border-radius: 12px;
   font-size: 13px;
-  color: #16a34a;
+  color: #059669;
   margin-bottom: 12px;
-  max-width: 800px;
+  max-width: 820px;
   margin-left: auto;
   margin-right: auto;
 `;
@@ -269,16 +300,16 @@ export const URLText = styled.span`
 export const URLButton = styled.button`
   background: none;
   border: none;
-  color: #16a34a;
+  color: #059669;
   cursor: pointer;
   padding: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   
   &:hover {
-    background: rgba(22, 163, 74, 0.1);
+    background: rgba(16, 185, 129, 0.1);
   }
 `;
 
@@ -289,28 +320,31 @@ export const QuickActions = styled.div`
   gap: 8px;
   justify-content: center;
   margin-top: 16px;
-  max-width: 800px;
+  max-width: 820px;
   margin-left: auto;
   margin-right: auto;
 `;
 
 export const QuickActionButton = styled(motion.button)`
   padding: 8px 16px;
-  border-radius: 20px;
-  background: #fff;
-  border: 1px solid #e5e5e5;
-  color: #666;
+  border-radius: 24px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #64748b;
   font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 6px;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   
   &:hover {
-    background: #f5f5f5;
-    border-color: #6366f1;
+    background: rgba(99, 102, 241, 0.06);
+    border-color: rgba(99, 102, 241, 0.2);
     color: #6366f1;
+    transform: translateY(-1px);
   }
   
   svg {
@@ -319,14 +353,14 @@ export const QuickActionButton = styled(motion.button)`
   }
 
   body[data-theme='dark'] & {
-    background: #2a2a3e;
-    border-color: #3a3a4e;
-    color: #b0b0b0;
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.06);
+    color: #94a3b8;
     
     &:hover {
-      background: #3a3a4e;
-      border-color: #6366f1;
-      color: #6366f1;
+      background: rgba(99, 102, 241, 0.1);
+      border-color: rgba(99, 102, 241, 0.3);
+      color: #818cf8;
     }
   }
 `;

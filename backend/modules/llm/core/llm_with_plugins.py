@@ -602,7 +602,7 @@ class EmotionalChatEngineWithPlugins:
                         "temperature": temperature,
                         "max_tokens": max_tokens
                     },
-                    timeout=30
+                    timeout=120
                 )
                 
                 if final_response.status_code == 200:
@@ -836,7 +836,7 @@ class EmotionalChatEngineWithPlugins:
                 "max_tokens": max_tokens
             }
             
-            response = requests.post(api_url, headers=headers, json=data, timeout=30)
+            response = requests.post(api_url, headers=headers, json=data, timeout=120)
             
             if response.status_code == 200:
                 result = response.json()

@@ -2,69 +2,73 @@ import styled from 'styled-components';
 import { motion } from 'framer-motion';
 
 export const SidebarHeader = styled.div`
-  padding: 16px 20px;
+  padding: 20px 20px 16px;
   display: flex;
   align-items: center;
   gap: 12px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   transition: border-color 0.3s ease;
 
   body[data-theme='dark'] & {
-    border-bottom-color: #2a2a3e;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
   }
 `;
 
 export const UserAvatar = styled.div`
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 14px;
+  font-size: 16px;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 `;
 
 export const UserName = styled.div`
-  font-weight: 600;
-  color: #1a1a1a;
-  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a2e;
+  font-size: 17px;
+  letter-spacing: -0.3px;
   transition: color 0.3s ease;
 
   body[data-theme='dark'] & {
-    color: #e0e0e0;
+    color: #f1f5f9;
   }
 `;
 
 export const NewChatButton = styled(motion.button)`
-  margin: 16px;
-  background: #f0f0ff;
-  color: #6366f1;
+  margin: 16px 16px 8px;
+  background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
+  color: #ffffff;
   border: none;
-  padding: 10px 16px;
-  border-radius: 8px;
-  font-weight: 500;
+  padding: 11px 16px;
+  border-radius: 12px;
+  font-weight: 600;
   font-size: 14px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
   transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
   
   &:hover {
-    background: #e0e0ff;
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+    transform: translateY(-1px);
   }
 `;
 
 export const SettingsButton = styled(motion.button)`
-  margin: 0 16px 8px;
+  margin: 0 16px 4px;
   background: transparent;
   border: none;
-  color: #666;
+  color: #64748b;
   padding: 10px 12px;
-  border-radius: 8px;
-  font-weight: 400;
+  border-radius: 10px;
+  font-weight: 500;
   font-size: 14px;
   cursor: pointer;
   display: flex;
@@ -73,16 +77,16 @@ export const SettingsButton = styled(motion.button)`
   transition: all 0.2s ease;
   
   &:hover {
-    background: #f5f5f5;
-    color: #333;
+    background: rgba(99, 102, 241, 0.06);
+    color: #6366f1;
   }
 
   body[data-theme='dark'] & {
-    color: #b0b0b0;
+    color: #94a3b8;
     
     &:hover {
-      background: #2a2a3e;
-      color: #e0e0e0;
+      background: rgba(99, 102, 241, 0.1);
+      color: #818cf8;
     }
   }
 `;
@@ -97,7 +101,7 @@ export const HistorySection = styled.div`
   }
   
   &::-webkit-scrollbar-thumb {
-    background: #ddd;
+    background: rgba(0, 0, 0, 0.08);
     border-radius: 4px;
   }
 `;
@@ -106,16 +110,16 @@ export const HistoryTitle = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 500;
-  color: #999;
-  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 12px 12px 8px;
+  letter-spacing: 0.8px;
+  padding: 16px 12px 8px;
   transition: color 0.3s ease;
 
   body[data-theme='dark'] & {
-    color: #666;
+    color: #475569;
   }
 `;
 
@@ -127,24 +131,25 @@ export const HistoryList = styled.div`
 
 export const HistoryItem = styled(motion.div)`
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s ease;
-  background: ${props => props.active ? '#f0f0ff' : 'transparent'};
+  background: ${props => props.$active ? 'rgba(99, 102, 241, 0.08)' : 'transparent'};
+  border-left: 3px solid ${props => props.$active ? '#6366f1' : 'transparent'};
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   
   &:hover {
-    background: ${props => props.active ? '#f0f0ff' : '#f5f5f5'};
+    background: ${props => props.$active ? 'rgba(99, 102, 241, 0.08)' : 'rgba(0, 0, 0, 0.03)'};
   }
 
   body[data-theme='dark'] & {
-    background: ${props => props.active ? '#2a2a4e' : 'transparent'};
+    background: ${props => props.$active ? 'rgba(99, 102, 241, 0.12)' : 'transparent'};
     
     &:hover {
-      background: ${props => props.active ? '#2a2a4e' : '#2a2a3e'};
+      background: ${props => props.$active ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255, 255, 255, 0.03)'};
     }
   }
 `;
@@ -168,24 +173,25 @@ export const HistoryItemActions = styled.div`
 export const DeleteButton = styled(motion.button)`
   background: none;
   border: none;
-  color: #999;
+  color: #94a3b8;
   cursor: pointer;
   padding: 4px;
-  border-radius: 4px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.15s ease;
   
   &:hover {
-    background: #fee;
-    color: #f56565;
+    background: #fef2f2;
+    color: #ef4444;
   }
 `;
 
 export const HistoryItemTitle = styled.div`
-  font-size: 14px;
-  color: #333;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
   line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
@@ -193,18 +199,18 @@ export const HistoryItemTitle = styled.div`
   transition: color 0.3s ease;
 
   body[data-theme='dark'] & {
-    color: #e0e0e0;
+    color: #e2e8f0;
   }
 `;
 
 export const HistoryItemTime = styled.div`
   font-size: 12px;
-  color: #999;
+  color: #94a3b8;
 `;
 
 export const HistoryItemPreview = styled.div`
   font-size: 12px;
-  color: #999;
+  color: #94a3b8;
   margin-top: 2px;
   white-space: nowrap;
   overflow: hidden;
@@ -217,11 +223,11 @@ export const HistoryItemMeta = styled.div`
   gap: 6px;
   margin-top: 4px;
   font-size: 11px;
-  color: #bbb;
+  color: #cbd5e1;
   transition: color 0.3s ease;
 
   body[data-theme='dark'] & {
-    color: #666;
+    color: #475569;
   }
 `;
 
@@ -229,7 +235,7 @@ export const MessageCountBadge = styled.span`
   display: inline-flex;
   align-items: center;
   padding: 1px 6px;
-  background: #f0f0ff;
+  background: rgba(99, 102, 241, 0.08);
   color: #6366f1;
   border-radius: 10px;
   font-weight: 500;
@@ -242,12 +248,12 @@ export const EmptyHistoryState = styled.div`
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
-  color: #bbb;
+  color: #cbd5e1;
   text-align: center;
   transition: color 0.3s ease;
 
   body[data-theme='dark'] & {
-    color: #666;
+    color: #475569;
   }
 `;
 
@@ -259,6 +265,6 @@ export const EmptyHistoryIcon = styled.div`
 
 export const EmptyHistoryText = styled.div`
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.6;
 `;
 

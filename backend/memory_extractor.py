@@ -17,10 +17,22 @@ class MemoryExtractor:
     
     def __init__(self):
         """初始化记忆提取器"""
-        self.client = OpenAI(
-            api_key=Config.OPENAI_API_KEY,
-            base_url=Config.API_BASE_URL
-        )
+        self.api_key = Config.OPENAI_API_KEY
+        self.base_url = Config.API_BASE_URL
+        self.client = None
+        
+        # 仅在有 API key 时创建 OpenAI 客户端
+        if self.api_key:
+            try:
+                self.client = OpenAI(
+                    api_key=self.api_key,
+                    base_url=self.base_url
+                )
+            except Exception as e:
+                print(f"⚠ OpenAI客户端初始化失败: {e}")
+                self.client = None
+        else:
+            print("⚠ API_KEY 未设置，记忆提取器将仅使用规则提取模式")
         
         # 定义需要提取的记忆类型
         self.memory_types = {
@@ -156,6 +168,9 @@ class MemoryExtractor:
                        intensity: Optional[float] = None) -> List[Dict[str, Any]]:
         """使用LLM提取记忆（用于复杂场景）"""
         try:
+            # 如果没有可用的 OpenAI 客户端，跳过 LLM 提取
+            if not self.client:
+                return []
             prompt = f"""分析以下对话，提取值得记忆的关键信息。
 
 用户消息：{user_message}
@@ -198,7 +213,12 @@ class MemoryExtractor:
                 max_tokens=500
             )
             
-            content = response.choices[0].message.content.strip()
+            content = response.choices[0].message.content
+            
+            if not content or not content.strip():
+                return []
+            
+            content = content.strip()
             
             # 尝试解析JSON
             # 移除markdown代码块标记
@@ -206,6 +226,12 @@ class MemoryExtractor:
                 content = content.split("```json")[1].split("```")[0].strip()
             elif "```" in content:
                 content = content.split("```")[1].split("```")[0].strip()
+            
+            # 尝试提取JSON对象（处理模型返回多余文本的情况）
+            json_start = content.find('{')
+            json_end = content.rfind('}')
+            if json_start != -1 and json_end != -1:
+                content = content[json_start:json_end+1]
             
             result = json.loads(content)
             

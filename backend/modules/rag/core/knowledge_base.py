@@ -92,9 +92,11 @@ class KnowledgeBaseManager:
             logger.error(f"加载PDF文档失败: {e}")
             raise
     
-    def load_directory_documents(self, directory_path: str, glob_pattern: str = "**/*.pdf") -> List[Document]:
+    def load_directory_documents(self, directory_path: str, glob_pattern: str = "**/*") -> List[Document]:
         """
-        批量加载目录下的文档
+        批量加载目录下的文档（自动根据文件类型选择加载器）
+        
+        支持：PDF (.pdf), Markdown (.md), 文本 (.txt) 等格式
         
         Args:
             directory_path: 目录路径
@@ -105,15 +107,54 @@ class KnowledgeBaseManager:
         """
         try:
             logger.info(f"开始加载目录文档: {directory_path}, 模式: {glob_pattern}")
-            loader = DirectoryLoader(
-                directory_path,
-                glob=glob_pattern,
-                loader_cls=PyPDFLoader,
-                show_progress=True
-            )
-            documents = loader.load()
-            logger.info(f"成功加载目录文档，共 {len(documents)} 页")
-            return documents
+            all_documents = []
+            
+            # 遍历目录下的所有匹配文件
+            dir_path = Path(directory_path)
+            if not dir_path.exists():
+                logger.warning(f"目录不存在: {directory_path}")
+                return []
+            
+            for file_path in dir_path.glob(glob_pattern):
+                if not file_path.is_file():
+                    continue
+                    
+                suffix = file_path.suffix.lower()
+                try:
+                    if suffix == '.pdf':
+                        loader = PyPDFLoader(str(file_path))
+                        docs = loader.load()
+                    elif suffix in ('.md', '.markdown'):
+                        # Markdown 文件使用 TextLoader 加载
+                        loader = TextLoader(str(file_path), encoding='utf-8')
+                        docs = loader.load()
+                    elif suffix == '.txt':
+                        loader = TextLoader(str(file_path), encoding='utf-8')
+                        docs = loader.load()
+                    else:
+                        # 尝试作为文本文件加载
+                        logger.debug(f"尝试作为文本加载未知格式文件: {file_path.name}")
+                        try:
+                            loader = TextLoader(str(file_path), encoding='utf-8')
+                            docs = loader.load()
+                        except Exception:
+                            logger.warning(f"跳过不支持的文件格式: {file_path.name}")
+                            continue
+                    
+                    # 为每个文档添加文件来源元数据
+                    for doc in docs:
+                        doc.metadata.setdefault('source', str(file_path))
+                        doc.metadata['file_type'] = suffix
+                    
+                    all_documents.extend(docs)
+                    logger.debug(f"成功加载文件: {file_path.name}, 共 {len(docs)} 个文档")
+                    
+                except Exception as e:
+                    logger.warning(f"加载文件失败 {file_path.name}: {e}")
+                    continue
+            
+            logger.info(f"成功加载目录文档，共 {len(all_documents)} 个文档")
+            return all_documents
         except Exception as e:
             logger.error(f"加载目录文档失败: {e}")
             raise
