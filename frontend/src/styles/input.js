@@ -241,8 +241,11 @@ export const AttachmentItem = styled(motion.div)`
   border-radius: 12px;
   font-size: 13px;
   color: #475569;
-  transition: background 0.3s ease, color 0.3s ease;
+  transition: background 0.3s ease, color 0.3s ease;  max-width: 300px;
 
+  ${props => props.$isImage && `
+    padding: 6px 10px;
+  `}
   body[data-theme='dark'] & {
     background: rgba(99, 102, 241, 0.1);
     border-color: rgba(99, 102, 241, 0.15);

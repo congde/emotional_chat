@@ -66,6 +66,7 @@ function App() {
     setAttachments,
     fileInputRef,
     handleFileUpload,
+    addFiles,
     removeAttachment
   } = useFileUpload();
 
@@ -211,6 +212,7 @@ function App() {
         onSendMessage={sendMessage}
         onFileUpload={handleFileUpload}
         onRemoveAttachment={removeAttachment}
+        onPasteFiles={addFiles}
         onSuggestionClick={handleSuggestionClick}
         onOpenFeedbackModal={openFeedbackModal}
         deepThinkActive={deepThinkActive}

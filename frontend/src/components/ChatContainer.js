@@ -177,6 +177,24 @@ const CardDesc = styled.div`
   }
 `;
 
+const ImageThumbnail = styled.img`
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  
+  &:hover {
+    transform: scale(1.1);
+  }
+
+  body[data-theme='dark'] & {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+`;
+
 // 获取问候语
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -242,12 +260,38 @@ const ChatContainer = ({
   onSendMessage,
   onFileUpload,
   onRemoveAttachment,
+  onPasteFiles,
   onSuggestionClick,
   onOpenFeedbackModal,
   deepThinkActive,
   onDeepThinkChange
 }) => {
   const isComposingRef = useRef(false);
+
+  // 处理粘贴事件 - 支持粘贴图片
+  const handlePaste = (e) => {
+    const clipboardItems = e.clipboardData?.items;
+    if (!clipboardItems) return;
+
+    const imageFiles = [];
+    for (let i = 0; i < clipboardItems.length; i++) {
+      const item = clipboardItems[i];
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) {
+          // 为粘贴的图片生成文件名
+          const ext = item.type.split('/')[1] || 'png';
+          const namedFile = new File([file], `粘贴图片_${Date.now()}.${ext}`, { type: item.type });
+          imageFiles.push(namedFile);
+        }
+      }
+    }
+
+    if (imageFiles.length > 0) {
+      e.preventDefault();
+      onPasteFiles?.(imageFiles);
+    }
+  };
 
   const handleKeyDown = (e) => {
     const isComposing =
@@ -430,13 +474,24 @@ const ChatContainer = ({
               {attachments.map((attachment) => (
                 <AttachmentItem
                   key={attachment.id}
+                  $isImage={attachment.type?.startsWith('image/')}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
                 >
-                  <AttachmentIcon>
-                    {getFileIcon(attachment.type)}
-                  </AttachmentIcon>
+                  {attachment.type?.startsWith('image/') && attachment.previewUrl ? (
+                    <ImageThumbnail
+                      src={attachment.previewUrl}
+                      alt={attachment.name}
+                      onClick={() => {
+                        if (attachment.previewUrl) window.open(attachment.previewUrl, '_blank');
+                      }}
+                    />
+                  ) : (
+                    <AttachmentIcon>
+                      {getFileIcon(attachment.type)}
+                    </AttachmentIcon>
+                  )}
                   <span>{attachment.name}</span>
                   <span style={{ color: '#999' }}>({formatFileSize(attachment.size)})</span>
                   <RemoveAttachmentButton
@@ -457,13 +512,14 @@ const ChatContainer = ({
               value={inputValue}
               onChange={onInputChange}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
               onCompositionStart={() => {
                 isComposingRef.current = true;
               }}
               onCompositionEnd={() => {
                 isComposingRef.current = false;
               }}
-              placeholder="发消息或输入 / 选择技能"
+              placeholder="发消息或输入 / 选择技能，可粘贴图片"
               disabled={isLoading}
               rows={1}
             />
