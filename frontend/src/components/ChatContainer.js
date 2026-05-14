@@ -42,6 +42,7 @@ import {
 import { emotionLabels } from '../constants/emotions';
 import { formatTimestamp, formatFileSize } from '../utils/formatters';
 import TypewriterComponent from './TypewriterText';
+import MarkdownRenderer from './MarkdownRenderer';
 import { getFileIcon } from '../utils/fileUtils';
 import styled from 'styled-components';
 
@@ -325,7 +326,7 @@ const ChatContainer = ({
                     {message.role === 'assistant' ? (
                       message.streaming ? (
                         <>
-                          {message.content}
+                          <MarkdownRenderer content={message.content} />
                           <span className="streaming-cursor" style={{
                             display: 'inline-block',
                             width: '2px',
@@ -336,16 +337,8 @@ const ChatContainer = ({
                             verticalAlign: 'text-bottom'
                           }} />
                         </>
-                      ) : message.isHistory ? (
-                        message.content
                       ) : (
-                        <TypewriterComponent
-                          text={message.content}
-                          speed={30}
-                          showCursor={true}
-                          cursorColor="#6366f1"
-                          isUser={false}
-                        />
+                        <MarkdownRenderer content={message.content} />
                       )
                     ) : (
                       message.content
