@@ -244,6 +244,7 @@ async def chat_with_attachments(
     try:
         # 处理文件附件
         file_contents = []
+        attachment_parse_errors = []
         if files:
             for file in files:
                 if not file.filename or not is_allowed_file(file.filename):
@@ -267,17 +268,27 @@ async def chat_with_attachments(
                 content = ""
                 if file_extension.lower() == '.pdf':
                     content = extract_text_from_pdf(file_path)
+                    if not content or not content.strip():
+                        attachment_parse_errors.append(f"{file.filename}: PDF未提取到可读文本")
                 elif file_extension.lower() in ['.jpg', '.jpeg', '.png', '.gif']:
                     content = extract_text_from_image(file_path)
                 elif file_extension.lower() == '.txt':
                     with open(file_path, 'r', encoding='utf-8') as f:
                         content = f.read()
+
+                logger.info(f"附件解析完成: {file.filename}, 字符数={len(content) if content else 0}")
                 
                 file_contents.append({
                     "filename": file.filename,
                     "content": content,
                     "type": file.content_type
                 })
+
+        if attachment_parse_errors:
+            raise HTTPException(
+                status_code=422,
+                detail="; ".join(attachment_parse_errors) + "。请检查PDF是否为扫描件，或尝试上传可复制文本的PDF。"
+            )
         
         # 处理URL内容
         url_contents_list = []
@@ -312,6 +323,8 @@ async def chat_with_attachments(
         response = await chat_service.chat(chat_request, use_memory_system=True)
         
         return response
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"带附件聊天接口错误: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -332,6 +345,7 @@ async def chat_stream(
     """
     # ---- 1. 处理附件（同步阶段） ----
     file_contents = []
+    attachment_parse_errors = []
     try:
         if files:
             for file in files:
@@ -348,12 +362,22 @@ async def chat_stream(
                 content = ""
                 if file_extension.lower() == '.pdf':
                     content = extract_text_from_pdf(file_path)
+                    if not content or not content.strip():
+                        attachment_parse_errors.append(f"{file.filename}: PDF未提取到可读文本")
                 elif file_extension.lower() in ['.jpg', '.jpeg', '.png', '.gif']:
                     content = extract_text_from_image(file_path)
                 elif file_extension.lower() == '.txt':
                     with open(file_path, 'r', encoding='utf-8') as f:
                         content = f.read()
+
+                logger.info(f"附件解析完成: {file.filename}, 字符数={len(content) if content else 0}")
                 file_contents.append({"filename": file.filename, "content": content})
+
+        if attachment_parse_errors:
+            raise HTTPException(
+                status_code=422,
+                detail="; ".join(attachment_parse_errors) + "。请检查PDF是否为扫描件，或尝试上传可复制文本的PDF。"
+            )
     except HTTPException:
         raise
     except Exception as e:
@@ -384,76 +408,124 @@ async def chat_stream(
             # 发送开始信号
             yield f"data: {json.dumps({'type':'start'})}\n\n"
 
-            # 尝试流式调用 LangChain chain
-            if hasattr(engine, 'chain') and engine.chain is not None:
-                from backend.database import DatabaseManager
-                # 构建历史
-                sid = session_id or str(uuid.uuid4())
-                db_manager = DatabaseManager()
-                with db_manager as db:
-                    recent = db.get_session_messages(sid, limit=10)
-                    history_text = ""
-                    for msg in list(reversed(recent[-5:])):
-                        history_text += f"{'用户' if msg.role == 'user' else '心语'}: {msg.content}\n"
-                # 长期记忆
-                long_term = ""
-                if hasattr(engine, 'vector_store') and engine.vector_store:
-                    try:
-                        similar = engine.vector_store.search_similar_conversations(
-                            query=enhanced_message[:200], session_id=None, n_results=2
-                        )
-                        if similar and similar.get('documents'):
-                            long_term = "\n相关历史参考：\n"
-                            for doc in similar['documents'][0][:2]:
-                                long_term += f"- {doc[:100]}\n"
-                    except Exception:
-                        pass
+            from backend.database import DatabaseManager
+            sid = session_id or str(uuid.uuid4())
 
-                full_response = ""
-                async for chunk in engine.chain.astream({
-                    "long_term_memory": long_term,
-                    "history": history_text.strip(),
-                    "input": enhanced_message
-                }):
-                    token = chunk if isinstance(chunk, str) else str(chunk)
-                    if token:
-                        full_response += token
-                        yield f"data: {json.dumps({'type':'token','content':token})}\n\n"
+            # 构建历史
+            db_manager = DatabaseManager()
+            with db_manager as db:
+                recent = db.get_session_messages(sid, limit=10)
+                history_text = ""
+                for msg in list(reversed(recent[-5:])):
+                    history_text += f"{'用户' if msg.role == 'user' else '心语'}: {msg.content}\n"
 
-                # 分析情绪
-                emotion = "neutral"
-                suggestions = []
+            # 长期记忆
+            long_term = ""
+            if hasattr(engine, 'vector_store') and engine.vector_store:
                 try:
-                    emotion_data = engine.analyze_emotion(enhanced_message)
-                    emotion = emotion_data.get("emotion", "neutral")
-                    if hasattr(engine, '_get_emotion_suggestions'):
-                        suggestions = engine._get_emotion_suggestions(emotion)
+                    similar = engine.vector_store.search_similar_conversations(
+                        query=enhanced_message[:200], session_id=None, n_results=2
+                    )
+                    if similar and similar.get('documents'):
+                        long_term = "\n相关历史参考：\n"
+                        for doc in similar['documents'][0][:2]:
+                            long_term += f"- {doc[:100]}\n"
                 except Exception:
                     pass
 
-                # 保存到数据库
-                try:
-                    with DatabaseManager() as db:
-                        if not session_id:
-                            db.create_session(sid, user_id)
-                        db.save_message(session_id=sid, user_id=user_id, role="user",
-                                        content=message, emotion=emotion)
-                        db.save_message(session_id=sid, user_id=user_id, role="assistant",
-                                        content=full_response, emotion=emotion)
-                except Exception as e:
-                    logger.error(f"流式保存消息失败: {e}")
+            # 使用 httpx 直接流式调用 API（解决 LangChain astream 兼容性问题）
+            import httpx
+            from backend.xinyu_prompt import XINYU_SYSTEM_PROMPT, build_full_prompt
 
-                # 发送完成信号（含元数据）
-                yield f"data: {json.dumps({'type':'done','session_id':sid,'emotion':emotion,'suggestions':suggestions})}\n\n"
+            api_key = engine.api_key
+            api_base_url = engine.api_base_url
+            model = engine.model
+
+            # 当有文件附件时，切换到内容分析模式而非纯情感陪伴模式
+            if file_contents:
+                system_content = (
+                    '你是"心语"，一位智能AI助手。用户上传了文件附件并请求你分析。'
+                    '请根据用户的具体要求，认真分析附件内容并给出有用的回答。'
+                    '回答要专业、详细、有条理。如果用户要求总结、分析、提取信息等，请直接执行任务。'
+                )
+                messages_payload = [
+                    {"role": "system", "content": system_content},
+                    {"role": "user", "content": enhanced_message}
+                ]
             else:
-                # Fallback: 非流式
-                chat_request = ChatRequest(message=enhanced_message, session_id=session_id, user_id=user_id)
-                response = await chat_service.chat(chat_request, use_memory_system=True)
-                yield f"data: {json.dumps({'type':'token','content':response.response})}\n\n"
-                yield f"data: {json.dumps({'type':'done','session_id':response.session_id,'emotion':response.emotion,'suggestions':response.suggestions})}\n\n"
+                system_content = build_full_prompt(
+                    user_input=enhanced_message,
+                    history_text=history_text.strip(),
+                    long_term_memory=long_term
+                )
+                messages_payload = [
+                    {"role": "system", "content": system_content},
+                    {"role": "user", "content": enhanced_message}
+                ]
+
+            full_response = ""
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                async with client.stream(
+                    "POST",
+                    f"{api_base_url}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": model,
+                        "messages": messages_payload,
+                        "temperature": 0.7,
+                        "stream": True,
+                    },
+                ) as resp:
+                    if resp.status_code != 200:
+                        error_body = await resp.aread()
+                        raise Exception(f"API返回错误 ({resp.status_code}): {error_body.decode()}")
+                    async for line in resp.aiter_lines():
+                        if not line.startswith("data: "):
+                            continue
+                        data_str = line[6:].strip()
+                        if data_str == "[DONE]":
+                            break
+                        try:
+                            chunk_data = json.loads(data_str)
+                            delta = chunk_data.get("choices", [{}])[0].get("delta", {})
+                            token = delta.get("content", "")
+                            if token:
+                                full_response += token
+                                yield f"data: {json.dumps({'type':'token','content':token})}\n\n"
+                        except (json.JSONDecodeError, IndexError, KeyError):
+                            continue
+
+            # 分析情绪
+            emotion = "neutral"
+            suggestions = []
+            try:
+                emotion_data = engine.analyze_emotion(enhanced_message)
+                emotion = emotion_data.get("emotion", "neutral")
+                if hasattr(engine, '_get_emotion_suggestions'):
+                    suggestions = engine._get_emotion_suggestions(emotion)
+            except Exception:
+                pass
+
+            # 保存到数据库
+            try:
+                with DatabaseManager() as db:
+                    if not session_id:
+                        db.create_session(sid, user_id)
+                    db.save_message(session_id=sid, user_id=user_id, role="user",
+                                    content=message, emotion=emotion)
+                    db.save_message(session_id=sid, user_id=user_id, role="assistant",
+                                    content=full_response, emotion=emotion)
+            except Exception as e:
+                logger.error(f"流式保存消息失败: {e}")
+
+            # 发送完成信号（含元数据）
+            yield f"data: {json.dumps({'type':'done','session_id':sid,'emotion':emotion,'suggestions':suggestions})}\n\n"
 
         except Exception as e:
-            logger.error(f"流式生成失败: {e}")
+            logger.error(f"流式生成失败: {e}", exc_info=True)
             yield f"data: {json.dumps({'type':'error','content':f'生成出错: {str(e)}'})}\n\n"
 
         yield "data: [DONE]\n\n"

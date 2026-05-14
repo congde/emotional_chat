@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { User, Bot, Loader2, Paperclip, Send, Link, ExternalLink, X, Sparkles, Mic, Heart, MessageCircle, Brain, Smile } from 'lucide-react';
 import {
@@ -246,8 +246,19 @@ const ChatContainer = ({
   deepThinkActive,
   onDeepThinkChange
 }) => {
+  const isComposingRef = useRef(false);
 
   const handleKeyDown = (e) => {
+    const isComposing =
+      isComposingRef.current ||
+      e.nativeEvent?.isComposing ||
+      e.isComposing ||
+      e.keyCode === 229;
+
+    if (isComposing) {
+      return;
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       onSendMessage();
@@ -453,6 +464,12 @@ const ChatContainer = ({
               value={inputValue}
               onChange={onInputChange}
               onKeyDown={handleKeyDown}
+              onCompositionStart={() => {
+                isComposingRef.current = true;
+              }}
+              onCompositionEnd={() => {
+                isComposingRef.current = false;
+              }}
               placeholder="发消息或输入 / 选择技能"
               disabled={isLoading}
               rows={1}

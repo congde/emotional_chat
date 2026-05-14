@@ -3,6 +3,11 @@ import { useEffect } from 'react';
 export const useKeyboard = (startNewChat, sendMessage, inputRef, attachmentButtonRef, sendButtonRef) => {
   // Enter键发送消息
   const handleKeyPress = (e) => {
+    const isComposing = e.nativeEvent?.isComposing || e.isComposing || e.keyCode === 229;
+    if (isComposing) {
+      return;
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();

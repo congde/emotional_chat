@@ -9,6 +9,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 import logging
 from datetime import datetime
+from chromadb.config import Settings as ChromaSettings
 
 # 使用兼容层统一处理 langchain 导入
 from .langchain_compat import (
@@ -48,6 +49,7 @@ class KnowledgeBaseManager:
         self.embeddings = None
         logger.info("暂时禁用嵌入功能，使用简单文本匹配")
         self.vectorstore: Optional[Chroma] = None
+        self.chroma_client_settings = ChromaSettings(anonymized_telemetry=False)
         
         # 确保目录存在
         Path(persist_directory).mkdir(parents=True, exist_ok=True)
@@ -261,7 +263,8 @@ class KnowledgeBaseManager:
                 vectorstore = Chroma.from_documents(
                     documents=chunks,
                     embedding=self.embeddings,
-                    persist_directory=self.persist_directory
+                    persist_directory=self.persist_directory,
+                    client_settings=self.chroma_client_settings
                 )
                 vectorstore.persist()
                 
@@ -283,7 +286,8 @@ class KnowledgeBaseManager:
             logger.info(f"从 {self.persist_directory} 加载向量存储")
             self.vectorstore = Chroma(
                 persist_directory=self.persist_directory,
-                embedding_function=self.embeddings
+                embedding_function=self.embeddings,
+                client_settings=self.chroma_client_settings
             )
             logger.info("向量存储加载成功")
             return self.vectorstore

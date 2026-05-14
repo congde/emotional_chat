@@ -6,7 +6,12 @@ LangChain 兼容层
 
 # 1. Document Loaders
 from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader, TextLoader
-from langchain_community.vectorstores import Chroma
+
+# Prefer the new package to avoid LangChain deprecation warnings.
+try:
+    from langchain_chroma import Chroma
+except ImportError:  # pragma: no cover - compatibility fallback
+    from langchain_community.vectorstores import Chroma
 
 # 2. Embeddings
 from langchain_openai import OpenAIEmbeddings
