@@ -1,0 +1,43 @@
+<mxfile host="app.diagrams.net" modified="2026-05-23T00:00:00.000Z" agent="Codex" version="24.7.17">
+  <diagram id="codex-control-stack" name="Codex 最小控制栈">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="760" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="Codex 在 emotional_chat 中的最小控制栈" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fontColor=#111827;" vertex="1" parent="1">
+          <mxGeometry x="170" y="30" width="660" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="layer5" value="环境层&#xa;沙箱 / 网络开关 / 凭证边界&#xa;控制技术上到底能执行到哪里" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#DC2626;fontColor=#111827;fontSize=15;fontStyle=1;arcSize=8;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="240" y="110" width="520" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="layer4" value="放权层&#xa;Approvals / owner 审批 / 发布门禁&#xa;高风险跃迁交回给人确认" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEDD5;strokeColor=#EA580C;fontColor=#111827;fontSize=15;fontStyle=1;arcSize=8;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="270" y="225" width="460" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="layer3" value="自动动作层&#xa;Hooks / 脚本 / CI 检查&#xa;自动格式化、测试、审计、阻断" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#D97706;fontColor=#111827;fontSize=15;fontStyle=1;arcSize=8;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="300" y="340" width="400" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="layer2" value="规则层&#xa;Rules / 目录级规则 / 分支策略&#xa;定义长期成立的约束" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=#16A34A;fontColor=#111827;fontSize=15;fontStyle=1;arcSize=8;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="330" y="455" width="340" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="layer1" value="说明层&#xa;AGENTS.md / README / runbook&#xa;说明项目、入口、禁区和交付方式" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#2563EB;fontColor=#111827;fontSize=15;fontStyle=1;arcSize=8;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="360" y="570" width="280" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow1" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#64748B;strokeWidth=2;" edge="1" parent="1" source="layer1" target="layer2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow2" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#64748B;strokeWidth=2;" edge="1" parent="1" source="layer2" target="layer3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow3" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#64748B;strokeWidth=2;" edge="1" parent="1" source="layer3" target="layer4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow4" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#64748B;strokeWidth=2;" edge="1" parent="1" source="layer4" target="layer5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="note" value="图 7-1：越往上，控制越硬；说明书解决“知道什么”，环境和审批控制“能做什么、何时必须停”。" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=14;fontColor=#475569;" vertex="1" parent="1">
+          <mxGeometry x="160" y="690" width="680" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

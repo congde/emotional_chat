@@ -1,0 +1,55 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/27.0.9 Chrome/134.0.6998.205 Electron/35.4.0 Safari/537.36" version="27.0.9">
+  <diagram id="harness-capability-route" name="Harness 式能力系统升级路线">
+    <mxGraphModel dx="1018" dy="781" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="860" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="从一次成功任务到 Harness 式能力系统" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=22;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="190" y="40" width="620" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="note" value="先设计边界，再逐步加入能力" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="330" y="80" width="340" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="step1" value="普通任务说明&#xa;一次性目标、范围和输出要求" style="rounded=1;whiteSpace=wrap;html=1;fontSize=15;fontStyle=1;arcSize=8;spacing=12;fillColor=#ffffff;strokeColor=#444444;" parent="1" vertex="1">
+          <mxGeometry x="305" y="130" width="390" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="step2" value="Harness 式任务边界&#xa;目标 / 输入 / 禁区 / 验证 / 交接" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fontStyle=1;arcSize=8;spacing=12;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="275" y="245" width="450" height="86" as="geometry" />
+        </mxCell>
+        <mxCell id="step3" value="提示模板&#xa;复用表达方式，减少重复说明" style="rounded=1;whiteSpace=wrap;html=1;fontSize=15;fontStyle=1;arcSize=8;spacing=12;fillColor=#ffffff;strokeColor=#444444;" parent="1" vertex="1">
+          <mxGeometry x="315" y="375" width="370" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="step4" value="Skill&#xa;只在经验稳定、边界清楚时沉淀" style="rounded=1;whiteSpace=wrap;html=1;fontSize=15;fontStyle=1;arcSize=8;spacing=12;fillColor=#ffffff;strokeColor=#444444;" parent="1" vertex="1">
+          <mxGeometry x="315" y="490" width="370" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="step5" value="Subagent&#xa;只在可并行、可回收时拆分" style="rounded=1;whiteSpace=wrap;html=1;fontSize=15;fontStyle=1;arcSize=8;spacing=12;fillColor=#ffffff;strokeColor=#444444;" parent="1" vertex="1">
+          <mxGeometry x="315" y="605" width="370" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="step6" value="只读型 MCP&#xa;只在外部上下文高频搬运时接入" style="rounded=1;whiteSpace=wrap;html=1;fontSize=15;fontStyle=1;arcSize=8;spacing=12;fillColor=#ffffff;strokeColor=#444444;" parent="1" vertex="1">
+          <mxGeometry x="315" y="720" width="370" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="step7" value="evals / traces / handoff / 编排层&#xa;在能力共享和多组件协同时逐步进入" style="rounded=1;whiteSpace=wrap;html=1;fontSize=15;fontStyle=1;arcSize=8;spacing=12;fillColor=#f5f5f5;strokeColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="275" y="835" width="450" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow1" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=#555555;" parent="1" source="step1" target="step2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow2" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=#555555;" parent="1" source="step2" target="step3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow3" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=#555555;" parent="1" source="step3" target="step4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow4" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=#555555;" parent="1" source="step4" target="step5" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow5" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=#555555;" parent="1" source="step5" target="step6" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow6" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=#555555;" parent="1" source="step6" target="step7" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

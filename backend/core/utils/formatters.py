@@ -82,6 +82,8 @@ def format_timestamp(
         return str(int(dt.timestamp()))
     elif format_type == "readable":
         return dt.strftime("%Y-%m-%d %H:%M:%S")
+    elif format_type == "date":
+        return dt.strftime("%Y-%m-%d")
     else:
         return dt.strftime(format_type)
 

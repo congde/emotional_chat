@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="680" viewBox="0 0 1000 680" role="img" aria-labelledby="title desc">
+  <title id="title">韬定律的四层系统协同</title>
+  <desc id="desc">从器件、电路、芯片到系统的时间缩微框架</desc>
+  <rect width="1000" height="680" fill="#f8fafc"/>
+  <text x="50" y="70" fill="#111827" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="34" font-weight="700">韬定律不是单点技术，而是多层级协同</text>
+  <text x="50" y="108" fill="#475569" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="18">核心目标：系统性降低时间常数 τ，让信号、数据和指令更高效地流动。</text>
+
+  <circle cx="500" cy="360" r="92" fill="#111827"/>
+  <text x="500" y="350" text-anchor="middle" fill="#ffffff" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="28" font-weight="700">时间缩微</text>
+  <text x="500" y="388" text-anchor="middle" fill="#cbd5e1" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="24">τ Scaling</text>
+
+  <rect x="80" y="165" width="330" height="150" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="112" y="212" fill="#0f766e" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="25" font-weight="700">器件层</text>
+  <text x="112" y="252" fill="#334155" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="18">优化晶体管与互连结构</text>
+  <text x="112" y="284" fill="#334155" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="18">降低电阻、寄生电容带来的延迟</text>
+
+  <rect x="590" y="165" width="330" height="150" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="622" y="212" fill="#b91c1c" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="25" font-weight="700">电路层</text>
+  <text x="622" y="252" fill="#334155" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="18">通过逻辑折叠缩短关键路径</text>
+  <text x="622" y="284" fill="#334155" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="18">减少信号绕路与负载成本</text>
+
+  <rect x="80" y="455" width="330" height="150" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="112" y="502" fill="#1d4ed8" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="25" font-weight="700">芯片层</text>
+  <text x="112" y="542" fill="#334155" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="18">软件、架构、芯片协同设计</text>
+  <text x="112" y="574" fill="#334155" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="18">提升指令流与数据流效率</text>
+
+  <rect x="590" y="455" width="330" height="150" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="622" y="502" fill="#7c3aed" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="25" font-weight="700">系统层</text>
+  <text x="622" y="542" fill="#334155" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="18">重构互联协议与通信路径</text>
+  <text x="622" y="574" fill="#334155" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="18">降低端到端执行时间</text>
+
+  <path d="M410 245 C470 255 475 290 477 310" fill="none" stroke="#94a3b8" stroke-width="3"/>
+  <path d="M590 245 C530 255 525 290 523 310" fill="none" stroke="#94a3b8" stroke-width="3"/>
+  <path d="M410 530 C470 520 475 450 477 410" fill="none" stroke="#94a3b8" stroke-width="3"/>
+  <path d="M590 530 C530 520 525 450 523 410" fill="none" stroke="#94a3b8" stroke-width="3"/>
+</svg>

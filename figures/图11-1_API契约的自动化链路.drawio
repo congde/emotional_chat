@@ -1,0 +1,52 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/27.0.9 Chrome/134.0.6998.205 Electron/35.4.0 Safari/537.36" version="27.0.9">
+  <diagram id="fig-11-1-api-contract-chain" name="图 11-1 API契约的自动化链路">
+    <mxGraphModel dx="1566" dy="1202" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="620" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="a" value="Pydantic 模型" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=18;fontColor=#111827;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="130" y="220" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="b" value="OpenAPI schema" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=18;fontColor=#111827;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="300" y="220" width="170" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="c" value="TypeScript 类型" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=18;fontColor=#111827;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="490" y="220" width="170" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d" value="API Client" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=18;fontColor=#111827;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="680" y="220" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e" value="前端调用" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=18;fontColor=#111827;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="850" y="220" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="f" value="契约测试" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=18;fontColor=#111827;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="500" y="310" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="g" value="集成验证" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=18;fontColor=#111827;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="850" y="310" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ab" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" parent="1" source="a" target="b" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bc" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" parent="1" source="b" target="c" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cd" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" parent="1" source="c" target="d" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="de" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" parent="1" source="d" target="e" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bf" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="b" target="f" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eg" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" parent="1" source="e" target="g" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fg" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" parent="1" source="f" target="g" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

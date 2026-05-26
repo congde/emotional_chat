@@ -209,6 +209,10 @@ class TestFormatters:
         readable = format_timestamp(dt, "readable")
         assert "2025-10-16 14:30:00" in readable
 
+        # 日期格式
+        date = format_timestamp(dt, "date")
+        assert date == "2025-10-16"
+
 
 class TestHelpers:
     """辅助函数测试"""

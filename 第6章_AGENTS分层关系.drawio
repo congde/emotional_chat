@@ -1,0 +1,62 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/27.0.9 Chrome/134.0.6998.205 Electron/35.4.0 Safari/537.36" version="27.0.9">
+  <diagram id="agents-layering" name="AGENTS.md 分层关系">
+    <mxGraphModel dx="925" dy="710" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="760" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="rootFile" value="根目录 AGENTS.md&#xa;全局共识&#xa;项目目标 / 顶层目录 / 统一命令 / 全局禁区 / 交付格式" style="rounded=1;whiteSpace=wrap;html=1;fontSize=15;fontStyle=1;arcSize=10;spacing=12;" parent="1" vertex="1">
+          <mxGeometry x="330" y="150" width="440" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="backend" value="backend/AGENTS.md&#xa;后端局部差异&#xa;FastAPI / Agent Runtime / RAG / 记忆 / 插件 / pytest" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;arcSize=8;spacing=10;" parent="1" vertex="1">
+          <mxGeometry x="150" y="290" width="190" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="frontend" value="frontend/AGENTS.md&#xa;前端局部差异&#xa;聊天界面 / 上传 / Markdown 渲染 / 流式输出 / npm test" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;arcSize=8;spacing=10;" parent="1" vertex="1">
+          <mxGeometry x="350" y="290" width="190" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="kb" value="knowledge_base/AGENTS.md&#xa;知识库局部差异&#xa;心理健康知识 / 临床建议 / 危机干预 / 人工复核点" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;arcSize=8;spacing=10;" parent="1" vertex="1">
+          <mxGeometry x="560" y="290" width="210" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="monitoring" value="monitoring/AGENTS.md&#xa;监控局部差异&#xa;Prometheus / Grafana / 指标影响范围 / 告警阈值" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;arcSize=8;spacing=10;" parent="1" vertex="1">
+          <mxGeometry x="780" y="290" width="190" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="inheritLabel" value="继承全局规则，只补充局部差异" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;arcSize=8;spacing=8;strokeColor=none;" parent="1" vertex="1">
+          <mxGeometry x="540" y="220" width="270" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;exitX=0.518;exitY=0.995;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="rootFile" target="backend" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="558" y="260" />
+              <mxPoint x="245" y="260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e2" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.518;exitY=1.003;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="rootFile" target="frontend" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="580" y="220" as="sourcePoint" />
+            <Array as="points">
+              <mxPoint x="558" y="260" />
+              <mxPoint x="445" y="260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e3" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" target="kb" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="558" y="210" as="sourcePoint" />
+            <Array as="points">
+              <mxPoint x="558" y="260" />
+              <mxPoint x="665" y="260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e4" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;exitX=0.519;exitY=0.994;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="rootFile" target="monitoring" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="560" y="260" />
+              <mxPoint x="875" y="260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

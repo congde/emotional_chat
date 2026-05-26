@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="383" viewBox="0 0 900 383" role="img" aria-labelledby="title desc">
+  <title id="title">华为韬定律公众号封面图</title>
+  <desc id="desc">半导体竞争从制程战争转向系统战争的主题封面</desc>
+  <rect width="900" height="383" fill="#f6f7f9"/>
+  <rect x="0" y="0" width="900" height="383" fill="#111827"/>
+  <path d="M0 275 C160 230 280 315 430 260 C590 205 710 230 900 178 L900 383 L0 383 Z" fill="#0f766e" opacity="0.72"/>
+  <path d="M0 322 C150 292 275 338 420 305 C590 266 710 292 900 236 L900 383 L0 383 Z" fill="#b91c1c" opacity="0.84"/>
+  <g opacity="0.2" stroke="#ffffff" stroke-width="1">
+    <path d="M95 76 H240 V138 H335"/>
+    <path d="M565 65 H702 V126 H812"/>
+    <path d="M118 226 H267 V174 H390"/>
+    <path d="M510 212 H662 V168 H790"/>
+    <circle cx="95" cy="76" r="5" fill="#fff"/>
+    <circle cx="335" cy="138" r="5" fill="#fff"/>
+    <circle cx="565" cy="65" r="5" fill="#fff"/>
+    <circle cx="812" cy="126" r="5" fill="#fff"/>
+    <circle cx="118" cy="226" r="5" fill="#fff"/>
+    <circle cx="390" cy="174" r="5" fill="#fff"/>
+    <circle cx="510" cy="212" r="5" fill="#fff"/>
+    <circle cx="790" cy="168" r="5" fill="#fff"/>
+  </g>
+  <text x="64" y="82" fill="#cbd5e1" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="24">从几何缩微到时间缩微</text>
+  <text x="64" y="156" fill="#ffffff" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="58" font-weight="700">华为“韬定律”</text>
+  <text x="64" y="216" fill="#ffffff" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="34" font-weight="700">芯片竞争，正在换维度</text>
+  <text x="66" y="284" fill="#e5e7eb" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="22">不是简单替代摩尔定律，而是在先进制程之外寻找新的系统效率空间</text>
+  <rect x="64" y="316" width="190" height="38" rx="4" fill="#ffffff"/>
+  <text x="88" y="341" fill="#111827" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="18" font-weight="700">深度解读</text>
+  <text x="182" y="341" fill="#b91c1c" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="18" font-weight="700">TAU LAW</text>
+</svg>

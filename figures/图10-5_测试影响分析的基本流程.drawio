@@ -1,0 +1,43 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/27.0.9 Chrome/134.0.6998.205 Electron/35.4.0 Safari/537.36" version="27.0.9">
+  <diagram id="fig-10-5-test-impact-analysis" name="图 10-5 测试影响分析的基本流程">
+    <mxGraphModel dx="1566" dy="1202" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="520" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="a" value="读取 diff" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=18;fontColor=#111827;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="150" y="210" width="90" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="b" value="识别直接&lt;br&gt;修改文件" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=18;fontColor=#111827;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="260" y="210" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="c" value="追踪调用方&lt;br&gt;和依赖" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=18;fontColor=#111827;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="420" y="210" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d" value="匹配相关测试" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=18;fontColor=#111827;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="570" y="210" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e" value="运行受影响测试" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=18;fontColor=#111827;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="740" y="210" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="f" value="必要时升级到&lt;br&gt;全量回归" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=18;fontColor=#111827;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="910" y="210" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ab" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" parent="1" source="a" target="b" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bc" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" parent="1" source="b" target="c" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cd" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" parent="1" source="c" target="d" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="de" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" parent="1" source="d" target="e" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ef" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" parent="1" source="e" target="f" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

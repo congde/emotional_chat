@@ -1,0 +1,43 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) draw.io/27.0.9" version="27.0.9">
+  <diagram id="fig-11-4-release-sequence" name="图 11-4 跨前后端发布安全时序">
+    <mxGraphModel dx="1700" dy="760" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="560" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="a" value="1. schema 兼容变更&lt;br&gt;不删旧字段，不强制约束" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=17;fontColor=#111827;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="60" y="220" width="220" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="b" value="2. 后端兼容代码&lt;br&gt;同时支持新旧 schema" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=17;fontColor=#111827;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="330" y="220" width="220" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="c" value="3. 分批数据回填&lt;br&gt;可幂等，可暂停" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=17;fontColor=#111827;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="600" y="220" width="200" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="d" value="4. 前端新入口 + Flag&lt;br&gt;小流量灰度" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=17;fontColor=#111827;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="850" y="220" width="210" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="e" value="5. 监控与扩大灰度&lt;br&gt;错误率 / 延迟 / 业务指标" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=17;fontColor=#111827;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="1110" y="220" width="230" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="f" value="6. 收紧约束&lt;br&gt;NOT NULL / 删除旧字段 / 清理旧逻辑" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=17;fontColor=#111827;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="1390" y="220" width="260" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="ab" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" edge="1" parent="1" source="a" target="b">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bc" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" edge="1" parent="1" source="b" target="c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cd" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" edge="1" parent="1" source="c" target="d">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="de" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" edge="1" parent="1" source="d" target="e">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ef" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" edge="1" parent="1" source="e" target="f">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
