@@ -7,6 +7,12 @@ from .core.llm_core import SimpleEmotionalChatEngine
 # from .services.llm_service import LLMService  # LLMService依赖LLMCore，暂时禁用
 from .models.llm_models import LLMRequest, LLMResponse, LLMProvider
 from .providers.openai_provider import OpenAIProvider
+from .harness import (
+    LLMHarnessSettings,
+    resolve_llm_settings,
+    try_create_chat_openai,
+    try_create_openai_sync_client,
+)
 
 __all__ = [
     "SimpleEmotionalChatEngine",
@@ -14,7 +20,11 @@ __all__ = [
     "LLMRequest",
     "LLMResponse",
     "LLMProvider",
-    "OpenAIProvider"
+    "OpenAIProvider",
+    "LLMHarnessSettings",
+    "resolve_llm_settings",
+    "try_create_chat_openai",
+    "try_create_openai_sync_client",
 ]
 
 # 可选的提供商

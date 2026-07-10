@@ -9,19 +9,64 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 
+
+def _project_root() -> str:
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _truthy_env(name: str, default: str = "0") -> bool:
+    return os.getenv(name, default).strip().lower() in ("1", "true", "yes", "on")
+
+
+def _sqlite_url_from_path(relative_or_abs: str) -> str:
+    path = os.path.abspath(relative_or_abs)
+    return "sqlite:///" + path.replace("\\", "/")
+
+
+def _resolve_database_url() -> str:
+    """
+    解析数据库 URL。
+    - 显式 DATABASE_URL 优先（除非仅想用 USE_SQLITE 覆盖时可先不设 DATABASE_URL）。
+    - USE_SQLITE=1 时使用本地 SQLite 文件（便于无 MySQL 环境跑通后端）。
+    - 否则默认 MySQL（MYSQL_* / 默认 localhost）。
+    """
+    if _truthy_env("USE_SQLITE"):
+        filename = os.getenv("SQLITE_PATH", os.path.join(_project_root(), "emotional_chat_local.db"))
+        parent = os.path.dirname(filename)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        return _sqlite_url_from_path(filename)
+    explicit = os.getenv("DATABASE_URL")
+    if explicit:
+        return explicit.strip()
+    return (
+        f"mysql+pymysql://{os.getenv('MYSQL_USER', 'root')}:"
+        f"{os.getenv('MYSQL_PASSWORD', '')}@"
+        f"{os.getenv('MYSQL_HOST', 'localhost')}:"
+        f"{os.getenv('MYSQL_PORT', '3306')}/"
+        f"{os.getenv('MYSQL_DATABASE', 'emotional_chat')}"
+    )
+
+
 # 数据库配置
-# 从环境变量获取数据库URL，如果没有设置则从各个组件构建
-# 支持三种模式：
-#   1. DATABASE_URL 环境变量直接指定
-#   2. MYSQL_* 环境变量组合构建 MySQL URL
-#   3. 默认回退到 SQLite（本地开发无需安装 MySQL）
+# 支持模式：
+#   1. USE_SQLITE=1 强制本地 SQLite（可用 SQLITE_PATH 指定文件）
+#   2. DATABASE_URL 环境变量直接指定
+#   3. MYSQL_* 环境变量组合构建 MySQL URL
+#   4. DB_TYPE=sqlite|mysql 明确指定
+#   5. 默认自动检测（MySQL 不可用时回退 SQLite）
 
-DB_TYPE = os.getenv("DB_TYPE", "").lower()  # 可选: mysql, sqlite, 空=自动检测
-
-if os.getenv("DATABASE_URL"):
-    # 优先使用显式指定的 DATABASE_URL
+if _truthy_env("USE_SQLITE"):
+    filename = os.getenv("SQLITE_PATH", os.path.join(_project_root(), "emotional_chat_local.db"))
+    parent = os.path.dirname(filename)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    DATABASE_URL = _sqlite_url_from_path(filename)
+    print(f"✓ 使用 SQLite 数据库: {filename}")
+elif os.getenv("DATABASE_URL"):
     DATABASE_URL = os.getenv("DATABASE_URL")
 else:
+    DB_TYPE = os.getenv("DB_TYPE", "").lower()
     _default_mysql_url = (
         f"mysql+pymysql://{os.getenv('MYSQL_USER', 'root')}:"
         f"{os.getenv('MYSQL_PASSWORD', '')}@"
@@ -29,41 +74,38 @@ else:
         f"{os.getenv('MYSQL_PORT', '3306')}/"
         f"{os.getenv('MYSQL_DATABASE', 'emotional_chat')}"
     )
-    
+
     if DB_TYPE == "sqlite":
-        # 明确指定使用 SQLite
-        _sqlite_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'emotional_chat.db')
-        DATABASE_URL = f"sqlite:///{_sqlite_path}"
+        _sqlite_path = os.path.join(_project_root(), "emotional_chat.db")
+        DATABASE_URL = _sqlite_url_from_path(_sqlite_path)
         print(f"✓ 使用 SQLite 数据库: {_sqlite_path}")
     elif DB_TYPE == "mysql":
-        # 明确指定使用 MySQL
         DATABASE_URL = _default_mysql_url
     else:
-        # 自动检测：先尝试 MySQL，不可用则回退到 SQLite
         try:
             import pymysql
             pymysql.connect(
-                host=os.getenv('MYSQL_HOST', 'localhost'),
-                port=int(os.getenv('MYSQL_PORT', '3306')),
-                user=os.getenv('MYSQL_USER', 'root'),
-                password=os.getenv('MYSQL_PASSWORD', ''),
-                database=os.getenv('MYSQL_DATABASE', 'emotional_chat'),
-                connect_timeout=3
+                host=os.getenv("MYSQL_HOST", "localhost"),
+                port=int(os.getenv("MYSQL_PORT", "3306")),
+                user=os.getenv("MYSQL_USER", "root"),
+                password=os.getenv("MYSQL_PASSWORD", ""),
+                database=os.getenv("MYSQL_DATABASE", "emotional_chat"),
+                connect_timeout=3,
             )
             DATABASE_URL = _default_mysql_url
             print("✓ 使用 MySQL 数据库")
         except Exception:
-            _sqlite_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'emotional_chat.db')
-            DATABASE_URL = f"sqlite:///{_sqlite_path}"
+            _sqlite_path = os.path.join(_project_root(), "emotional_chat.db")
+            DATABASE_URL = _sqlite_url_from_path(_sqlite_path)
             print(f"⚠ MySQL 不可用，自动回退到 SQLite 数据库: {_sqlite_path}")
 
-# SQLite 需要额外参数以支持多线程
-_engine_kwargs = {}
+_engine_kwargs = {"echo": False}
 if DATABASE_URL.startswith("sqlite"):
     _engine_kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    _engine_kwargs["pool_pre_ping"] = True
 
-# 创建数据库引擎
-engine = create_engine(DATABASE_URL, echo=False, **_engine_kwargs)
+engine = create_engine(DATABASE_URL, **_engine_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
@@ -360,8 +402,50 @@ def create_tables():
     使用命令：python db_manager.py init
     
     仅在特殊情况下（如测试环境快速建表）才直接调用此函数
+    
+    当 MySQL 未启动导致连接被拒绝时，若 USE_SQLITE_FALLBACK 为真（默认开启），
+    会自动切换到项目根目录下的 emotional_chat_local.db（SQLite）。
+    生产环境请设置 USE_SQLITE_FALLBACK=0 并保证 MySQL 可用。
     """
-    Base.metadata.create_all(bind=engine)
+    global engine, SessionLocal, DATABASE_URL
+    from sqlalchemy.exc import OperationalError
+
+    try:
+        Base.metadata.create_all(bind=engine)
+        return
+    except OperationalError as e:
+        err = str(e).lower()
+        is_unreachable = (
+            "2003" in str(e)
+            or "can't connect" in err
+            or "actively refused" in err
+            or "10061" in str(e)
+            or "connection refused" in err
+        )
+        if (
+            not is_unreachable
+            or DATABASE_URL.startswith("sqlite")
+            or not _truthy_env("USE_SQLITE_FALLBACK", default="1")
+        ):
+            raise
+        sqlite_path = os.path.join(_project_root(), "emotional_chat_local.db")
+        sqlite_url = _sqlite_url_from_path(sqlite_path)
+        print(
+            "警告: 无法连接 MySQL，已自动改用 SQLite: "
+            f"{sqlite_path}\n"
+            "  若需使用 MySQL，请先启动服务并核对 MYSQL_* / DATABASE_URL；\n"
+            "  若不希望自动回退，请设置环境变量 USE_SQLITE_FALLBACK=0。"
+        )
+        DATABASE_URL = sqlite_url
+        try:
+            engine.dispose(close=True)
+        except Exception:
+            pass
+        engine = create_engine(
+            sqlite_url, echo=True, connect_args={"check_same_thread": False}
+        )
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        Base.metadata.create_all(bind=engine)
 
 # 获取数据库会话
 def get_db():

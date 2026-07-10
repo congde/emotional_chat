@@ -25,6 +25,7 @@ from backend.modules.agent.protocol.mcp import (
     MCPMessage, MCPProtocol, MCPToolCall, MCPContext, 
     MCPMessageType, get_mcp_logger
 )
+from backend.hermes.intent import workspace_automation_intent
 
 
 class GoalType(Enum):
@@ -34,6 +35,7 @@ class GoalType(Enum):
     PROBLEM_SOLVING = "problem_solving"         # 问题解决
     BEHAVIOR_CHANGE = "behavior_change"         # 行为改变
     CASUAL_CHAT = "casual_chat"                 # 闲聊
+    WORKSPACE_AUTOMATION = "workspace_automation"  # Hermes 式工作区 / 文档 / 联网 / 图表
 
 
 class Complexity(Enum):
@@ -115,7 +117,8 @@ class Planner:
         """
         # 1. 目标识别
         goal = self._identify_goal(user_input, context)
-        
+        context["goal"] = goal
+
         # 2. 判断复杂度
         if goal["complexity"] == Complexity.SIMPLE:
             # 简单任务：直接回复
@@ -159,6 +162,15 @@ class Planner:
         perception = context.get("perception", {})
         emotion = perception.get("emotion", "")
         emotion_intensity = perception.get("emotion_intensity", 0)
+
+        # Hermes 工作区 / 出书 / 图表 / 联网：优先于纯情绪路由（避免改稿需求被当成闲聊）
+        if workspace_automation_intent(user_input):
+            return {
+                "goal_type": GoalType.WORKSPACE_AUTOMATION,
+                "complexity": Complexity.COMPLEX,
+                "urgency": "medium",
+                "description": "本地工作区与文档/联网自动化",
+            }
         
         # 规则1：高情绪强度 -> 情感支持
         if emotion_intensity >= 7.0:
@@ -246,6 +258,24 @@ class Planner:
                 }
             ]
         
+        elif goal_type == GoalType.WORKSPACE_AUTOMATION:
+            sub_goals = [
+                {
+                    "task_id": "hermes_workspace",
+                    "description": "执行工作区与联网/文档/图表指令",
+                    "depends_on": [],
+                    "priority": "high",
+                    "tools_needed": ["hermes_dispatch"],
+                },
+                {
+                    "task_id": "reply_with_results",
+                    "description": "结合工具输出向用户说明结果与后续建议",
+                    "depends_on": ["hermes_workspace"],
+                    "priority": "high",
+                    "tools_needed": [],
+                },
+            ]
+
         elif goal_type == GoalType.PROBLEM_SOLVING:
             # 问题解决流程
             sub_goals = [
@@ -588,6 +618,9 @@ class Planner:
                 "days": 7,
                 "emotion_type": perception.get("emotion")
             }
+
+        elif tool_name == "hermes_dispatch":
+            return {"instruction": context.get("user_input", "") or ""}
         
         else:
             return {}

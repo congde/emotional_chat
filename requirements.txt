@@ -57,6 +57,8 @@ mako>=1.0.0  # Alembic 依赖
 python-multipart>=0.0.9
 PyPDF2>=2.0.0
 pypdf>=3.0.0  # PyPDF2 的后续版本，RAG 模块 PyPDFLoader 依赖
+# Hermes 工作区：Word .docx 读写（可选；未安装则 docx 工具返回提示）
+python-docx>=1.1.0
 
 # 依赖冲突修复
 idna>=2.10

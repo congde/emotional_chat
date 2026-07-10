@@ -1,0 +1,40 @@
+<mxfile host="65bd71144e">
+    <diagram name="记忆提取器" id="memory-extractor-flow">
+        <mxGraphModel dx="1023" dy="1132" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="960" pageHeight="520" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="grp-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffdf5;strokeColor=#d6b656;strokeWidth=1;dashed=1;dashPattern=6 6;opacity=80;" parent="1" vertex="1">
+                    <mxGeometry x="372" y="30" width="468" height="394" as="geometry"/>
+                </mxCell>
+                <mxCell id="conv" value="对话原文" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="380" y="-41" width="112" height="44" as="geometry"/>
+                </mxCell>
+                <mxCell id="extractor" value="[ 记忆提取器 ]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="540" y="-50" width="152" height="62" as="geometry"/>
+                </mxCell>
+                <mxCell id="m1" value="实体识别：提取人名、偏好对象&#xa;（&quot;我喜欢蓝色&quot; → {type: preference, key: color, value: blue}）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;spacingLeft=10;fontSize=11;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="388" y="48" width="432" height="68" as="geometry"/>
+                </mxCell>
+                <mxCell id="m2" value="情绪/状态标注：识别用户情绪状态&#xa;（&quot;我最近总是失眠&quot; → {type: health_status, tag: insomnia, sentiment: negative}）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;spacingLeft=10;fontSize=11;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="388" y="128" width="432" height="68" as="geometry"/>
+                </mxCell>
+                <mxCell id="m3" value="意图归类：将陈述归入主题类目（&quot;睡眠问题&quot;&quot;工作压力&quot;&quot;兴趣爱好&quot;）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;spacingLeft=10;fontSize=11;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="388" y="208" width="432" height="56" as="geometry"/>
+                </mxCell>
+                <mxCell id="m4" value="重要性评分：基于频率、情绪强度、明确性打分（0-1）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;spacingLeft=10;fontSize=11;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="388" y="276" width="432" height="48" as="geometry"/>
+                </mxCell>
+                <mxCell id="m5" value="去重/合并：与已有记忆对比，更新而非重复创建&#xa;（如用户第3次提到失眠 → 更新频率计数，而非新建第3条记忆）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;spacingLeft=10;fontSize=11;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="388" y="336" width="432" height="68" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_conv_ext" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;" parent="1" source="conv" target="extractor" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="2" style="edgeStyle=none;html=1;entryX=0.524;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="extractor" target="grp-bg">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

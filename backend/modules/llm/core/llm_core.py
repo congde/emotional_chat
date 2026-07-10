@@ -2,7 +2,6 @@
 """
 简化版LangChain聊天引擎（支持LCEL表达式，Python 3.10+）
 """
-import os
 import json
 import uuid
 from typing import List, Dict, Any, Optional
@@ -11,13 +10,11 @@ import requests
 
 # 导入 LangChain (Python 3.10+, langchain 0.2.x+)
 try:
-    from langchain_openai import ChatOpenAI
     from langchain_core.prompts import ChatPromptTemplate
     from langchain_core.output_parsers import StrOutputParser
     LANGCHAIN_AVAILABLE = True
 except ImportError:
     LANGCHAIN_AVAILABLE = False
-    ChatOpenAI = None
     ChatPromptTemplate = None
     StrOutputParser = None
     print("提示: LangChain 模块未安装，将使用传统 HTTP 请求方式")
@@ -25,6 +22,7 @@ except ImportError:
 # 数据库和模型
 from backend.database import DatabaseManager, create_tables
 from backend.models import ChatRequest, ChatResponse
+from backend.modules.llm.harness import resolve_llm_settings, try_create_chat_openai
 
 # 导入心语Prompt配置
 from backend.xinyu_prompt import (
@@ -45,10 +43,11 @@ except ImportError as e:
 
 class SimpleEmotionalChatEngine:
     def __init__(self):
-        # 初始化API配置 - 使用统一的LLM配置
-        self.api_key = os.getenv("LLM_API_KEY") or os.getenv("DASHSCOPE_API_KEY") or os.getenv("OPENAI_API_KEY")
-        self.api_base_url = os.getenv("LLM_BASE_URL") or os.getenv("API_BASE_URL", "https://api.openai.com/v1")
-        self.model = os.getenv("DEFAULT_MODEL", "qwen-plus")
+        # 初始化API配置 - 经 LLM Harness 统一解析
+        _cfg = resolve_llm_settings()
+        self.api_key = _cfg.api_key
+        self.api_base_url = _cfg.base_url
+        self.model = _cfg.model
         
         if not self.api_key:
             print("警告: API_KEY 未设置，将使用本地fallback模式")
@@ -72,16 +71,14 @@ class SimpleEmotionalChatEngine:
         # 初始化 LangChain 组件（LCEL 表达式）- 如果可用
         if self.api_key and LANGCHAIN_AVAILABLE:
             try:
-                # 1. 初始化 OpenAI 模型
-                self.llm = ChatOpenAI(
-                    model=self.model,
-                    temperature=0.7,
-                    api_key=self.api_key,
-                    base_url=self.api_base_url
-                )
-                
-                # 2. 定义 AI 人格与行为准则（使用完整的心语Prompt）
-                self.template = """{system_prompt}
+                # 1. 经 LLM Harness 创建 OpenAI 兼容客户端（与 Hermes 式网关一致）
+                self.llm = try_create_chat_openai(temperature=0.7, model=self.model)
+                if not self.llm:
+                    print("警告: LangChain ChatOpenAI 不可用，将使用传统方式")
+                    self.chain = None
+                else:
+                    # 2. 定义 AI 人格与行为准则（使用完整的心语Prompt）
+                    self.template = """{system_prompt}
 
 {{long_term_memory}}
 
@@ -90,13 +87,12 @@ class SimpleEmotionalChatEngine:
 
 用户：{{input}}
 心语：""".format(system_prompt=XINYU_SYSTEM_PROMPT)
-                
-                # 3. 创建提示模板和链（LCEL表达式）
-                self.prompt = ChatPromptTemplate.from_template(self.template)
-                self.output_parser = StrOutputParser()
-                # 构建链：chain = prompt | model | output_parser
-                self.chain = self.prompt | self.llm | self.output_parser
-                print("✓ LangChain LCEL 链初始化成功")
+
+                    # 3. 创建提示模板和链（LCEL表达式）
+                    self.prompt = ChatPromptTemplate.from_template(self.template)
+                    self.output_parser = StrOutputParser()
+                    self.chain = self.prompt | self.llm | self.output_parser
+                    print("✓ LangChain LCEL 链初始化成功")
             except Exception as e:
                 print("警告: LangChain 初始化失败，将使用传统方式: {}".format(e))
                 self.llm = None

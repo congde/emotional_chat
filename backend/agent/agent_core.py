@@ -675,6 +675,17 @@ class AgentCore:
         tool_outputs: List[Dict[str, Any]]
     ) -> str:
         """模板回复（降级方案）"""
+        import json
+
+        for out in tool_outputs or []:
+            if out.get("success") and out.get("tool") == "hermes_dispatch":
+                payload = out.get("result") or {}
+                body = json.dumps(payload, ensure_ascii=False, indent=2)[:14000]
+                return (
+                    "已根据你的指令在工作区内执行（Hermes 工具链）。请核对结果；"
+                    "若需继续改稿，可给出更明确的段落与替换文案。\n\n" + body
+                )
+
         perception = context.get("perception", {})
         emotion = perception.get("emotion", "")
         

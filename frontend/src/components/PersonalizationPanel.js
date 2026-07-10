@@ -31,20 +31,21 @@ const Overlay = styled(motion.div)`
 `;
 
 const Panel = styled(motion.div)`
-  background: white;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
   border-radius: 24px;
   width: 90%;
   max-width: 900px;
   max-height: 85vh;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
 `;
 
 const Header = styled.div`
   padding: 24px 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, #5a3630 100%);
   color: white;
   display: flex;
   align-items: center;
@@ -81,27 +82,27 @@ const CloseButton = styled.button`
 
 const TabBar = styled.div`
   display: flex;
-  border-bottom: 1px solid #e0e0e0;
-  background: #f8f9fa;
+  border-bottom: 1px solid var(--border);
+  background: var(--teal-soft);
 `;
 
 const Tab = styled.button`
   flex: 1;
   padding: 16px;
   border: none;
-  background: ${props => props.active ? 'white' : 'transparent'};
-  color: ${props => props.active ? '#667eea' : '#666'};
+  background: ${props => props.active ? 'var(--surface-elevated)' : 'transparent'};
+  color: ${props => props.active ? 'var(--accent)' : 'var(--ink-muted)'};
   font-weight: ${props => props.active ? '600' : '400'};
   cursor: pointer;
   transition: all 0.2s;
-  border-bottom: 2px solid ${props => props.active ? '#667eea' : 'transparent'};
+  border-bottom: 2px solid ${props => props.active ? 'var(--accent)' : 'transparent'};
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   
   &:hover {
-    background: white;
+    background: var(--surface-elevated);
   }
 `;
 
@@ -117,7 +118,7 @@ const Section = styled.div`
 
 const SectionTitle = styled.h3`
   font-size: 1.1rem;
-  color: #333;
+  color: var(--ink);
   margin-bottom: 16px;
   display: flex;
   align-items: center;
@@ -134,15 +135,15 @@ const RoleGrid = styled.div`
 const RoleCard = styled(motion.div)`
   padding: 20px;
   border-radius: 16px;
-  border: 2px solid ${props => props.selected ? '#667eea' : '#e0e0e0'};
-  background: ${props => props.selected ? 'rgba(102, 126, 234, 0.05)' : 'white'};
+  border: 2px solid ${props => props.selected ? 'var(--accent)' : 'var(--border-strong)'};
+  background: ${props => props.selected ? 'var(--accent-soft)' : 'var(--surface-elevated)'};
   cursor: pointer;
   transition: all 0.2s;
   
   &:hover {
-    border-color: #667eea;
+    border-color: var(--accent);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    box-shadow: var(--shadow-md);
   }
 `;
 
@@ -153,13 +154,13 @@ const RoleIcon = styled.div`
 
 const RoleName = styled.div`
   font-weight: 600;
-  color: #333;
+  color: var(--ink);
   margin-bottom: 4px;
 `;
 
 const RoleDescription = styled.div`
   font-size: 0.85rem;
-  color: #666;
+  color: var(--ink-muted);
   line-height: 1.4;
 `;
 
@@ -170,7 +171,7 @@ const InputGroup = styled.div`
 const Label = styled.label`
   display: block;
   font-weight: 500;
-  color: #333;
+  color: var(--ink);
   margin-bottom: 8px;
   font-size: 0.95rem;
 `;
@@ -178,15 +179,17 @@ const Label = styled.label`
 const Input = styled.input`
   width: 100%;
   padding: 12px 16px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-strong);
   border-radius: 10px;
   font-size: 1rem;
   transition: all 0.2s;
+  background: var(--surface-elevated);
+  color: var(--ink);
   
   &:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
   }
 `;
 
@@ -204,7 +207,7 @@ const SliderLabel = styled.div`
 `;
 
 const SliderValue = styled.span`
-  color: #667eea;
+  color: var(--accent);
   font-weight: 600;
 `;
 
@@ -212,7 +215,7 @@ const Slider = styled.input`
   width: 100%;
   height: 6px;
   border-radius: 3px;
-  background: #e0e0e0;
+  background: var(--border-strong);
   outline: none;
   -webkit-appearance: none;
   
@@ -222,7 +225,7 @@ const Slider = styled.input`
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: #667eea;
+    background: var(--accent);
     cursor: pointer;
     transition: all 0.2s;
     
@@ -235,7 +238,7 @@ const Slider = styled.input`
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: #667eea;
+    background: var(--accent);
     cursor: pointer;
     border: none;
   }
@@ -246,7 +249,8 @@ const ToggleGroup = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  background: #f8f9fa;
+  background: var(--teal-soft);
+  border: 1px solid var(--border);
   border-radius: 10px;
   margin-bottom: 16px;
 `;
@@ -259,12 +263,12 @@ const ToggleLabel = styled.div`
 
 const ToggleName = styled.div`
   font-weight: 500;
-  color: #333;
+  color: var(--ink);
 `;
 
 const ToggleDescription = styled.div`
   font-size: 0.85rem;
-  color: #666;
+  color: var(--ink-muted);
 `;
 
 const Toggle = styled.button`
@@ -272,7 +276,7 @@ const Toggle = styled.button`
   height: 32px;
   border-radius: 16px;
   border: none;
-  background: ${props => props.active ? '#667eea' : '#ddd'};
+  background: ${props => props.active ? 'var(--accent)' : 'var(--border-strong)'};
   cursor: pointer;
   position: relative;
   transition: all 0.3s;
@@ -292,7 +296,7 @@ const Toggle = styled.button`
 
 const Footer = styled.div`
   padding: 20px 32px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--border);
   display: flex;
   gap: 12px;
   justify-content: flex-end;
@@ -311,12 +315,12 @@ const Button = styled(motion.button)`
 `;
 
 const PrimaryButton = styled(Button)`
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, var(--accent), #5a3630);
   color: white;
   
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 8px 24px var(--accent-glow);
   }
   
   &:disabled {
@@ -327,11 +331,12 @@ const PrimaryButton = styled(Button)`
 `;
 
 const SecondaryButton = styled(Button)`
-  background: #f0f0f0;
-  color: #333;
+  background: var(--teal-soft);
+  color: var(--ink);
+  border: 1px solid var(--border);
   
   &:hover {
-    background: #e0e0e0;
+    background: var(--accent-soft);
   }
 `;
 
@@ -603,8 +608,8 @@ const PersonalizationPanel = ({ isOpen, onClose, userId }) => {
                         onClick={() => setConfig({ ...config, safety_level: level })}
                         style={{
                           flex: 1,
-                          background: config.safety_level === level ? '#667eea' : '#f0f0f0',
-                          color: config.safety_level === level ? 'white' : '#333'
+                          background: config.safety_level === level ? 'var(--accent)' : 'var(--teal-soft)',
+                          color: config.safety_level === level ? 'white' : 'var(--ink)'
                         }}
                       >
                         {level === 'strict' ? '严格' : level === 'standard' ? '标准' : '宽松'}

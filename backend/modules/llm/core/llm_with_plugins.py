@@ -1,7 +1,6 @@
 """
 带插件支持的聊天引擎 - 扩展 SimpleEmotionalChatEngine 以支持 Function Calling
 """
-import os
 import json
 import uuid
 import re
@@ -11,16 +10,15 @@ import requests
 
 # 导入 LangChain (Python 3.10+, langchain 0.2.x+)
 try:
-    from langchain_openai import ChatOpenAI
     from langchain_core.prompts import ChatPromptTemplate
     from langchain_core.output_parsers import StrOutputParser
     LANGCHAIN_AVAILABLE = True
 except ImportError:
     LANGCHAIN_AVAILABLE = False
-    ChatOpenAI = None
     ChatPromptTemplate = None
     StrOutputParser = None
 
+from backend.modules.llm.harness import resolve_llm_settings, try_create_chat_openai
 from backend.database import DatabaseManager, create_tables, get_db
 from backend.models import ChatRequest, ChatResponse
 from backend.xinyu_prompt import get_system_prompt, build_full_prompt, validate_and_filter_input, XINYU_SYSTEM_PROMPT
@@ -44,10 +42,11 @@ class EmotionalChatEngineWithPlugins:
     """
     
     def __init__(self):
-        # 初始化API配置
-        self.api_key = os.getenv("LLM_API_KEY") or os.getenv("DASHSCOPE_API_KEY") or os.getenv("OPENAI_API_KEY")
-        self.api_base_url = os.getenv("LLM_BASE_URL") or os.getenv("API_BASE_URL", "https://api.openai.com/v1")
-        self.model = os.getenv("DEFAULT_MODEL", "qwen-plus")
+        # 初始化 API 配置（经 LLM Harness，与 Hermes 式多提供商网关一致）
+        _cfg = resolve_llm_settings()
+        self.api_key = _cfg.api_key
+        self.api_base_url = _cfg.base_url
+        self.model = _cfg.model
         
         if not self.api_key:
             print("警告: API_KEY 未设置，将使用本地fallback模式")
@@ -91,14 +90,12 @@ class EmotionalChatEngineWithPlugins:
         # 初始化 LLM
         if self.api_key and LANGCHAIN_AVAILABLE:
             try:
-                self.llm = ChatOpenAI(
-                    model=self.model,
-                    temperature=0.7,
-                    api_key=self.api_key,
-                    base_url=self.api_base_url
-                )
-                
-                self.template = """{system_prompt}
+                self.llm = try_create_chat_openai(temperature=0.7, model=self.model)
+                if not self.llm:
+                    print("警告: LangChain ChatOpenAI 不可用")
+                    self.chain = None
+                else:
+                    self.template = """{system_prompt}
 
 {{long_term_memory}}
 
@@ -107,11 +104,11 @@ class EmotionalChatEngineWithPlugins:
 
 用户：{{input}}
 心语：""".format(system_prompt=XINYU_SYSTEM_PROMPT)
-                
-                self.prompt = ChatPromptTemplate.from_template(self.template)
-                self.output_parser = StrOutputParser()
-                self.chain = self.prompt | self.llm | self.output_parser
-                print("✓ LangChain LCEL 链初始化成功")
+
+                    self.prompt = ChatPromptTemplate.from_template(self.template)
+                    self.output_parser = StrOutputParser()
+                    self.chain = self.prompt | self.llm | self.output_parser
+                    print("✓ LangChain LCEL 链初始化成功")
             except Exception as e:
                 print(f"警告: LangChain 初始化失败: {e}")
                 self.llm = None

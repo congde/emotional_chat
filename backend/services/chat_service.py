@@ -192,6 +192,27 @@ class ChatService:
             except Exception as e:
                 print(f"输入预处理失败，使用原始消息: {e}")
                 preprocessed = None
+
+        # 0.5 Hermes 工作区自动化（与主聊天同路执行，无需单独调 /agent）
+        import json as _json
+
+        hermes_hd = None
+        try:
+            from backend.hermes.intent import workspace_automation_intent
+            from backend.hermes.settings import hermes_ready
+            from backend.hermes.dispatch import run_hermes_dispatch
+
+            if workspace_automation_intent(message):
+                if hermes_ready():
+                    hermes_hd = run_hermes_dispatch(message)
+                else:
+                    hermes_hd = {
+                        "ok": False,
+                        "error": "请配置 HERMES_WORKSPACE_ROOT 为已存在的目录",
+                        "steps": [],
+                    }
+        except Exception as e:
+            hermes_hd = {"ok": False, "error": str(e), "steps": []}
         
         # 1. 分析情绪（使用清洗后的消息）
         emotion_result = self.chat_engine.analyze_emotion(message)
@@ -269,8 +290,12 @@ class ChatService:
                 "intent": intent_result.get('intent') if intent_result else None,
                 "intent_confidence": intent_result.get('confidence') if intent_result else None,
                 "input_preprocessed": preprocessed is not None,
-                "input_metadata": preprocessed.get("metadata") if preprocessed else None
+                "input_metadata": preprocessed.get("metadata") if preprocessed else None,
+                "hermes": hermes_hd,
             }
+            if hermes_hd:
+                hb = _json.dumps(hermes_hd, ensure_ascii=False, indent=2)[:16000]
+                response.response = "【工作区自动化】\n" + hb + "\n\n——\n\n" + response.response
         else:
             # 使用常规引擎回复
             print(f"ChatService使用常规引擎: session_id={session_id}, user_id={user_id}")
@@ -296,8 +321,12 @@ class ChatService:
                 "intent": intent_result.get('intent') if intent_result else None,
                 "intent_confidence": intent_result.get('confidence') if intent_result else None,
                 "input_preprocessed": preprocessed is not None,
-                "input_metadata": preprocessed.get("metadata") if preprocessed else None
+                "input_metadata": preprocessed.get("metadata") if preprocessed else None,
+                "hermes": hermes_hd,
             }
+            if hermes_hd:
+                hb = _json.dumps(hermes_hd, ensure_ascii=False, indent=2)[:16000]
+                response.response = "【工作区自动化】\n" + hb + "\n\n——\n\n" + response.response
         
         # 5.1. 保存会话和消息到数据库
         # RAG分支需要手动保存消息，因为没有调用 llm_with_plugins.py 的 chat 方法

@@ -50,9 +50,6 @@ log/
 *.sqlite3
 chroma_db/
 
-# Documentation (local edits only)
-docs/
-
 # Local assets
 assets/
 

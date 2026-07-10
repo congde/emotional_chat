@@ -5,24 +5,18 @@ import re
 try:
     from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
     from langchain_core.prompts import PromptTemplate
-    from langchain_openai import ChatOpenAI
 except ImportError:
     BaseMessage = None
     HumanMessage = None
     AIMessage = None
     PromptTemplate = None
-    ChatOpenAI = None
 
-from config import Config
+from backend.modules.llm.harness import try_create_chat_openai
+
 
 class EmotionAnalyzer:
     def __init__(self):
-        self.llm = ChatOpenAI(
-            api_key=Config.OPENAI_API_KEY,
-            base_url=Config.API_BASE_URL,
-            model_name=Config.DEFAULT_MODEL,
-            temperature=0.3
-        )
+        self.llm = try_create_chat_openai(temperature=0.3)
         
         # 情感分析提示模板
         self.emotion_prompt = PromptTemplate(
