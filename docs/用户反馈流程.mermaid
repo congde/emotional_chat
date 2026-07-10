@@ -1,0 +1,60 @@
+sequenceDiagram
+    participant User as 用户
+    participant Frontend as 前端界面
+    participant API as 后端API
+    participant DB as 数据库
+    participant Analyzer as 反馈分析器
+    participant Optimizer as Prompt优化器
+    participant Monitor as 监控系统
+    
+    Note over User,Monitor: 用户反馈处理流程
+    
+    User->>Frontend: 使用聊天机器人
+    Frontend->>User: 显示聊天界面
+    
+    User->>Frontend: 遇到问题，点击反馈
+    Frontend->>User: 显示反馈表单
+    
+    User->>Frontend: 填写反馈信息
+    Note right of User: • 选择反馈类型<br/>• 评分 1-5分<br/>• 详细评论
+    
+    Frontend->>API: POST /feedback
+    Note right of Frontend: {feedback_type, rating, comment, session_id}
+    
+    API->>API: 验证反馈数据
+    API->>DB: 保存反馈记录
+    DB-->>API: 返回feedback_id
+    API-->>Frontend: 反馈提交成功
+    Frontend-->>User: 显示感谢信息
+    
+    Note over Analyzer,Optimizer: 定期分析处理
+    
+    Analyzer->>DB: 查询最新反馈
+    DB-->>Analyzer: 返回反馈数据
+    
+    Analyzer->>Analyzer: 分析反馈模式
+    Note right of Analyzer: • 统计各类型反馈<br/>• 计算平均评分<br/>• 提取关键词<br/>• 情感分析
+    
+    Analyzer->>Optimizer: 传递分析结果
+    Note right of Analyzer: {low_rating_feedback, common_issues, improvement_suggestions}
+    
+    Optimizer->>Optimizer: 分析问题根因
+    Note right of Optimizer: • 识别Prompt问题<br/>• 分析回应模式<br/>• 生成优化方案
+    
+    Optimizer->>Optimizer: 创建新Prompt版本
+    Note right of Optimizer: 基于反馈建议优化Prompt内容
+    
+    Optimizer->>Monitor: 部署A/B测试
+    Monitor->>Monitor: 对比新旧版本效果
+    
+    Monitor-->>Optimizer: 测试结果
+    Optimizer->>Optimizer: 评估改进效果
+    
+    alt 效果显著
+        Optimizer->>Monitor: 部署新版本
+        Monitor->>User: 用户开始使用优化版本
+    else 效果不明显
+        Optimizer->>Optimizer: 继续优化迭代
+    end
+    
+    Note over User,Monitor: 持续监控反馈质量

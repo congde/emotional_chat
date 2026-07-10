@@ -1,0 +1,180 @@
+<mxfile host="65bd71144e">
+    <diagram name="插件降级策略架构" id="plugin-fallback-architecture">
+        <mxGraphModel dx="319" dy="689" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1000" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="level1_title" value="第一级：数据源降级（初始化阶段）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=14;align=left;verticalAlign=top;" parent="1" vertex="1">
+                    <mxGeometry x="80" y="100" width="1240" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="init_start" value="插件初始化" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="160" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="check1" value="检查主数据源&#xa;（付费API）" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="150" width="140" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="check2" value="检查备选数据源&#xa;（同类型服务）" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="500" y="150" width="140" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="check3" value="使用免费/模拟数据" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="700" y="150" width="140" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="result1" value="主数据源&#xa;（高质量）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c5e1a5;strokeColor=#82b366;fontSize=11;fontStyle=1" parent="1" vertex="1">
+                    <mxGeometry x="300" y="260" width="140" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="result2" value="备选数据源&#xa;（中等质量）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe082;strokeColor=#f9a825;fontSize=11;fontStyle=1" parent="1" vertex="1">
+                    <mxGeometry x="500" y="260" width="140" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="result3" value="免费数据源&#xa;（基础功能）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffccbc;strokeColor=#e64a19;fontSize=11;fontStyle=1" parent="1" vertex="1">
+                    <mxGeometry x="700" y="260" width="140" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="level2_title" value="第二级：请求失败重试机制（运行时）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=14;align=left;verticalAlign=top;" parent="1" vertex="1">
+                    <mxGeometry x="80" y="360" width="1240" height="280" as="geometry"/>
+                </mxCell>
+                <mxCell id="request_start" value="API请求" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="420" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="retry_loop" value="重试循环&#xa;（最多3次）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="410" width="180" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="error_type" value="错误类型判断" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="540" y="420" width="140" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="network_error" value="网络超时/连接错误&#xa;→ 指数退避重试" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe082;strokeColor=#f9a825;fontSize=10;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="740" y="380" width="200" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="auth_error" value="认证/参数错误&#xa;→ 立即返回错误" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffccbc;strokeColor=#e64a19;fontSize=10;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="740" y="460" width="200" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="parse_error" value="数据解析错误&#xa;→ 记录日志并提示" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffccbc;strokeColor=#e64a19;fontSize=10;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="670" y="560" width="200" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="success" value="请求成功" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c5e1a5;strokeColor=#82b366;fontSize=12;fontStyle=1" parent="1" vertex="1">
+                    <mxGeometry x="1000" y="420" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="max_retry" value="达到最大重试次数" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffccbc;strokeColor=#e64a19;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="1000" y="530" width="140" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="level3_title" value="第三级：运行时数据源切换（动态降级）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=14;align=left;verticalAlign=top;" parent="1" vertex="1">
+                    <mxGeometry x="80" y="700" width="1240" height="250" as="geometry"/>
+                </mxCell>
+                <mxCell id="execute_start" value="插件执行" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="760" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="try_primary" value="尝试主数据源" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="750" width="180" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="check_fail" value="是否失败？" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="540" y="760" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="fallback" value="降级到备用数据源" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe082;strokeColor=#f9a825;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="720" y="750" width="180" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="check_fail2" value="是否仍失败？" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="960" y="760" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="final_fallback" value="降级到免费数据源" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffccbc;strokeColor=#e64a19;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="1140" y="750" width="140" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="return_success" value="返回结果" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c5e1a5;strokeColor=#82b366;fontSize=12;fontStyle=1" parent="1" vertex="1">
+                    <mxGeometry x="540" y="860" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="return_error" value="返回错误提示" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffccbc;strokeColor=#e64a19;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="1140" y="860" width="140" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;" parent="1" source="init_start" target="check1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" value="有密钥" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="1" source="check1" target="result1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" value="无密钥" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="1" source="check1" target="check2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" value="有密钥" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="1" source="check2" target="result2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" value="无密钥" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="1" source="check2" target="check3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;" parent="1" source="check3" target="result3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;" parent="1" source="request_start" target="retry_loop" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;" parent="1" source="retry_loop" target="error_type" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e9" value="网络错误" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="1" source="error_type" target="network_error" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e10" value="认证错误" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="1" source="error_type" target="auth_error" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e11" value="解析错误" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="error_type" target="parse_error" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="610" y="545"/>
+                            <mxPoint x="760" y="545"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e12" value="成功" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="1" source="error_type" target="success" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e13" value="重试" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;dashed=1;" parent="1" source="network_error" target="retry_loop" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="840" y="405"/>
+                            <mxPoint x="840" y="350"/>
+                            <mxPoint x="390" y="350"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e14" value="达到上限" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="1" source="retry_loop" target="max_retry" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="390" y="510"/>
+                            <mxPoint x="1070" y="510"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;" parent="1" source="execute_start" target="try_primary" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;" parent="1" source="try_primary" target="check_fail" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e17" value="失败" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="1" source="check_fail" target="fallback" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e18" value="成功" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="1" source="check_fail" target="return_success" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="600" y="790"/>
+                            <mxPoint x="600" y="890"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;" parent="1" source="fallback" target="check_fail2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e20" value="仍失败" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="1" source="check_fail2" target="final_fallback" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e21" value="成功" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="1" source="check_fail2" target="return_success" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1020" y="790"/>
+                            <mxPoint x="1020" y="890"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e22" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=block;endFill=1;" parent="1" source="final_fallback" target="return_error" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

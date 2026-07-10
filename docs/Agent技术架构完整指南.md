@@ -1,0 +1,1043 @@
+# Agent技术架构完整指南
+
+> 本文档整合了情感聊天机器人项目中所有Agent相关的技术实现，帮助读者从技术角度深入理解Agent架构。
+
+---
+
+## 〇、Agent优化十大实战经验
+
+> 基于上下文工程和Multi-Agent构建的实战总结，帮助你让Agent更符合预期。
+
+### 为什么Agent不按预期输出？
+
+在构建Agent时，我们经常遇到以下问题：
+- "为什么调了提示词，Agent效果还是这么差？"
+- "为什么Agent运行不稳定，交互几轮后就开始不遵循指令了？"
+- "为什么Agent总是产生幻觉，不按预期输出？"
+
+这需要从两个角度分析：**预期层面**和**技术层面**。
+
+### 经验一：清晰化你的预期
+
+**核心原则**：避免模糊预期，给到足够清晰的预期，让大模型理解起来没有任何的歧义和困惑。
+
+模糊预期会让大模型产生困惑（Confuse），必须将模糊的预期转化为具体、可衡量的清晰预期。
+
+**如何定义清晰预期？**
+
+| 维度 | 模糊预期 | 清晰预期 |
+|------|---------|---------|
+| 任务要求 | "判断用户情绪是否需要干预" | "如果用户情绪分数连续3天低于3分（满分5分），或出现'不想活'等危机词汇，则需要干预" |
+| 输出格式 | "给我一个情绪分析报告" | "输出包含emotion_type、intensity(1-10)、needs_intervention(bool)的JSON对象" |
+| 风格语气 | "用温暖的方式回复" | "以第一人称、使用'我理解'开头，语句不超过50字，避免使用感叹号" |
+
+**踩坑案例**：情感支持场景下的歧义
+
+当用户说"我好累"时，可能是：
+1. **身体疲劳**：需要建议休息、放松
+2. **心理疲惫**：需要情感支持、倾听
+
+解决方案：明确描述两种情况的区别，提供判断规则或让模型通过追问澄清。
+
+### 经验二：上下文精准投喂
+
+**核心原则**："给其所需，去其所扰"。模型需要且关心的信息，一定要给到；模型不需要且不相关的干扰信息，一定要剔除。
+
+**踩坑案例**：情绪分析时的信息干扰
+
+当调用情绪分析工具返回大量字段（情绪类型、强度、置信度、历史趋势、生理指标等）时，模型可能随意选择字段进行判断，导致结论不一致。
+
+**解决方案**：
+```python
+# 错误做法：直接返回所有字段
+return emotion_api_response  # 包含20+字段
+
+# 正确做法：只返回模型需要的字段
+return {
+    "primary_emotion": emotion_api_response["primary_emotion"],
+    "intensity": emotion_api_response["intensity"],
+    "needs_support": emotion_api_response["intensity"] > 7
+}
+```
+
+### 经验三：身份和历史执行清晰化
+
+**核心原则**：模型需要明确知道有几方的身份，需要知道自己做过哪些事情，当前执行到哪个阶段。
+
+**踩坑案例**：三方角色不清晰导致模型"错乱"
+
+在心理咨询场景中，存在三个角色：用户、AI助手、人工咨询师。如果将咨询师与用户的对话直接作为History喂给模型，模型会混淆角色，产生幻觉。
+
+**解决方案**：
+1. **主线回归用户与大模型**：对话的完整执行过程，以用户和大模型之间的交互为主线
+2. **咨询师对话作参考**：将咨询师与用户的对话标识为"对话记忆"（Dialogue Memory）注入上下文
+3. **保留完整动作**：大模型自己执行过的Action History完整保留
+
+**关键原则**：
+- **Mask, Don't Remove**：不要删除历史，可以标记或压缩
+- **Keep the Wrong Stuff In**：保留失败的尝试，让模型学会适应
+
+### 经验四：善用结构化形式表达逻辑
+
+**核心原则**：相对复杂的流程、逻辑，优先考虑形式化、结构化方式表达，不要只用自然语言。
+
+结构化语言消除歧义，程序化语言天然为"运行"设计。
+
+```yaml
+# 用YAML表达情绪干预流程
+intervention_flow:
+  - step: analyze_emotion
+    condition: always
+  - step: check_crisis_keywords
+    condition: emotion.intensity > 7
+    action: trigger_crisis_protocol
+  - step: provide_support
+    condition: emotion.needs_support == true
+    tools:
+      - play_meditation_audio
+      - set_reminder
+```
+
+### 经验五：尝试自定义工具协议
+
+**核心原则**：如果你的领域任务相对独特且对稳定性要求较高，自定义工具协议和指令是值得尝试的。
+
+通用的Function Call协议在特定领域场景下，可能不如自定义协议稳定，因为模型会按照训练数据中的方式去理解和调用。
+
+### 经验六：Few-Shot要合理使用
+
+**核心原则**：灵活性强的场景慎用Few-Shot，特定任务中建议用多样化的Few-Shot。
+
+| 场景类型 | Few-Shot策略 |
+|---------|-------------|
+| 单任务（参数提取、分类判断） | 提供多样化的Few-Shot示例，覆盖不同情况 |
+| 灵活任务（开放式对话、创意生成） | 减少或不用Few-Shot，避免模型"过拟合" |
+
+**建议**：Few-Shot示例要多样化，包括正例、反例、边界情况。
+
+### 经验七：保持上下文的"苗条"
+
+**核心原则**：在不损失性能的前提下，尽可能对上下文进行"瘦身"。
+
+当上下文超过一定长度（如1万Token），模型对历史信息的遗忘率显著增加，甚至系统指令都会被间歇性遗忘。
+
+**优化方法**：
+- 通过RAG动态筛选当前任务需要的信息
+- 精简重复的提示词要求
+- 测试移除某些指令后模型的反应是否敏感
+
+### 经验八：使用记忆管理来避免模型遗忘
+
+**核心原则**：重点信息多次增强提示，上下文压缩减少历史对话轮次，外部存储帮助实时唤起更久的记忆。
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    记忆管理策略                          │
+├─────────────────────────────────────────────────────────┤
+│ 1. 重点信息增强提示                                      │
+│    - 关键信息（用户ID、偏好等）在对话中多次"复习"        │
+│    - 作为工具调用的"内部变量"持续传递                    │
+├─────────────────────────────────────────────────────────┤
+│ 2. 上下文记忆压缩                                        │
+│    - 早期对话通过summary方式提取核心信息                 │
+│    - 类似计算机的"内存"管理                              │
+├─────────────────────────────────────────────────────────┤
+│ 3. 外部记忆存储                                          │
+│    - 长期信息记录到Memory池                              │
+│    - 支持"读"和"写"操作                                  │
+│    - 类似计算机的"外存"                                  │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 经验九：使用Multi-Agent来平衡可控性与灵活性
+
+**核心原则**：Workflow提升可控性，LLM自主决策提升灵活性，好的Multi-Agent设计既可控又能灵活。
+
+```
+┌────────────────────────────────────────────────────────┐
+│                    主Agent (调度决策)                   │
+│  - 意图路由、子模块调度、最终生成的决策                 │
+│  - 使用LLM进行自主决策，负责灵活性                      │
+└────────────────────────────────────────────────────────┘
+         │              │              │
+         ▼              ▼              ▼
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│ 情绪分析Agent │ │ 危机干预Agent │ │ 资源推荐Agent │
+│  (子Agent)    │ │  (子Agent)    │ │  (子Agent)    │
+│              │ │              │ │              │
+│ Workflow编排 │ │ 规则引擎+LLM │ │ RAG+规则     │
+│ 高稳定性     │ │ 高可控性     │ │ 高准确性     │
+└──────────────┘ └──────────────┘ └──────────────┘
+```
+
+**⚠️ 重要提醒：Multi-Agent并非万能药**
+
+基于DeepMind等机构的大规模实验研究，Multi-Agent系统存在以下局限：
+
+1. **协调税（Coordination Tax）**：每个Agent都需要理解接口、维护上下文、处理结果。当工具数量超过阈值，传递信息的成本就超过了并行处理的收益。
+
+2. **能力饱和效应**：当单Agent准确率超过45%时，引入多智能体协作往往带来收益递减甚至负收益。
+
+3. **错误放大问题**：在独立多Agent架构下，错误更容易被放大。如果单Agent错误率是5%，独立多Agent系统的错误率可能达到86%（错误放大因子17.2）。
+
+**适用场景**：
+- ✅ **边界清晰、SOP明确的任务**（如金融分析）：多Agent可以带来显著提升（81%效果提升）
+- ❌ **开放且复杂的任务**（如游戏规划）：多Agent可能导致性能暴跌35%
+- ❌ **需要创造性规划的任务**：目前LLM还未涌现自组织分工能力
+
+**设计建议**：
+- 对于复杂任务，人为编排的任务拆分SOP依然是必经之路
+- 不要指望扔一堆Agent进去让它们自己进化出分层结构
+- 考虑使用工具分层，让不同的指挥官只看一组工具，降低认知负担
+
+### 经验十：只有HITL才能做出更好的Agent
+
+**核心原则**：只有坚持人在回路（Human-In-The-Loop），深入业务场景中，才能做出好的Agent。
+
+Agent的本质是让大模型"代理/模拟"人的行为。要做好Agent，必须先知道"人"是怎么做的：
+- 人是如何识别这个问题的？
+- 什么情况应该调用哪个工具？
+- 调用工具之后如何回复给用户？
+
+**实践建议**：
+- 深入了解实际用户的处理逻辑和习惯
+- 持续收集用户反馈，指导Agent迭代优化
+- 观察真实场景，而不仅仅依赖需求文档
+
+---
+
+## 一、Agent整体架构
+
+### 1.1 架构概览
+
+```
+┌─────────────────────────────────────────────────────┐
+│                  Agent Core                         │
+│  (核心控制器，协调所有模块)                          │
+└─────────────────────────────────────────────────────┘
+         │         │         │         │
+         ▼         ▼         ▼         ▼
+    ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐
+    │Memory  │ │Planner │ │Tool     │ │Reflector│
+    │Hub     │ │        │ │Caller   │ │        │
+    └────────┘ └────────┘ └────────┘ └────────┘
+         │         │         │         │
+         ▼         ▼         ▼         ▼
+    ┌──────────────────────────────────────┐
+    │          External Tools              │
+    │  - Calendar API                       │
+    │  - Audio Player                       │
+    │  - Psychology DB                      │
+    │  - Scheduler Service                  │
+    └──────────────────────────────────────┘
+```
+
+### 1.2 模块职责
+
+| 模块 | 职责 | 主要功能 |
+|------|------|----------|
+| Agent Core | 核心控制器 | 协调所有模块，管理完整交互流程 |
+| Memory Hub | 记忆中枢 | 记忆编码、检索、巩固 |
+| Planner | 任务规划 | 目标识别、任务分解、策略选择 |
+| Tool Caller | 工具调用 | 工具注册、调用执行、结果处理 |
+| Reflector | 反思优化 | 效果评估、策略优化、回访规划 |
+
+---
+
+## 二、核心模块详解
+
+### 2.1 Agent Core
+
+**文件**: `backend/agent/agent_core.py`
+
+**核心处理流程**:
+
+```python
+async def process(user_input, user_id, conversation_id=None):
+    """处理用户输入的完整流程"""
+    # 1. 感知层：分析用户输入（情感分析、意图识别、实体提取）
+    # 2. 记忆检索：获取相关记忆
+    # 3. 任务规划：生成执行计划
+    # 4. 执行计划：调用工具、生成回复
+    # 5. 记忆巩固：保存新记忆
+    # 6. 反思评估：评估交互效果
+    # 7. 记录历史：保存执行记录
+```
+
+### 2.2 Memory Hub (记忆中枢)
+
+**文件**: `backend/agent/memory_hub.py`
+
+**记忆类型**:
+- **情景记忆 (Episodic)**: 事件、经历，有时间戳和情感标签
+- **语义记忆 (Semantic)**: 知识、概念，抽象通用
+- **程序记忆 (Procedural)**: 技能、策略
+- **对话记忆 (Conversation)**: 对话历史
+
+**核心方法**:
+
+```python
+def encode(experience) -> Dict        # 编码：将新经验转换为记忆
+def retrieve(query, user_id, context, top_k) -> List[Dict]  # 检索相关记忆
+def consolidate(memory) -> bool       # 巩固：工作记忆转移到长期记忆
+def get_user_profile(user_id) -> Dict # 获取用户画像
+```
+
+**检索策略**:
+1. **语义检索**: 向量相似度搜索
+2. **时间检索**: 近期优先
+3. **情绪检索**: 情绪一致性匹配
+
+**分层架构**:
+
+```
+┌──────────────────────────────────────────────────┐
+│              Memory Hub (记忆中枢)                │
+│  ┌──────────────┐      ┌──────────────────────┐  │
+│  │  工作记忆    │      │     长期记忆          │  │
+│  │ (Working     │      │  ┌──────────────────┐ │  │
+│  │  Memory)     │      │  │   情景记忆       │ │  │
+│  │              │      │  │ (Episodic)       │ │  │
+│  │ - 对话上下文  │      │  └──────────────────┘ │  │
+│  │ - 激活任务    │      │  ┌──────────────────┐ │  │
+│  │ - 临时变量    │      │  │   语义记忆       │ │  │
+│  └──────────────┘      │  │ (Semantic)       │ │  │
+│                         │  └──────────────────┘ │  │
+│                         │  ┌──────────────────┐ │  │
+│                         │  │   对话记忆       │ │  │
+│                         │  │ (Conversation)   │ │  │
+│                         │  └──────────────────┘ │  │
+│                         └──────────────────────┘  │
+└──────────────────────────────────────────────────┘
+         │                    │                    │
+         ▼                    ▼                    ▼
+    ┌─────────┐         ┌─────────┐         ┌─────────┐
+    │  MySQL  │         │ ChromaDB │         │ Memory  │
+    │ 数据库   │         │ 向量数据库│         │ Manager │
+    └─────────┘         └─────────┘         └─────────┘
+```
+
+**检索流程**:
+
+```
+用户查询
+    ↓
+多路径检索
+    ├─→ 向量语义检索 (相似度)
+    ├─→ 时间序列检索 (近期优先)
+    └─→ 情绪关联检索 (情绪一致性)
+    ↓
+合并去重 → 按重要性排序 → 返回Top-K记忆
+```
+
+**重要性计算**:
+
+- 情绪强度 (30%)
+- 关键词匹配 (20%)
+- 内容长度 (10%)
+- 用户反馈 (40%)
+
+### 2.3 Planner (规划模块)
+
+**文件**: `backend/agent/planner.py`
+
+**目标类型**:
+- `INFORMATION_QUERY`: 信息查询
+- `EMOTIONAL_SUPPORT`: 情感支持
+- `PROBLEM_SOLVING`: 问题解决
+- `BEHAVIOR_CHANGE`: 行为改变
+- `CASUAL_CHAT`: 闲聊
+
+**执行策略**:
+- `DIRECT_RESPONSE`: 直接回复
+- `EMPATHY_FIRST`: 情感优先
+- `TOOL_USE`: 工具调用
+- `SCHEDULED_FOLLOWUP`: 定时回访
+- `CONVERSATIONAL`: 对话引导
+
+### 2.4 Tool Caller (工具调用)
+
+**文件**: `backend/agent/tool_caller.py`
+
+**内置工具**:
+- `search_memory`: 搜索记忆
+- `get_emotion_log`: 获取情绪日志
+- `set_reminder`: 设置提醒
+- `recommend_meditation`: 推荐冥想
+- `recommend_resource`: 推荐资源
+- `psychological_assessment`: 心理评估
+
+### 2.5 Reflector (反思模块)
+
+**文件**: `backend/agent/reflector.py`
+
+**评估指标**:
+- 用户满意度
+- 响应时间
+- 目标达成度
+- 情绪变化
+- 工具使用效果
+
+### 2.6 意图识别 (Intent Recognition)
+
+**混合式架构**:
+
+```
+用户输入
+  ↓
+输入预处理器 (InputProcessor)
+  ├── 文本清洗
+  ├── 风险检测
+  └── 合规验证
+  ↓
+意图分类器 (IntentClassifier)
+  ├── 规则引擎 (RuleEngine) - 关键词快速匹配
+  └── ML分类器 (MLClassifier) - BERT模型处理复杂语义
+  ↓
+融合策略
+  ├── 危机优先
+  ├── 高置信度规则
+  └── 模型预测
+  ↓
+意图结果 + 响应建议
+```
+
+**六大意图类型**:
+
+| 意图类型 | 说明 | 示例 |
+|---------|------|------|
+| **emotion** | 情感表达 | "我好难过"、"今天心情不好" |
+| **advice** | 寻求建议 | "怎么办？"、"你有什么建议" |
+| **conversation** | 普通对话 | "今天天气不错"、"我在看书" |
+| **function** | 功能请求 | "提醒我吃药"、"记录今天的心情" |
+| **crisis** | 危机干预 | "不想活了"、"撑不下去" |
+| **chat** | 闲聊 | "你好"、"在吗"、"晚上好" |
+
+---
+
+## 三、MCP协议详解 (Model Context Protocol)
+
+### 3.1 为什么需要MCP？
+
+在复杂的 Agent 系统中，模块之间的高效、可靠通信是系统稳定运行的关键。如果仅依赖自由文本或内部对象传递状态，极易导致上下文丢失、调试困难以及扩展性受限。
+
+MCP 的出现，本质上是**提示工程（Prompt Engineering）发展到高级阶段的必然产物**。研究表明，向模型提供更具体、结构化的上下文信息（例如本地文件、数据库记录或实时网络数据），能显著提升其推理准确性与任务完成度。
+
+在没有 MCP 的时代，开发者往往需要手动从数据库筛选相关信息，再将其拼接到提示词中。随着任务复杂度上升，这种"手工喂料"方式不仅效率低下，还容易出错。
+
+### 3.2 Function Calling的局限
+
+主流 LLM 平台（如 OpenAI、Google）陆续推出了 Function Calling 功能，允许模型在推理过程中动态调用预定义函数。然而，Function Calling 仍存在明显局限：
+
+- **平台绑定性强**：不同厂商的函数调用接口互不兼容，切换模型需重写大量代码
+- **扩展性差**：难以支持复杂的多工具协作或自定义数据流
+- **安全性与可控性不足**：敏感数据可能被无意识暴露给模型
+
+### 3.3 MCP的核心优势
+
+MCP 由 Anthropic 等机构推动，旨在充当 AI 模型的"万能转接头"——让 LLM 能够灵活、安全地访问本地或远程工具，同时保持对数据流的完全控制。
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   LLM 模型   │ ←→  │  MCP 协议层  │ ←→  │  外部工具    │
+│ (任意厂商)   │     │  (标准接口)  │     │ (API/DB等)  │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+核心优势体现在三个方面：
+
+| 优势 | 说明 |
+|------|------|
+| **生态丰富** | 社区已提供大量现成插件（如日历、音频播放器、心理知识库），可即插即用 |
+| **模型无关** | 不依赖特定 LLM 平台，任何支持 MCP 的模型均可无缝切换 |
+| **数据可控** | 敏感信息无需上传至云端，开发者可通过自定义接口精确决定传输内容 |
+
+### 3.4 消息结构
+
+```json
+{
+    "message_id": "唯一消息ID",
+    "message_type": "消息类型",
+    "content": "自然语言内容",
+    "context": {
+        "user_profile": {},
+        "emotion_state": {},
+        "task_goal": {},
+        "memory_summary": {},
+        "conversation_history": []
+    },
+    "tool_calls": [],
+    "tool_responses": [],
+    "timestamp": "时间戳",
+    "source_module": "来源模块",
+    "target_module": "目标模块"
+}
+```
+
+### 3.5 消息类型
+
+- `user_input`: 用户输入
+- `planner_output`: Planner规划输出
+- `tool_request`: 工具请求
+- `tool_response`: 工具响应
+- `agent_response`: Agent回复
+- `reflector_evaluation`: Reflector评估结果
+
+### 3.6 通信流程
+
+```
+用户输入
+    ↓
+Agent Core (创建user_input MCP消息)
+    ↓
+Planner (plan_with_mcp) → planner_output
+    ↓
+Tool Caller (call_with_mcp) → tool_response
+    ↓
+Agent Core (生成回复) → agent_response
+    ↓
+Reflector (evaluate_with_mcp) → reflector_evaluation
+    ↓
+返回最终回复
+```
+
+### 3.7 使用示例
+
+```python
+from backend.modules.agent.core.agent.agent_core import AgentCore
+
+agent = AgentCore()
+
+# 使用MCP协议处理
+mcp_response = await agent.process_with_mcp(
+    user_input="我最近睡不好，怎么办？",
+    user_id="user_123"
+)
+
+# 获取回复
+response = mcp_response.content
+```
+
+### 3.8 MCP为"心语"带来的价值
+
+MCP协议的引入为"心语"Agent系统带来了：
+
+- 标准化的模块间通信
+- 完整的上下文传递
+- 可追溯的交互链
+- 更好的可维护性和扩展性
+- 为未来多智能体协作奠定基础
+
+可以说，MCP 不仅是一种通信格式，更是构建下一代智能体系统的基础设施。每一次对话，都将成为一份结构清晰、语义完整、可审计可复现的"数字记忆"。
+
+---
+
+## 四、实战演示：完整的Agent式交互
+
+### 4.1 场景描述
+
+**用户输入**: "唉，又失眠了，感觉压力好大。"
+
+### 4.2 Agent处理流程
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ 1. 感知与理解                                                 │
+│    NLP识别关键词：失眠、压力                                   │
+│    触发："心理健康干预"流程                                    │
+├──────────────────────────────────────────────────────────────┤
+│ 2. 规划决策                                                   │
+│    ├─ 查询记忆：过去7天情绪评分平均3.2（满分5），呈下降趋势     │
+│    └─ 判断：需干预，建议"放松训练 + 情绪疏导"方案              │
+├──────────────────────────────────────────────────────────────┤
+│ 3. 工具调用                                                   │
+│    ├─ play_meditation_audio("calming_music")                 │
+│    └─ set_daily_reminder("21:30", "今晚早点放松哦")           │
+├──────────────────────────────────────────────────────────────┤
+│ 4. 生成回复                                                   │
+│    "听起来你最近真的很辛苦呢。我已经为你准备了一段舒缓音乐..."  │
+├──────────────────────────────────────────────────────────────┤
+│ 5. 后续行动                                                   │
+│    ├─ 24小时后自动回访："昨晚睡得怎么样？需要聊聊吗？"         │
+│    └─ 连续三天未改善 → 建议专业正念课程                        │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 4.3 完整代码实现
+
+```python
+from backend.agent import AgentCore, get_memory_hub, Planner, get_tool_caller, get_reflector
+
+async def handle_user_message(user_input: str, user_id: str):
+    """完整的Agent式交互流程"""
+    
+    # ========== 1. 初始化各模块 ==========
+    agent = AgentCore()
+    memory_hub = get_memory_hub()
+    planner = Planner()
+    tool_caller = get_tool_caller()
+    reflector = get_reflector()
+    
+    # ========== 2. 感知与理解 ==========
+    # 获取用户画像和历史记忆
+    user_profile = memory_hub.get_user_profile(user_id)
+    relevant_memories = memory_hub.retrieve(
+        query=user_input,
+        user_id=user_id,
+        top_k=5
+    )
+    
+    # ========== 3. 规划决策 ==========
+    context = {
+        "user_profile": user_profile,
+        "memories": relevant_memories,
+        "current_input": user_input
+    }
+    plan = await planner.plan(user_input, context)
+    
+    print(f"执行计划: {plan}")
+    # 输出示例:
+    # {
+    #     "goal": "EMOTIONAL_SUPPORT",
+    #     "strategy": "EMPATHY_FIRST", 
+    #     "tasks": [
+    #         {"action": "analyze_emotion", "priority": 1},
+    #         {"action": "play_meditation_audio", "params": {"genre": "sleep"}, "priority": 2},
+    #         {"action": "set_reminder", "params": {"time": "21:30"}, "priority": 3}
+    #     ]
+    # }
+    
+    # ========== 4. 工具调用 ==========
+    tool_results = []
+    for task in plan.get("tasks", []):
+        if task.get("action") in ["play_meditation_audio", "set_reminder"]:
+            result = await tool_caller.call(
+                tool_name=task["action"],
+                parameters=task.get("params", {})
+            )
+            tool_results.append(result)
+            print(f"工具调用结果: {result}")
+    
+    # ========== 5. 生成回复 ==========
+    result = await agent.process(
+        user_input=user_input,
+        user_id=user_id
+    )
+    
+    print(f"生成回复: {result['response']}")
+    # 输出: "听起来你最近真的很辛苦呢。我已经为你准备了一段舒缓音乐，
+    #        现在就可以播放。另外，我每天晚上9点半都会提醒你放松，好吗？"
+    
+    # ========== 6. 记忆巩固 ==========
+    new_memory = {
+        "content": user_input,
+        "emotion": "stressed",
+        "context": "sleep_issue",
+        "user_id": user_id
+    }
+    memory_hub.consolidate(new_memory)
+    
+    # ========== 7. 反思评估 ==========
+    interaction = {
+        "user_input": user_input,
+        "response": result["response"],
+        "tool_calls": tool_results,
+        "plan": plan
+    }
+    evaluation = await reflector.evaluate(interaction)
+    
+    print(f"反思评估: {evaluation}")
+    # 输出示例:
+    # {
+    #     "effectiveness": 0.85,
+    #     "suggestions": ["可以询问用户具体的压力来源"],
+    #     "follow_up": {"delay_hours": 24, "message": "昨晚睡得怎么样？"}
+    # }
+    
+    return result
+
+# 使用示例
+import asyncio
+asyncio.run(handle_user_message(
+    user_input="唉，又失眠了，感觉压力好大。",
+    user_id="user_123"
+))
+```
+
+### 4.4 工具函数详解
+
+#### 1. get_user_mood_trend - 情绪趋势分析
+
+```python
+from backend.agent.tools.agent_tools import get_user_mood_trend
+
+result = get_user_mood_trend("user_123", days=7)
+# 返回: {
+#     "trend": [...],           # 每日情绪数据
+#     "average_intensity": 6.5, # 平均强度
+#     "trend_direction": "improving",  # 趋势方向
+#     "needs_intervention": False,     # 是否需要干预
+#     "summary": "..."         # 趋势摘要
+# }
+```
+
+#### 2. play_meditation_audio - 冥想音频播放
+
+```python
+from backend.agent.tools.agent_tools import play_meditation_audio
+
+result = play_meditation_audio("anxiety", user_id="user_123")
+# genre可选: "sleep", "anxiety", "relaxation", "breathing"
+```
+
+#### 3. set_daily_reminder - 每日提醒
+
+```python
+from backend.agent.tools.agent_tools import set_daily_reminder
+
+result = set_daily_reminder(
+    time="21:30",
+    message="今晚早点放松哦，记得做睡前冥想",
+    user_id="user_123"
+)
+```
+
+#### 4. search_mental_health_resources - 心理资源搜索
+
+```python
+from backend.agent.tools.agent_tools import search_mental_health_resources
+
+result = search_mental_health_resources("焦虑", resource_type="article")
+# resource_type可选: "article", "video", "exercise"
+```
+
+#### 5. send_follow_up_message - 回访消息
+
+```python
+from backend.agent.tools.agent_tools import send_follow_up_message
+
+result = send_follow_up_message(
+    user_id="user_123",
+    days_ago=1,
+    custom_message="你好，距离我们上次聊天已经过去1天了。最近感觉怎么样？"
+)
+```
+
+### 4.5 场景扩展：连续失眠的主动干预
+
+```python
+from backend.agent.tools.agent_tools import (
+    get_user_mood_trend,
+    play_meditation_audio,
+    set_daily_reminder,
+    send_follow_up_message
+)
+
+async def proactive_sleep_intervention(user_id: str):
+    """主动干预：检测到用户连续失眠时触发"""
+    
+    # 1. 检查情绪趋势
+    mood_trend = get_user_mood_trend(user_id, days=7)
+    print(f"情绪趋势: {mood_trend['trend_direction']}")
+    print(f"是否需要干预: {mood_trend['needs_intervention']}")
+    
+    if mood_trend["needs_intervention"]:
+        # 2. 播放助眠音频
+        audio_result = play_meditation_audio("sleep", user_id)
+        print(f"已播放助眠音频: {audio_result['audio_name']}")
+        
+        # 3. 设置每日提醒
+        reminder_result = set_daily_reminder(
+            time="21:30",
+            message="今晚早点放松哦，记得做睡前冥想 🌙",
+            user_id=user_id
+        )
+        print(f"已设置提醒: {reminder_result['reminder_id']}")
+        
+        # 4. 安排24小时后回访
+        follow_up = send_follow_up_message(
+            user_id=user_id,
+            days_ago=1,
+            custom_message="昨晚睡得怎么样？需要聊聊吗？"
+        )
+        print(f"已安排回访: {follow_up['scheduled_time']}")
+        
+        return {
+            "intervention_triggered": True,
+            "actions": ["audio", "reminder", "follow_up"]
+        }
+    
+    return {"intervention_triggered": False}
+```
+
+### 4.6 效果对比
+
+| 对比项 | 传统机器人 | Agent化"心语" |
+|--------|-----------|---------------|
+| 响应方式 | 回复安慰语句 → 交互结束 | 启动服务闭环 → 建立长期支持关系 |
+| 主动性 | 被动等待输入 | 主动回访、提醒 |
+| 个性化 | 固定模板回复 | 基于记忆的个性化服务 |
+| 持续性 | 单次对话 | 长期陪伴与跟踪 |
+
+---
+
+## 五、Agent与RAG、Prompt的协同
+
+Agent不是孤立的技术，而是整个大模型应用架构的"指挥中枢"。
+
+### 5.1 Agent + RAG：让主动服务"言之有据"
+
+Agent 做决策前，会先让 RAG 找依据。当Agent决定提供心理建议时，不能仅凭模型"想象"，而应基于权威知识。
+
+**协同流程**:
+
+```
+用户提及"焦虑"
+    ↓
+Agent判断：需提供缓解方法
+    ↓
+调用RAG系统，检索《认知行为疗法手册》相关内容
+    ↓
+结合检索结果生成建议，确保科学性
+```
+
+**优势**: 避免知识幻觉，提升服务可信度。
+
+### 5.2 Agent + Prompt工程：定义"人格化决策逻辑"
+
+Agent的规划与反思行为，依然依赖高质量Prompt设计。
+
+**关键Prompt设计原则**:
+
+| 原则 | 示例 |
+|------|------|
+| 角色强化 | "你是一位富有同理心的心理陪伴专家" |
+| 决策框架 | "请按评估→规划→行动→反思的流程思考" |
+| 安全约束 | "不得建议药物或替代专业治疗" |
+
+**示例Prompt**:
+```
+请以温和但坚定的方式引导用户关注自身情绪，避免过度承诺或引发依赖。
+```
+
+### 5.3 Agent + 记忆系统：实现"越用越懂你"
+
+长期记忆让Agent具备"成长性"：
+
+```
+第一次对话：用户说"喜欢猫" → 记录偏好
+    ↓
+后续对话：用户情绪低落
+    ↓
+Agent主动说："要不要看看小猫视频？上次你说它们让你开心。"
+```
+
+这种"细节关怀"，正是情感连接的核心。
+
+### 5.4 三者协同架构图
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Agent Core                              │
+│                    (指挥中枢)                                 │
+└─────────────────────────────────────────────────────────────┘
+         │              │              │
+         ▼              ▼              ▼
+   ┌──────────┐   ┌──────────┐   ┌──────────┐
+   │  Prompt  │   │   RAG    │   │  Memory  │
+   │  工程    │   │  检索    │   │  系统    │
+   │          │   │          │   │          │
+   │ 定义人格 │   │ 提供知识 │   │ 记住用户 │
+   │ 约束行为 │   │ 避免幻觉 │   │ 个性服务 │
+   └──────────┘   └──────────┘   └──────────┘
+```
+
+---
+
+## 六、扩展指南
+
+### 6.1 添加新工具
+
+```python
+# 1. 在 tool_caller.py 中实现工具函数
+async def _my_tool_impl(self, param1: str, param2: int) -> Dict:
+    """工具实现"""
+    return {"result": "success"}
+
+# 2. 注册工具
+self.registry.register(
+    name="my_tool",
+    description="工具描述",
+    function=self._my_tool_impl,
+    parameters={
+        "param1": {"type": "string", "required": True},
+        "param2": {"type": "int", "required": False, "default": 0}
+    },
+    category="custom"
+)
+```
+
+### 6.2 自定义规划策略
+
+在 `planner.py` 的 `_select_strategy()` 方法中添加自定义逻辑。
+
+### 6.3 扩展记忆类型
+
+在 `memory_hub.py` 的 `_infer_memory_type()` 方法中添加新的记忆类型判断。
+
+### 6.4 意图识别API
+
+```python
+import requests
+
+# 分析意图
+response = requests.post(
+    "http://localhost:8000/intent/analyze",
+    json={
+        "text": "我最近压力很大，睡不好觉",
+        "user_id": "user_123"
+    }
+)
+result = response.json()
+print(f"意图: {result['data']['intent']['intent']}")
+print(f"置信度: {result['data']['intent']['confidence']}")
+```
+
+---
+
+## 七、相关文件索引
+
+| 文件 | 说明 |
+|------|------|
+| `backend/agent/agent_core.py` | Agent核心控制器 |
+| `backend/agent/memory_hub.py` | 记忆中枢 |
+| `backend/agent/planner.py` | 任务规划模块 |
+| `backend/agent/tool_caller.py` | 工具调用模块 |
+| `backend/agent/reflector.py` | 反思优化模块 |
+| `backend/agent/tools/agent_tools.py` | Agent工具函数 |
+| `backend/modules/agent/protocol/mcp.py` | MCP协议实现 |
+| `backend/modules/intent/` | 意图识别模块 |
+
+---
+
+---
+
+## 八、上下文工程最佳实践
+
+### 8.1 什么是上下文工程？
+
+"提示词工程"（Prompt Engineering）已经不是新概念，但真正的重点在于"工程"二字。在实际生产中，提示词是在系统运行过程中**动态获取和拼接**的，以适应复杂场景。
+
+"上下文工程"（Context Engineering）更准确地描述了这一过程，它关注：
+- 系统指令的动态组装
+- 对话History的组装
+- 长期Memory的存储和读取
+- 工具调用结果的整合
+
+### 8.2 上下文组装策略
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    上下文组装流程                        │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  ┌─────────────┐                                        │
+│  │ System      │ ← 角色定义 + 行为约束 + 安全规则       │
+│  │ Instruction │                                        │
+│  └─────────────┘                                        │
+│         ↓                                               │
+│  ┌─────────────┐                                        │
+│  │ User        │ ← 用户画像 + 偏好设置 + 历史摘要       │
+│  │ Context     │                                        │
+│  └─────────────┘                                        │
+│         ↓                                               │
+│  ┌─────────────┐                                        │
+│  │ Memory      │ ← 相关记忆检索 + 重要事件 + 情感标签   │
+│  │ Injection   │                                        │
+│  └─────────────┘                                        │
+│         ↓                                               │
+│  ┌─────────────┐                                        │
+│  │ Dialogue    │ ← 最近N轮对话 + 早期对话摘要           │
+│  │ History     │                                        │
+│  └─────────────┘                                        │
+│         ↓                                               │
+│  ┌─────────────┐                                        │
+│  │ Current     │ ← 当前用户输入 + 意图分析结果          │
+│  │ Query       │                                        │
+│  └─────────────┘                                        │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 8.3 History管理策略
+
+```python
+class HistoryManager:
+    """对话历史管理器"""
+    
+    def __init__(self, max_recent_turns=5, max_tokens=2000):
+        self.max_recent_turns = max_recent_turns
+        self.max_tokens = max_tokens
+    
+    def build_history(self, full_history: List[Dict]) -> List[Dict]:
+        """构建优化后的历史上下文"""
+        if len(full_history) <= self.max_recent_turns:
+            return full_history
+        
+        # 早期对话压缩为摘要
+        early_history = full_history[:-self.max_recent_turns]
+        summary = self._summarize(early_history)
+        
+        # 保留最近N轮完整对话
+        recent_history = full_history[-self.max_recent_turns:]
+        
+        return [{"role": "system", "content": f"早期对话摘要：{summary}"}] + recent_history
+    
+    def _summarize(self, history: List[Dict]) -> str:
+        """压缩早期对话为摘要"""
+        # 提取关键信息：用户关心的问题、达成的共识、未解决的事项
+        pass
+```
+
+### 8.4 动态上下文注入
+
+```python
+async def assemble_context(user_input: str, user_id: str) -> Dict:
+    """动态组装上下文"""
+    
+    # 1. 获取用户画像
+    user_profile = await memory_hub.get_user_profile(user_id)
+    
+    # 2. 检索相关记忆（基于当前输入）
+    relevant_memories = await memory_hub.retrieve(
+        query=user_input,
+        user_id=user_id,
+        top_k=3
+    )
+    
+    # 3. 获取对话历史（压缩后）
+    history = await history_manager.build_history(
+        await get_conversation_history(user_id)
+    )
+    
+    # 4. 意图分析
+    intent = await intent_classifier.classify(user_input)
+    
+    # 5. 根据意图动态选择注入内容
+    context_injection = await select_context_by_intent(intent, user_profile)
+    
+    return {
+        "user_profile": user_profile,
+        "memories": relevant_memories,
+        "history": history,
+        "intent": intent,
+        "injection": context_injection
+    }
+```
+
+---
+
+**版本**: v2.0.0  
+**最后更新**: 2025-11-27  
+**更新内容**: 新增Agent优化十大实战经验、上下文工程最佳实践章节
+
