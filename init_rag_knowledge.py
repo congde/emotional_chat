@@ -23,7 +23,11 @@ def main():
     try:
         # 1. 创建知识库管理器
         print("→ 步骤 1/3: 初始化知识库管理器...")
-        kb_manager = KnowledgeBaseManager()
+        kb_manager = KnowledgeBaseManager(
+            chunking_strategy="structure",
+            chunk_size=800,
+            chunk_overlap=150
+        )
         print("✓ 知识库管理器初始化成功\n")
         
         # 2. 加载示例知识

@@ -17,6 +17,7 @@ from langchain_core.prompts import PromptTemplate
 from ..core.knowledge_base import KnowledgeBaseManager
 from backend.logging_config import get_logger
 from backend.modules.llm.harness import try_create_chat_openai
+from config import Config
 
 logger = get_logger(__name__)
 
@@ -203,8 +204,48 @@ class RAGService:
         try:
             logger.info(f"结合上下文回答问题: {question[:50]}...")
             
-            # 先检索相关知识
-            knowledge_docs = self.kb_manager.search_similar(question, k=search_k)
+            # 第一步：扩大召回，使用 reranker（如果相关库存在）进行重排
+            knowledge_docs = []
+            try:
+                from langchain.retrievers import ContextualCompressionRetriever
+                from langchain.retrievers.document_compressors import CrossEncoderReranker
+                from langchain_community.cross_encoders import HuggingFaceCrossEncoder
+                
+                # 通过配置控制是否启用 Reranker 以及模型名称
+                reranker_enabled = getattr(Config, "ENABLE_RERANKER", True)
+                if not reranker_enabled:
+                    raise RuntimeError("Reranker disabled by configuration")
+                reranker_model_name = getattr(
+                    Config, "RERANKER_MODEL", "BAAI/bge-reranker-base"
+                )
+                
+                # 懒加载并缓存 HuggingFaceCrossEncoder 模型（实例级缓存）
+                if not hasattr(self, "_reranker_model") or self._reranker_model is None:
+                    logger.info(f"初始化 Reranker 模型: {reranker_model_name}")
+                    self._reranker_model = HuggingFaceCrossEncoder(
+                        model_name=reranker_model_name
+                    )
+                
+                # 获取基础检索器（Top 20）
+                base_retriever = self.kb_manager.vectorstore.as_retriever(
+                    search_kwargs={"k": 20}
+                )
+                
+                # 使用缓存的模型构建轻量级重排器（根据当前 search_k 调整 top_n）
+                compressor = CrossEncoderReranker(
+                    model=self._reranker_model,
+                    top_n=search_k,
+                )
+                compression_retriever = ContextualCompressionRetriever(
+                    base_compressor=compressor,
+                    base_retriever=base_retriever,
+                )
+                
+                knowledge_docs = compression_retriever.invoke(question)
+                logger.info(f"已使用 Reranker 完成重排序，获取 {len(knowledge_docs)} 条结果")
+            except Exception as e:
+                logger.warning(f"Reranker 尚未配置或初始化失败，降级为基础检索: {e}")
+                knowledge_docs = self.kb_manager.search_similar(question, k=search_k)
             
             # 构建增强的上下文
             knowledge_context = "\n\n".join([
@@ -348,7 +389,30 @@ class RAGIntegrationService:
         Returns:
             是否使用RAG
         """
-        # 定义触发RAG的关键词
+        # 检查知识库是否可用
+        if not self.rag_service.is_knowledge_available():
+            return False
+            
+        # 优先使用大模型进行意图分类判断
+        try:
+            prompt = f"""
+            判断以下用户的求助是否需要专业的心理学知识（如CBT/正念/临床建议/放松技巧等）来回答。
+            用户输入: "{message}"
+            当前用户情绪: "{emotion or '未知'}"
+            如果需要引入心理学知识提供建议，请回复 "True"；如果只是普通的闲聊或寒暄，请回复 "False"。
+            仅回复 "True" 或 "False"。
+            """
+            
+            # 使用 LLM 进行分类 (基于现有 llm_core 或直接调用 self.rag_service.llm)
+            decision = self.rag_service.llm.invoke(prompt).content.strip()
+            is_rag_needed = "true" in decision.lower()
+            logger.info(f"LLM 意图判断 RAG 分类: {decision} -> {is_rag_needed}")
+            if is_rag_needed:
+                return True
+        except Exception as e:
+            logger.warning(f"LLM 意图分类判断失败，回退至关键词检测: {e}")
+        
+        # Fallback 到原有的关键词方法
         rag_triggers = [
             "怎么办", "如何", "方法", "建议", "技巧", "练习",
             "失眠", "焦虑", "抑郁", "压力", "紧张", "担心", "害怕",
@@ -357,25 +421,18 @@ class RAGIntegrationService:
             "睡眠", "运动", "饮食", "关系", "工作", "学习"
         ]
         
-        # 需要专业建议的情绪
         professional_emotions = [
             "焦虑", "抑郁", "压力大", "紧张", "恐惧", "悲伤", "愤怒"
         ]
         
-        # 检查消息中是否包含触发词
         message_lower = message.lower()
         has_trigger = any(trigger in message_lower for trigger in rag_triggers)
-        
-        # 检查情绪是否需要专业建议
         needs_professional = emotion and any(prof in emotion for prof in professional_emotions)
         
-        # 检查知识库是否可用
-        rag_available = self.rag_service.is_knowledge_available()
-        
-        should_use = (has_trigger or needs_professional) and rag_available
+        should_use = has_trigger or needs_professional
         
         if should_use:
-            logger.info(f"触发RAG: trigger={has_trigger}, emotion={needs_professional}")
+            logger.info(f"触发RAG(关键词回退): trigger={has_trigger}, emotion={needs_professional}")
         
         return should_use
     

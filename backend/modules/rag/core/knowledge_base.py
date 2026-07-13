@@ -45,9 +45,25 @@ class KnowledgeBaseManager:
             chunk_overlap: 块重叠（字符数）
         """
         self.persist_directory = persist_directory
-        # 暂时禁用嵌入功能，使用简单的文本匹配
-        self.embeddings = None
-        logger.info("暂时禁用嵌入功能，使用简单文本匹配")
+        
+        # 启用真实的 Embedding 模型 (使用配置的 API Key)
+        api_key = Config.LLM_API_KEY
+        if api_key:
+            try:
+                self.embeddings = OpenAIEmbeddings(
+                    openai_api_key=api_key,
+                    openai_api_base=Config.LLM_BASE_URL,
+                    model="text-embedding-v1", # 使用通义千问支持的文本向量模型名称
+                    check_embedding_ctx_length=False  # 关闭通义不兼容的长度检查
+                )
+                logger.info("已成功启用真实的向量嵌入模型(OpenAI Compatible Embeddings)")
+            except Exception as e:
+                logger.error(f"初始化 Embeddings 失败，回退为None: {e}")
+                self.embeddings = None
+        else:
+            self.embeddings = None
+            logger.warning("未配置 LLM_API_KEY，降级为文本匹配模式")
+            
         self.vectorstore: Optional[Chroma] = None
         self.chroma_client_settings = ChromaSettings(anonymized_telemetry=False)
         
@@ -260,8 +276,13 @@ class KnowledgeBaseManager:
                 logger.info("文本存储创建完成")
                 return None
             else:
+                from langchain_community.vectorstores.utils import filter_complex_metadata
+                
+                # 过滤掉 Chroma 不支持的复杂 metadata (比如列表/字典)
+                filtered_chunks = filter_complex_metadata(chunks)
+                
                 vectorstore = Chroma.from_documents(
-                    documents=chunks,
+                    documents=filtered_chunks,
                     embedding=self.embeddings,
                     persist_directory=self.persist_directory,
                     client_settings=self.chroma_client_settings
@@ -330,13 +351,14 @@ class KnowledgeBaseManager:
             logger.error(f"添加文档失败: {e}")
             raise
     
-    def search_similar(self, query: str, k: int = 3) -> List[Document]:
+    def search_similar(self, query: str, k: int = 3, filter: Optional[Dict[str, Any]] = None) -> List[Document]:
         """
         相似度搜索
         
         Args:
             query: 查询文本
             k: 返回结果数量
+            filter: Chroma 元数据过滤器
             
         Returns:
             相似文档列表
@@ -349,6 +371,16 @@ class KnowledgeBaseManager:
                 query_lower = query.lower()
                 results = []
                 for doc in self.text_storage:
+                    # 简易 filter 匹配
+                    if filter:
+                        match = True
+                        for k_f, v_f in filter.items():
+                            if doc.metadata.get(k_f) != v_f:
+                                match = False
+                                break
+                        if not match:
+                            continue
+
                     if query_lower in doc.page_content.lower():
                         results.append(doc)
                         if len(results) >= k:
@@ -361,8 +393,8 @@ class KnowledgeBaseManager:
                 logger.info("向量存储未加载，尝试加载...")
                 self.load_vectorstore()
             
-            logger.info(f"执行相似度搜索: {query[:50]}...")
-            results = self.vectorstore.similarity_search(query, k=k)
+            logger.info(f"执行相似度搜索: {query[:50]}... filter: {filter}")
+            results = self.vectorstore.similarity_search(query, k=k, filter=filter)
             logger.info(f"搜索完成，返回 {len(results)} 个结果")
             return results
         except Exception as e:
