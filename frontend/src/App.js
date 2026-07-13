@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import styled from 'styled-components';
+import { History, Plus, Settings, Zap } from 'lucide-react';
 import { AppContainer } from './styles';
 import Sidebar from './components/Sidebar';
 import ChatContainer from './components/ChatContainer';
@@ -6,8 +8,39 @@ import FeedbackModal from './components/FeedbackModal';
 import PersonalizationPanel from './components/PersonalizationPanel';
 import HistoryManagementModal from './components/HistoryManagementModal';
 import SkillsPanel from './components/SkillsPanel';
+import ContextRail from './components/ContextRail';
 import { useTheme } from './contexts/ThemeContext';
 import { useChat, useFileUpload, useKeyboard, useSession, useFeedback, useURLDetection } from './hooks';
+
+const MobileBar = styled.nav`
+  display: none;
+  @media (max-width: 840px) {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 50;
+    height: 52px;
+    padding: 7px 10px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border-default);
+  }
+`;
+
+const MobileAction = styled.button`
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  &:hover { background: var(--bg-hover); color: var(--text-primary); }
+`;
 
 function App() {
   // 用户ID管理
@@ -26,10 +59,16 @@ function App() {
   const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
   const [showHistoryManagement, setShowHistoryManagement] = useState(false);
   const [showSkillsPanel, setShowSkillsPanel] = useState(false);
+  const [skillsCategory, setSkillsCategory] = useState('all');
   const [deepThinkActive, setDeepThinkActive] = useState(false);
   
   // 主题管理
   const { theme, toggleTheme } = useTheme();
+
+  const openSkills = useCallback((category = 'all') => {
+    setSkillsCategory(category);
+    setShowSkillsPanel(true);
+  }, []);
 
   // Refs
   const inputRef = useRef(null);
@@ -47,7 +86,14 @@ function App() {
     startNewChat: startNewChatHook
   } = useSession(currentUserId);
 
-  const chatHook = useChat(currentUserId);
+  const handleConversationSaved = useCallback((savedSessionId) => {
+    setSessionIdFromHook(savedSessionId);
+    loadHistorySessions();
+  }, [setSessionIdFromHook, loadHistorySessions]);
+
+  const chatHook = useChat(currentUserId, {
+    onConversationSaved: handleConversationSaved
+  });
   const {
     messages,
     setMessages,
@@ -58,6 +104,7 @@ function App() {
     setSuggestions,
     messagesEndRef,
     scrollToBottom,
+    stopGeneration,
     sendMessage: sendMessageHook
   } = chatHook;
 
@@ -99,13 +146,12 @@ function App() {
   // 发送消息
   const sendMessage = useCallback(async () => {
     await sendMessageHook(inputValue, attachments, setInputValue, setAttachments, setDetectedURLs, deepThinkActive);
-    loadHistorySessions(); // 刷新历史会话列表
     // Reset textarea height after sending
     if (inputRef.current) {
       inputRef.current.style.height = 'auto';
     }
     setTimeout(() => inputRef.current?.focus(), 100);
-  }, [inputValue, attachments, sendMessageHook, setInputValue, setAttachments, setDetectedURLs, loadHistorySessions, deepThinkActive]);
+  }, [inputValue, attachments, sendMessageHook, setInputValue, setAttachments, setDetectedURLs, deepThinkActive]);
 
   // 新建对话
   const startNewChat = useCallback(() => {
@@ -120,6 +166,8 @@ function App() {
 
   // 删除对话
   const handleDeleteSession = useCallback((targetSessionId, event) => {
+    event?.stopPropagation();
+    event?.preventDefault();
     deleteConversationHook(targetSessionId, sessionId, setMessages, setSessionId, setSuggestions);
   }, [deleteConversationHook, sessionId, setSessionId, setMessages, setSuggestions]);
 
@@ -180,6 +228,13 @@ function App() {
 
   return (
     <AppContainer>
+      <MobileBar aria-label="移动导航">
+        <MobileAction onClick={startNewChat} aria-label="新对话"><Plus size={18} /></MobileAction>
+        <MobileAction onClick={() => setShowHistoryManagement(true)} aria-label="历史对话"><History size={18} /></MobileAction>
+        <MobileAction onClick={() => openSkills('all')} aria-label="技能中心"><Zap size={18} /></MobileAction>
+        <MobileAction onClick={() => setShowPersonalizationPanel(true)} aria-label="个性化"><Settings size={18} /></MobileAction>
+        <span style={{ marginLeft: 'auto', fontWeight: 650, fontSize: 14, paddingRight: 8 }}>心语</span>
+      </MobileBar>
       <Sidebar
         currentUserId={currentUserId}
         sessionId={sessionId}
@@ -188,7 +243,7 @@ function App() {
         onLoadSession={handleLoadSession}
         onDeleteSession={handleDeleteSession}
         onOpenPersonalization={() => setShowPersonalizationPanel(true)}
-        onOpenSkills={() => setShowSkillsPanel(true)}
+        onOpenSkills={() => openSkills('all')}
         onToggleTheme={toggleTheme}
         theme={theme}
         onOpenHistoryManagement={() => setShowHistoryManagement(true)}
@@ -210,13 +265,29 @@ function App() {
         onKeyPress={handleKeyPress}
         onTabNavigation={handleTabNavigation}
         onSendMessage={sendMessage}
+        onStopGeneration={stopGeneration}
         onFileUpload={handleFileUpload}
         onRemoveAttachment={removeAttachment}
         onPasteFiles={addFiles}
         onSuggestionClick={handleSuggestionClick}
+        onVoiceTranscript={(transcript) => {
+          setInputValue((current) => `${current}${current ? ' ' : ''}${transcript}`);
+          inputRef.current?.focus();
+        }}
         onOpenFeedbackModal={openFeedbackModal}
         deepThinkActive={deepThinkActive}
         onDeepThinkChange={setDeepThinkActive}
+      />
+
+      <ContextRail
+        currentUserId={currentUserId}
+        sessionId={sessionId}
+        messages={messages}
+        suggestions={suggestions}
+        attachments={attachments}
+        onSuggestionClick={handleSuggestionClick}
+        onOpenEmotionTools={() => openSkills('emotion')}
+        onAddAttachment={() => fileInputRef.current?.click()}
       />
 
       <PersonalizationPanel
@@ -247,9 +318,10 @@ function App() {
 
       <SkillsPanel
         isOpen={showSkillsPanel}
+        initialCategory={skillsCategory}
         onClose={() => setShowSkillsPanel(false)}
         onSelectSkill={(skill) => {
-          const skillPrompt = `/${skill.name}`;
+          const skillPrompt = `请使用“${skill.description || skill.name}”能力帮助我：`;
           setInputValue(skillPrompt);
           inputRef.current?.focus();
         }}

@@ -2,11 +2,11 @@ import styled from 'styled-components';
 import { motion } from 'framer-motion';
 
 export const SidebarHeader = styled.div`
-  padding: 20px 20px 16px;
+  padding: 18px 16px 12px;
   display: flex;
   align-items: center;
   gap: 12px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 0;
   transition: border-color 0.3s ease;
 
   body[data-theme='dark'] & {
@@ -15,22 +15,22 @@ export const SidebarHeader = styled.div`
 `;
 
 export const UserAvatar = styled.div`
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: #202327;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-size: 16px;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  box-shadow: none;
 `;
 
 export const UserName = styled.div`
   font-weight: 700;
-  color: #1a1a2e;
-  font-size: 17px;
+  color: var(--text-primary);
+  font-size: 16px;
   letter-spacing: -0.3px;
   transition: color 0.3s ease;
 
@@ -40,12 +40,12 @@ export const UserName = styled.div`
 `;
 
 export const NewChatButton = styled(motion.button)`
-  margin: 16px 16px 8px;
-  background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
-  color: #ffffff;
-  border: none;
-  padding: 11px 16px;
-  border-radius: 12px;
+  margin: 6px 12px 8px;
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  padding: 10px 12px;
+  border-radius: 10px;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
@@ -53,21 +53,21 @@ export const NewChatButton = styled(motion.button)`
   align-items: center;
   gap: 8px;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   
   &:hover {
-    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
-    transform: translateY(-1px);
+    background: var(--bg-hover);
+    box-shadow: none;
   }
 `;
 
 export const SettingsButton = styled(motion.button)`
-  margin: 0 16px 4px;
+  margin: 0 12px 2px;
   background: transparent;
   border: none;
-  color: #64748b;
-  padding: 10px 12px;
-  border-radius: 10px;
+  color: var(--text-secondary);
+  padding: 9px 10px;
+  border-radius: 9px;
   font-weight: 500;
   font-size: 14px;
   cursor: pointer;
@@ -77,8 +77,8 @@ export const SettingsButton = styled(motion.button)`
   transition: all 0.2s ease;
   
   &:hover {
-    background: rgba(99, 102, 241, 0.06);
-    color: #6366f1;
+    background: var(--bg-hover);
+    color: var(--text-primary);
   }
 
   body[data-theme='dark'] & {
@@ -111,7 +111,7 @@ export const HistoryTitle = styled.div`
   align-items: center;
   gap: 8px;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--text-tertiary);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.8px;
@@ -134,15 +134,15 @@ export const HistoryItem = styled(motion.div)`
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s ease;
-  background: ${props => props.$active ? 'rgba(99, 102, 241, 0.08)' : 'transparent'};
-  border-left: 3px solid ${props => props.$active ? '#6366f1' : 'transparent'};
+  background: ${props => props.$active ? 'var(--bg-hover)' : 'transparent'};
+  border-left: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   
   &:hover {
-    background: ${props => props.$active ? 'rgba(99, 102, 241, 0.08)' : 'rgba(0, 0, 0, 0.03)'};
+    background: var(--bg-hover);
   }
 
   body[data-theme='dark'] & {

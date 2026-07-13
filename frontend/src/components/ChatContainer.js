@@ -1,8 +1,11 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { User, Bot, Loader2, Paperclip, Send, Link, ExternalLink, X, Sparkles, Mic, Heart, MessageCircle, Brain, Smile } from 'lucide-react';
+import { User, Bot, Loader2, Paperclip, Send, Square, Link, ExternalLink, X, Sparkles, Mic, Heart, MessageCircle, Brain, Smile } from 'lucide-react';
 import {
   ChatContainer as ChatContainerStyled,
+  ChatHeader,
+  ChatTitle,
+  ChatSubtitle,
   MessagesContainer,
   MessageBubble,
   Avatar,
@@ -14,7 +17,6 @@ import {
   MessageTimestamp,
   Suggestions,
   SuggestionChip,
-  WelcomeMessage,
   LoadingIndicator,
   InputContainer
 } from '../styles';
@@ -36,12 +38,9 @@ import {
   URLText,
   URLButton,
   FeatureButton,
-  QuickActions,
-  QuickActionButton
 } from '../styles/input';
 import { emotionLabels } from '../constants/emotions';
 import { formatTimestamp, formatFileSize } from '../utils/formatters';
-import TypewriterComponent from './TypewriterText';
 import MarkdownRenderer from './MarkdownRenderer';
 import { getFileIcon } from '../utils/fileUtils';
 import styled from 'styled-components';
@@ -60,22 +59,22 @@ const WelcomeContainer = styled.div`
 `;
 
 const WelcomeAvatar = styled.div`
-  width: 64px;
-  height: 64px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, #6366f1 0%, #a78bfa 100%);
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: var(--bg-subtle);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--text-secondary);
   margin-bottom: 20px;
-  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.25);
+  box-shadow: none;
 `;
 
 const WelcomeTitle = styled.h2`
   font-size: 28px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--text-primary);
   margin-bottom: 8px;
   letter-spacing: -0.5px;
   text-align: center;
@@ -87,7 +86,7 @@ const WelcomeTitle = styled.h2`
 
 const WelcomeSubtitle = styled.p`
   font-size: 15px;
-  color: #94a3b8;
+  color: var(--text-secondary);
   margin-bottom: 36px;
   text-align: center;
   line-height: 1.6;
@@ -113,18 +112,17 @@ const QuickStartCard = styled.button`
   align-items: flex-start;
   gap: 12px;
   padding: 16px;
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
   cursor: pointer;
   text-align: left;
   transition: all 0.2s ease;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: none;
   
   &:hover {
-    border-color: rgba(99, 102, 241, 0.2);
-    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.08);
-    transform: translateY(-2px);
+    border-color: var(--text-tertiary);
+    background: var(--bg-subtle);
   }
   
   body[data-theme='dark'] & {
@@ -258,15 +256,58 @@ const ChatContainer = ({
   onKeyPress,
   onTabNavigation,
   onSendMessage,
+  onStopGeneration,
   onFileUpload,
   onRemoveAttachment,
   onPasteFiles,
   onSuggestionClick,
+  onVoiceTranscript,
   onOpenFeedbackModal,
   deepThinkActive,
   onDeepThinkChange
 }) => {
   const isComposingRef = useRef(false);
+  const recognitionRef = useRef(null);
+  const [isListening, setIsListening] = useState(false);
+
+  const toggleVoiceInput = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) {
+      window.alert('当前浏览器不支持语音输入，请使用最新版 Chrome 或 Edge。');
+      return;
+    }
+
+    const recognition = new Recognition();
+    recognition.lang = 'zh-CN';
+    recognition.interimResults = false;
+    recognition.continuous = false;
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+    };
+    recognition.onerror = (event) => {
+      setIsListening(false);
+      recognitionRef.current = null;
+      if (event.error !== 'aborted') {
+        window.alert(`语音识别失败：${event.error || '未知错误'}`);
+      }
+    };
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map((result) => result[0]?.transcript || '')
+        .join('')
+        .trim();
+      if (transcript) onVoiceTranscript?.(transcript);
+    };
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
 
   // 处理粘贴事件 - 支持粘贴图片
   const handlePaste = (e) => {
@@ -319,6 +360,13 @@ const ChatContainer = ({
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
+      <ChatHeader>
+        <div>
+          <ChatTitle>心语对话</ChatTitle>
+          <ChatSubtitle>安全、私密的情感陪伴空间</ChatSubtitle>
+        </div>
+        <div style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>重要决定请谨慎核实</div>
+      </ChatHeader>
       <MessagesContainer>
         <AnimatePresence initial={false}>
           {messages.length === 0 ? (
@@ -326,9 +374,9 @@ const ChatContainer = ({
               <WelcomeAvatar>
                 <Heart size={28} />
               </WelcomeAvatar>
-              <WelcomeTitle>{getGreeting()}，我是心语</WelcomeTitle>
+              <WelcomeTitle>今天想聊些什么？</WelcomeTitle>
               <WelcomeSubtitle>
-                你的AI情感支持伙伴，随时倾听你的心声
+                {getGreeting()}。我会认真倾听，也会记住对你重要的事情。
               </WelcomeSubtitle>
               <QuickStartGrid>
                 {quickStartItems.map((item, index) => (
@@ -547,21 +595,24 @@ const ChatContainer = ({
               </LeftActions>
               <RightActions>
                 <AttachmentButton
+                  onClick={toggleVoiceInput}
+                  $active={isListening}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  title="语音输入"
+                  title={isListening ? '停止语音输入' : '语音输入'}
+                  aria-label={isListening ? '停止语音输入' : '开始语音输入'}
                 >
                   <Mic size={18} />
                 </AttachmentButton>
                 <SendButton
                   ref={sendButtonRef}
-                  onClick={onSendMessage}
-                  disabled={(!inputValue.trim() && attachments.length === 0) || isLoading}
+                  onClick={isLoading ? onStopGeneration : onSendMessage}
+                  disabled={!isLoading && !inputValue.trim() && attachments.length === 0}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  title="发送消息"
+                  title={isLoading ? '停止生成' : '发送消息'}
                 >
-                  <Send size={16} />
+                  {isLoading ? <Square size={14} fill="currentColor" /> : <Send size={16} />}
                 </SendButton>
               </RightActions>
             </InputActions>

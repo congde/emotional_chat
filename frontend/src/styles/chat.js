@@ -4,10 +4,13 @@ import { emotionColors } from '../constants/emotions';
 
 // 顶部对话标题栏
 export const ChatHeader = styled.div`
-  padding: 16px 40px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(12px);
+  min-height: 58px;
+  padding: 10px 22px;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-panel);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   transition: background 0.3s ease, border-color 0.3s ease;
   
   body[data-theme='dark'] & {
@@ -23,7 +26,7 @@ export const ChatHeader = styled.div`
 export const ChatTitle = styled.h2`
   font-size: 16px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--text-primary);
   margin: 0 0 4px 0;
   letter-spacing: -0.3px;
   transition: color 0.3s ease;
@@ -35,7 +38,7 @@ export const ChatTitle = styled.h2`
 
 export const ChatSubtitle = styled.p`
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--text-secondary);
   margin: 0;
   transition: color 0.3s ease;
 
@@ -61,31 +64,28 @@ export const MessageBubble = styled(motion.div)`
   display: flex;
   align-items: flex-start;
   gap: 14px;
-  max-width: 820px;
+  max-width: 760px;
   margin: 0 auto;
   width: 100%;
   ${props => props.isUser ? 'flex-direction: row-reverse;' : ''}
 `;
 
 export const Avatar = styled.div`
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: ${props => props.isUser
-    ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
-    : 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)'
+    ? '#202327'
+    : 'var(--bg-subtle)'
   };
-  color: ${props => props.isUser ? 'white' : '#64748b'};
+  color: ${props => props.isUser ? 'white' : 'var(--text-secondary)'};
   flex-shrink: 0;
   font-size: 15px;
   transition: background 0.3s ease, color 0.3s ease;
-  box-shadow: ${props => props.isUser
-    ? '0 2px 8px rgba(99, 102, 241, 0.25)'
-    : '0 1px 4px rgba(0, 0, 0, 0.06)'
-  };
+  box-shadow: none;
 
   body[data-theme='dark'] & {
     background: ${props => props.isUser
@@ -103,21 +103,18 @@ export const MessageWrapper = styled.div`
 `;
 
 export const MessageContent = styled.div`
-  padding: 14px 18px;
-  border-radius: ${props => props.isUser ? '18px 18px 6px 18px' : '18px 18px 18px 6px'};
+  padding: ${props => props.isUser ? '11px 14px' : '2px 0'};
+  border-radius: 14px;
   background: ${props => props.isUser
-    ? 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)'
-    : '#ffffff'
+    ? 'var(--bg-subtle)'
+    : 'transparent'
   };
-  color: ${props => props.isUser ? '#ffffff' : '#334155'};
+  color: var(--text-primary);
   line-height: 1.7;
   word-wrap: break-word;
   font-size: 14.5px;
   transition: background 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
-  box-shadow: ${props => props.isUser
-    ? '0 2px 12px rgba(99, 102, 241, 0.2)'
-    : '0 1px 6px rgba(0, 0, 0, 0.04)'
-  };
+  box-shadow: none;
   
   body[data-theme='dark'] & {
     color: ${props => props.isUser ? '#ffffff' : '#e2e8f0'};

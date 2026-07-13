@@ -3,62 +3,53 @@ import { motion } from 'framer-motion';
 
 export const AppContainer = styled.div`
   min-height: 100vh;
-  background: #f8f9fb;
+  background: var(--bg-app);
   display: flex;
+  color: var(--text-primary);
   transition: background 0.3s ease;
-
-  body[data-theme='dark'] & {
-    background: #0f0f1a;
-  }
 `;
 
 export const Sidebar = styled(motion.div)`
-  width: 280px;
-  background: #ffffff;
+  width: 248px;
+  flex: 0 0 248px;
+  background: var(--bg-subtle);
   display: flex;
   flex-direction: column;
-  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  border-right: 1px solid var(--border-default);
   height: 100vh;
   position: sticky;
   top: 0;
   transition: background 0.3s ease, border-color 0.3s ease;
   
-  body[data-theme='dark'] & {
-    background: #141422;
-    border-right-color: rgba(255, 255, 255, 0.06);
-  }
-  
-  @media (max-width: 768px) {
+  @media (max-width: 840px) {
     display: none;
   }
 `;
 
 export const ChatContainer = styled(motion.div)`
   flex: 1;
-  background: #f8f9fb;
+  min-width: 0;
+  background: var(--bg-panel);
   display: flex;
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
   transition: background 0.3s ease;
 
-  body[data-theme='dark'] & {
-    background: #0f0f1a;
+  @media (max-width: 840px) {
+    padding-top: 52px;
   }
+
 `;
 
 export const MessagesContainer = styled.div`
   flex: 1;
   overflow-y: auto;
-  padding: 32px 40px;
+  padding: 40px 32px 24px;
   display: flex;
   flex-direction: column;
   gap: 24px;
   transition: background 0.3s ease;
-  
-  body[data-theme='dark'] & {
-    background: #0f0f1a;
-  }
   
   @media (max-width: 768px) {
     padding: 20px 16px;
@@ -66,7 +57,7 @@ export const MessagesContainer = styled.div`
 `;
 
 export const InputContainer = styled.div`
-  padding: 16px 40px 32px;
+  padding: 12px 32px 24px;
   display: flex;
   flex-direction: column;
   gap: 12px;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, Search, Brain, Heart, Calendar, BarChart3, Music, Shield, Zap, Plus, Upload, FileJson, Trash2 } from 'lucide-react';
+import { X, Search, Brain, Heart, Calendar, BarChart3, Music, Shield, Zap, Plus, Upload, Trash2 } from 'lucide-react';
 import styled from 'styled-components';
 import ChatAPI from '../services/ChatAPI';
 
@@ -342,20 +342,6 @@ const ImportBtn = styled.button`
   }
 `;
 
-const ImportModal = styled(motion.div)`
-  position: absolute;
-  inset: 0;
-  background: #ffffff;
-  border-radius: 20px;
-  display: flex;
-  flex-direction: column;
-  z-index: 10;
-
-  body[data-theme='dark'] & {
-    background: #1e293b;
-  }
-`;
-
 const ImportBody = styled.div`
   flex: 1;
   overflow-y: auto;
@@ -630,7 +616,7 @@ const saveImportedSkills = (skills) => {
   localStorage.setItem(IMPORTED_SKILLS_KEY, JSON.stringify(skills));
 };
 
-const SkillsPanel = ({ isOpen, onClose, onSelectSkill }) => {
+const SkillsPanel = ({ isOpen, onClose, onSelectSkill, initialCategory = 'all' }) => {
   const [skills, setSkills] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
@@ -643,9 +629,10 @@ const SkillsPanel = ({ isOpen, onClose, onSelectSkill }) => {
 
   useEffect(() => {
     if (isOpen) {
+      setActiveCategory(initialCategory);
       loadSkills();
     }
-  }, [isOpen]);
+  }, [isOpen, initialCategory]);
 
   const loadSkills = async () => {
     setLoading(true);

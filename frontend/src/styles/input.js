@@ -2,18 +2,18 @@ import styled from 'styled-components';
 import { motion } from 'framer-motion';
 
 export const InputWrapper = styled.div`
-  max-width: 820px;
+  max-width: 780px;
   margin: 0 auto;
   width: 100%;
 `;
 
 export const InputBox = styled.div`
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 20px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-default);
+  border-radius: 18px;
   padding: 14px 18px;
   transition: all 0.25s ease;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-float);
   
   &:focus-within {
     border-color: rgba(99, 102, 241, 0.4);
@@ -42,7 +42,7 @@ export const MessageInput = styled.textarea`
   min-height: 24px;
   max-height: 200px;
   line-height: 1.5;
-  color: #1a1a2e;
+  color: var(--text-primary);
   background: transparent;
   transition: color 0.3s ease, height 0.1s ease;
   overflow-y: auto;
@@ -157,9 +157,9 @@ export const AttachmentButton = styled(motion.button)`
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: transparent;
+  background: ${props => props.$active ? 'var(--accent-soft)' : 'transparent'};
   border: none;
-  color: #94a3b8;
+  color: ${props => props.$active ? 'var(--accent-primary)' : '#94a3b8'};
   cursor: pointer;
   display: flex;
   align-items: center;

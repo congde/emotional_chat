@@ -1,5 +1,38 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
+:root {
+  --bg-app: #f3f5f7;
+  --bg-panel: #ffffff;
+  --bg-subtle: #eef1f4;
+  --bg-hover: #e7ebef;
+  --text-primary: #202327;
+  --text-secondary: #69717d;
+  --text-tertiary: #98a0aa;
+  --border-default: #e1e5e9;
+  --accent-primary: #2563eb;
+  --accent-soft: #e9f0ff;
+  --danger: #dc2626;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --shadow-float: 0 12px 36px rgba(30, 38, 48, 0.12);
+}
+
+body[data-theme='dark'] {
+  --bg-app: #0f1115;
+  --bg-panel: #181b20;
+  --bg-subtle: #22262d;
+  --bg-hover: #2a2f37;
+  --text-primary: #f2f3f5;
+  --text-secondary: #a6adb8;
+  --text-tertiary: #707985;
+  --border-default: #30353d;
+  --accent-primary: #60a5fa;
+  --accent-soft: rgba(96, 165, 250, 0.14);
+  --danger: #f87171;
+  --shadow-float: 0 12px 40px rgba(0, 0, 0, 0.34);
+}
+
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
@@ -16,16 +49,16 @@ body {
     'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #f8f9fb;
+  background: var(--bg-app);
   min-height: 100vh;
   overflow-x: hidden;
   transition: background 0.3s ease;
-  color: #1a1a2e;
+  color: var(--text-primary);
 }
 
 body[data-theme='dark'] {
-  background: #0f0f1a;
-  color: #e2e8f0;
+  background: var(--bg-app);
+  color: var(--text-primary);
 }
 
 code {

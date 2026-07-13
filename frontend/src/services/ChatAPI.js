@@ -123,7 +123,7 @@ class ChatAPI {
 
   static async parseURL(data) {
     try {
-      const response = await axios.post(`${API_BASE_URL}/parse-url`, data, {
+      const response = await axios.post(`${API_BASE_URL}/chat/parse-url`, data, {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -196,6 +196,20 @@ class ChatAPI {
     }
   }
 
+  static async getUserMemories(userId, limit = 3) {
+    const response = await axios.get(`${API_BASE_URL}/memory/users/${userId}/memories`, {
+      params: { limit }
+    });
+    return response.data;
+  }
+
+  static async searchUserMemories(userId, query, limit = 5) {
+    const response = await axios.get(`${API_BASE_URL}/memory/users/${userId}/memories/search`, {
+      params: { query, n_results: limit, days_limit: 3650 }
+    });
+    return response.data;
+  }
+
   static async deleteSession(sessionId) {
     try {
       const response = await axios.delete(`${API_BASE_URL}/chat/sessions/${sessionId}`);
@@ -246,7 +260,10 @@ class ChatAPI {
   static async getAvailableSkills() {
     try {
       const response = await axios.get(`${API_BASE_URL}/agent/tools`);
-      return response.data;
+      const payload = response.data;
+      return {
+        tools: payload?.data?.tools || payload?.tools || []
+      };
     } catch (error) {
       console.error('获取技能列表失败:', error);
       // Return default skills if API is unavailable

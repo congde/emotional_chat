@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import ChatAPI from '../services/ChatAPI';
 import { detectURLs } from '../utils/formatters';
 
-export const useChat = (currentUserId) => {
+export const useChat = (currentUserId, { onConversationSaved } = {}) => {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState(null);
@@ -12,6 +12,15 @@ export const useChat = (currentUserId) => {
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  const stopGeneration = useCallback(() => {
+    abortRef.current?.();
+    abortRef.current = null;
+    setIsLoading(false);
+    setMessages(prev => prev.map(message =>
+      message.streaming ? { ...message, streaming: false, stopped: true } : message
+    ));
   }, []);
 
   const sendMessage = useCallback(async (inputValue, attachments, setInputValue, setAttachments, setDetectedURLs, deepThinking = false) => {
@@ -88,6 +97,7 @@ export const useChat = (currentUserId) => {
       },
       onDone: (data) => {
         setSessionId(data.session_id);
+        onConversationSaved?.(data.session_id);
         setSuggestions(data.suggestions || []);
         setMessages(prev => prev.map(msg =>
           msg.id === botMsgId
@@ -111,7 +121,7 @@ export const useChat = (currentUserId) => {
       }
     });
 
-  }, [isLoading, sessionId, currentUserId]);
+  }, [isLoading, sessionId, currentUserId, onConversationSaved]);
 
   return {
     messages,
@@ -123,6 +133,7 @@ export const useChat = (currentUserId) => {
     setSuggestions,
     messagesEndRef,
     scrollToBottom,
+    stopGeneration,
     sendMessage
   };
 };

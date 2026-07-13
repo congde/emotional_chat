@@ -18,6 +18,7 @@ import PyPDF2
 import requests
 from bs4 import BeautifulSoup
 import asyncio
+from datetime import datetime
 
 # 添加项目根目录到Python路径
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -408,7 +409,7 @@ async def chat_stream(
             # 发送开始信号
             yield f"data: {json.dumps({'type':'start'})}\n\n"
 
-            from backend.database import DatabaseManager
+            from backend.database import DatabaseManager, ChatSession
             sid = session_id or str(uuid.uuid4())
 
             # 构建历史
@@ -463,6 +464,12 @@ async def chat_stream(
                     {"role": "user", "content": enhanced_message}
                 ]
 
+            if str(deep_thinking).lower() == "true":
+                messages_payload[0]["content"] += (
+                    "\n\n用户已开启深度思考模式。请先充分分析问题的背景、约束和可能影响，"
+                    "再给出结构清晰、审慎且可执行的回答；不要展示隐含推理过程。"
+                )
+
             full_response = ""
             async with httpx.AsyncClient(timeout=120.0) as client:
                 async with client.stream(
@@ -512,12 +519,18 @@ async def chat_stream(
             # 保存到数据库
             try:
                 with DatabaseManager() as db:
-                    if not session_id:
+                    existing_session = db.db.query(ChatSession).filter(
+                        ChatSession.session_id == sid
+                    ).first()
+                    if not existing_session:
                         db.create_session(sid, user_id)
+                    else:
+                        existing_session.updated_at = datetime.utcnow()
                     db.save_message(session_id=sid, user_id=user_id, role="user",
                                     content=message, emotion=emotion)
                     db.save_message(session_id=sid, user_id=user_id, role="assistant",
                                     content=full_response, emotion=emotion)
+                    db.db.commit()
             except Exception as e:
                 logger.error(f"流式保存消息失败: {e}")
 
