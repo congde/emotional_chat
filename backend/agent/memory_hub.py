@@ -23,7 +23,9 @@ Memory Hub — 六层记忆中枢
 from __future__ import annotations
 
 import logging
+import threading
 import time
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from backend.agent.memory_store import (
@@ -124,8 +126,17 @@ class MemoryHub:
         # L2 活动日志缓冲（本轮累积，蒸馏后清空）
         self._activity_log: List[Dict[str, Any]] = []
 
-    async def initialize(self) -> None:
-        """初始化所有 Store 实例"""
+        self._persistent_loaded = False
+
+        # Store creation is intentionally synchronous so legacy Agent constructors
+        # never receive a coroutine in place of a MemoryHub.
+        self._initialize_stores()
+
+    def _initialize_stores(self) -> None:
+        """Create scope stores once without performing database I/O."""
+        if self._stores:
+            return
+
         # L1 组织级 — 全局知识库，只读
         self._stores["organization"] = InMemoryStore(
             store_id=f"org_{self._agent_type}",
@@ -168,13 +179,17 @@ class MemoryHub:
                 description="会话级工作记忆：当前话题、用户状态",
             )
 
-        # 加载已有数据（L3/L4 从数据库恢复）
-        await self._load_persistent_data()
-
         logger.info(
             "MemoryHub initialized: user=%s, session=%s, stores=%s",
             self._user_id[:8], self._session_id[:8], list(self._stores.keys()),
         )
+
+    async def initialize(self) -> None:
+        """Load persistent state once; safe to call repeatedly."""
+        self._initialize_stores()
+        if not self._persistent_loaded:
+            await self._load_persistent_data()
+            self._persistent_loaded = True
 
     # ── 六层 Store 访问 ──────────────────────────────────────────────────
 
@@ -602,7 +617,8 @@ class MemoryHub:
         try:
             if get_db is None or ChatMessage is None:
                 return []
-            db = next(get_db())
+            db_generator = get_db()
+            db = next(db_generator)
             from datetime import datetime, timedelta
             since_date = datetime.now() - timedelta(days=days)
 
@@ -771,6 +787,9 @@ class MemoryHub:
 
         except Exception as e:
             logger.warning("加载持久化记忆数据失败: %s", e)
+        finally:
+            if "db_generator" in locals():
+                db_generator.close()
 
     async def _sync_to_vector_store(self, path: str, content: str) -> None:
         """同步写入到向量数据库（用于语义检索）"""
@@ -786,36 +805,70 @@ class MemoryHub:
                     "summary": content[:100],
                     "type": "knowledge",
                     "importance": 0.5,
-                    "timestamp": time.time(),
+                    "timestamp": datetime.now().isoformat(),
                 },
             )
         except Exception as e:
             logger.warning("同步到向量存储失败: %s", e)
 
 
-# ── 全局单例 ─────────────────────────────────────────────────────────────────
+# ── 隔离注册表 ───────────────────────────────────────────────────────────────
 
-_memory_hub_instance: Optional[MemoryHub] = None
+_memory_hub_registry: Dict[Tuple[str, str, str], MemoryHub] = {}
+_memory_hub_registry_lock = threading.RLock()
 
 
-async def get_memory_hub(
+def get_memory_hub(
     user_id: str = "",
     session_id: str = "",
     agent_type: str = "xinyu",
 ) -> MemoryHub:
-    """获取全局 MemoryHub 实例（惰性初始化）"""
-    global _memory_hub_instance
-    if _memory_hub_instance is None:
-        _memory_hub_instance = MemoryHub(
-            user_id=user_id,
-            session_id=session_id,
-            agent_type=agent_type,
-        )
-        await _memory_hub_instance.initialize()
-    return _memory_hub_instance
+    """Return a MemoryHub isolated by user, session, and agent type.
+
+    This function is synchronous for compatibility with Agent constructors.
+    Call ``await hub.initialize()`` where persistent state must be loaded before
+    the first turn.
+    """
+    key = (user_id or "", session_id or "", agent_type or "xinyu")
+    with _memory_hub_registry_lock:
+        hub = _memory_hub_registry.get(key)
+        if hub is None:
+            hub = MemoryHub(
+                user_id=key[0],
+                session_id=key[1],
+                agent_type=key[2],
+            )
+            _memory_hub_registry[key] = hub
+        return hub
 
 
-def reset_memory_hub() -> None:
-    """重置全局 MemoryHub 实例（用于测试或重新初始化）"""
-    global _memory_hub_instance
-    _memory_hub_instance = None
+async def get_memory_hub_async(
+    user_id: str = "",
+    session_id: str = "",
+    agent_type: str = "xinyu",
+) -> MemoryHub:
+    """Return an isolated hub after loading its persistent state."""
+    hub = get_memory_hub(user_id, session_id, agent_type)
+    await hub.initialize()
+    return hub
+
+
+def reset_memory_hub(
+    user_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+    agent_type: Optional[str] = None,
+) -> None:
+    """Reset matching hubs, or the complete registry when no filter is given."""
+    with _memory_hub_registry_lock:
+        if user_id is None and session_id is None and agent_type is None:
+            _memory_hub_registry.clear()
+            return
+
+        keys = [
+            key for key in _memory_hub_registry
+            if (user_id is None or key[0] == user_id)
+            and (session_id is None or key[1] == session_id)
+            and (agent_type is None or key[2] == agent_type)
+        ]
+        for key in keys:
+            _memory_hub_registry.pop(key, None)

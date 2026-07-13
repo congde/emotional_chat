@@ -55,12 +55,20 @@ class MemoryService:
         
         # 同步到关系数据库
         if memories:
-            self._sync_memories_to_db(memories)
+            synced_ids = self._sync_memories_to_db(memories)
+            # Chroma is an index, not the source of truth. Remove entries whose
+            # relational write failed so they cannot leak into later retrievals.
+            for memory in memories:
+                memory_id = memory.get("id")
+                if memory_id and memory_id not in synced_ids:
+                    self.memory_manager.delete_memory(user_id, memory_id)
+            memories = [m for m in memories if m.get("id") in synced_ids]
         
         return memories
     
-    def _sync_memories_to_db(self, memories: List[Dict[str, Any]]):
-        """将记忆同步到关系数据库"""
+    def _sync_memories_to_db(self, memories: List[Dict[str, Any]]) -> set[str]:
+        """将记忆同步到关系数据库，返回已确认持久化的 ID。"""
+        synced_ids: set[str] = set()
         try:
             with DatabaseManager() as db:
                 for memory in memories:
@@ -85,10 +93,14 @@ class MemoryService:
                             keywords=json.dumps([], ensure_ascii=False)
                         )
                         db.db.add(memory_item)
+                    if memory.get("id"):
+                        synced_ids.add(memory["id"])
                 
                 db.db.commit()
         except Exception as e:
             print(f"同步记忆到数据库失败: {e}")
+            return set()
+        return synced_ids
     
     async def retrieve_memories(
         self,
@@ -177,25 +189,57 @@ class MemoryService:
         Returns:
             是否删除成功
         """
-        # 从向量数据库删除
-        success = self.memory_manager.delete_memory(user_id, memory_id)
-        
-        # 从关系数据库软删除
-        if success:
-            try:
-                with DatabaseManager() as db:
-                    memory_item = db.db.query(MemoryItem).filter(
-                        MemoryItem.memory_id == memory_id,
-                        MemoryItem.user_id == user_id
-                    ).first()
-                    
-                    if memory_item:
-                        memory_item.is_active = False
-                        db.db.commit()
-            except Exception as e:
-                print(f"从数据库删除记忆失败: {e}")
-        
-        return success
+        # The relational row is authoritative and also proves ownership. Never
+        # delete from the vector index before this check succeeds.
+        try:
+            with DatabaseManager() as db:
+                memory_item = db.db.query(MemoryItem).filter(
+                    MemoryItem.memory_id == memory_id,
+                    MemoryItem.user_id == user_id,
+                    MemoryItem.is_active == True,
+                ).first()
+                if not memory_item:
+                    return False
+
+                if not self.memory_manager.delete_memory(user_id, memory_id):
+                    return False
+
+                memory_item.is_active = False
+                db.db.commit()
+                return True
+        except Exception as e:
+            print(f"删除记忆失败: {e}")
+            return False
+
+    async def update_memory_importance(
+        self, user_id: str, memory_id: str, new_importance: float
+    ) -> bool:
+        """Update importance in both the authoritative row and vector index."""
+        if not 0.0 <= new_importance <= 1.0:
+            raise ValueError("new_importance must be between 0 and 1")
+
+        try:
+            with DatabaseManager() as db:
+                memory_item = db.db.query(MemoryItem).filter(
+                    MemoryItem.memory_id == memory_id,
+                    MemoryItem.user_id == user_id,
+                    MemoryItem.is_active == True,
+                ).first()
+                if not memory_item:
+                    return False
+
+                old_importance = memory_item.importance
+                memory_item.importance = new_importance
+                db.db.flush()
+                if not self.memory_manager.update_memory_importance(memory_id, new_importance):
+                    memory_item.importance = old_importance
+                    db.db.rollback()
+                    return False
+                db.db.commit()
+                return True
+        except Exception as e:
+            print(f"更新记忆重要性失败: {e}")
+            return False
     
     async def get_user_memories_list(
         self,

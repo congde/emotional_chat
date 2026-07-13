@@ -376,6 +376,12 @@ class MemoryManager:
             return False
         
         try:
+            existing = self.memory_collection.get(ids=[memory_id], include=["metadatas"])
+            if not existing or not existing.get("ids"):
+                return False
+            metadata = (existing.get("metadatas") or [{}])[0] or {}
+            if metadata.get("user_id") != user_id:
+                return False
             self.memory_collection.delete(ids=[memory_id])
             return True
         except Exception as e:
@@ -395,11 +401,17 @@ class MemoryManager:
         """
         if not self.memory_collection:
             return False
+
+        if not 0.0 <= new_importance <= 1.0:
+            raise ValueError("new_importance must be between 0 and 1")
         
         try:
-            # ChromaDB不支持直接更新，需要先获取后重新添加
-            # 这里简化处理，实际应用中可能需要更复杂的逻辑
-            print(f"记忆{memory_id}的重要性更新为{new_importance}")
+            existing = self.memory_collection.get(ids=[memory_id], include=["metadatas"])
+            if not existing or not existing.get("ids"):
+                return False
+            metadata = dict((existing.get("metadatas") or [{}])[0] or {})
+            metadata["importance"] = float(new_importance)
+            self.memory_collection.update(ids=[memory_id], metadatas=[metadata])
             return True
         except Exception as e:
             print(f"更新记忆重要性失败: {e}")

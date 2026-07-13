@@ -5,6 +5,7 @@
 
 from fastapi import APIRouter, HTTPException
 from typing import Optional
+from pydantic import BaseModel, Field
 from backend.services.memory_service import MemoryService
 from backend.services.context_service import ContextService
 from backend.logging_config import get_logger
@@ -15,6 +16,10 @@ logger = get_logger(__name__)
 # 初始化服务
 memory_service = MemoryService()
 context_service = ContextService(memory_service=memory_service)
+
+
+class MemoryImportanceUpdate(BaseModel):
+    importance: float = Field(..., ge=0.0, le=1.0)
 
 
 @router.get("/users/{user_id}/memories")
@@ -129,6 +134,33 @@ async def delete_memory(user_id: str, memory_id: str):
         raise
     except Exception as e:
         logger.error(f"删除记忆失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/users/{user_id}/memories/{memory_id}/importance")
+async def update_memory_importance(
+    user_id: str,
+    memory_id: str,
+    request: MemoryImportanceUpdate,
+):
+    """Update a user-owned memory's importance score."""
+    try:
+        success = await memory_service.update_memory_importance(
+            user_id=user_id,
+            memory_id=memory_id,
+            new_importance=request.importance,
+        )
+        if not success:
+            raise HTTPException(status_code=404, detail="记忆不存在或更新失败")
+        return {
+            "message": "记忆重要性更新成功",
+            "memory_id": memory_id,
+            "importance": request.importance,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"更新记忆重要性失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

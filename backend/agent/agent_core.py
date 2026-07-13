@@ -110,6 +110,12 @@ class AgentCore:
         start_time = datetime.now()
         
         try:
+            from .memory_hub import get_memory_hub_async
+
+            self.memory_hub = await get_memory_hub_async(
+                user_id=user_id,
+                session_id=conversation_id or "",
+            )
             # ===== 阶段1: 感知层 =====
             perception = await self._perceive(user_input, user_id)
             
@@ -134,7 +140,7 @@ class AgentCore:
             )
             
             # 获取用户画像
-            user_profile = self.memory_hub.get_user_profile(user_id)
+            user_profile = await self.memory_hub.get_user_profile(user_id)
             
             # ===== 阶段3: 任务规划 =====
             planning_context = {
@@ -248,6 +254,12 @@ class AgentCore:
         start_time = datetime.now()
         
         try:
+            from .memory_hub import get_memory_hub_async
+
+            self.memory_hub = await get_memory_hub_async(
+                user_id=user_id,
+                session_id=conversation_id or "",
+            )
             # ===== 阶段1: 感知层 =====
             perception = await self._perceive(user_input, user_id)
             
@@ -264,7 +276,7 @@ class AgentCore:
             )
             
             # 获取用户画像
-            user_profile = self.memory_hub.get_user_profile(user_id)
+            user_profile = await self.memory_hub.get_user_profile(user_id)
             
             # 获取对话历史
             working_memory = self.memory_hub.get_working_memory()

@@ -31,6 +31,15 @@ const Overlay = styled(motion.div)`
 `;
 
 const Panel = styled(motion.div)`
+  --surface-elevated: #ffffff;
+  --accent: #6366f1;
+  --accent-soft: rgba(99, 102, 241, 0.1);
+  --accent-glow: rgba(99, 102, 241, 0.28);
+  --ink: #1e293b;
+  --ink-muted: #64748b;
+  --border: rgba(15, 23, 42, 0.1);
+  --border-strong: #dbe2ea;
+  --teal-soft: #f8fafc;
   background: var(--surface-elevated);
   border: 1px solid var(--border);
   border-radius: 24px;
@@ -41,6 +50,18 @@ const Panel = styled(motion.div)`
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
+
+  body[data-theme='dark'] & {
+    --surface-elevated: #1e293b;
+    --accent: #818cf8;
+    --accent-soft: rgba(129, 140, 248, 0.16);
+    --accent-glow: rgba(129, 140, 248, 0.3);
+    --ink: #f1f5f9;
+    --ink-muted: #94a3b8;
+    --border: rgba(255, 255, 255, 0.1);
+    --border-strong: #475569;
+    --teal-soft: #0f172a;
+  }
 `;
 
 const Header = styled.div`

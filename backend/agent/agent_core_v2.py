@@ -17,6 +17,7 @@ Agent Core — Runtime + Skills 适配层
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from datetime import datetime
@@ -179,6 +180,11 @@ class AgentCore:
 
         # 初始化 Runtime
         self._runtime = None
+        self._runtime_key = None
+        # AgentCore remains a process-wide singleton for backward compatibility.
+        # Serialize turns while its Runtime/Skill dependencies are rebound to a
+        # user scope, preventing concurrent requests from crossing scopes.
+        self._process_lock = asyncio.Lock()
         self._execution_history: List[Dict[str, Any]] = []
 
         # MCP 兼容字段
@@ -272,23 +278,24 @@ class AgentCore:
         interaction_id = str(uuid.uuid4())
         start_time = datetime.now()
 
-        if self._use_runtime:
-            return await self._process_with_runtime(
-                user_input=user_input,
-                user_id=user_id,
-                conversation_id=conversation_id,
-                interaction_id=interaction_id,
-                start_time=start_time,
-            )
-        else:
-            # 回退到旧模式
-            return await self._process_legacy(
-                user_input=user_input,
-                user_id=user_id,
-                conversation_id=conversation_id,
-                interaction_id=interaction_id,
-                start_time=start_time,
-            )
+        async with self._process_lock:
+            if self._use_runtime:
+                return await self._process_with_runtime(
+                    user_input=user_input,
+                    user_id=user_id,
+                    conversation_id=conversation_id,
+                    interaction_id=interaction_id,
+                    start_time=start_time,
+                )
+            else:
+                # 回退到旧模式
+                return await self._process_legacy(
+                    user_input=user_input,
+                    user_id=user_id,
+                    conversation_id=conversation_id,
+                    interaction_id=interaction_id,
+                    start_time=start_time,
+                )
 
     async def _process_with_runtime(
         self,
@@ -300,9 +307,17 @@ class AgentCore:
     ) -> Dict[str, Any]:
         """使用 ConversationRuntime 处理"""
         try:
+            runtime_key = (user_id, conversation_id or "")
             # 1. 构建或复用 Runtime
-            if self._runtime is None:
+            if self._runtime is None or self._runtime_key != runtime_key:
+                from .memory_hub import get_memory_hub_async
+
+                self.memory_hub = await get_memory_hub_async(
+                    user_id=user_id,
+                    session_id=conversation_id or "",
+                )
                 self._runtime = self._build_runtime(user_id, conversation_id)
+                self._runtime_key = runtime_key
                 await self._runtime.start()
 
             # 2. 注入旧系统依赖到 Skill
@@ -398,6 +413,12 @@ class AgentCore:
         当 Runtime 初始化失败或被禁用时使用。
         """
         try:
+            from .memory_hub import get_memory_hub_async
+
+            self.memory_hub = await get_memory_hub_async(
+                user_id=user_id,
+                session_id=conversation_id or "",
+            )
             # ===== 阶段1: 感知层 =====
             perception = await self._perceive(user_input, user_id)
 
@@ -416,7 +437,7 @@ class AgentCore:
                     context={"emotion": perception.get("emotion", ""), "time_range": 30},
                     top_k=5,
                 )
-                user_profile = self.memory_hub.get_user_profile(user_id) or {}
+                user_profile = await self.memory_hub.get_user_profile(user_id) or {}
 
             # ===== 阶段3: 任务规划 =====
             execution_plan = None

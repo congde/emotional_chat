@@ -150,6 +150,7 @@ const SearchInput = styled.div`
 
 const CategoryTabs = styled.div`
   display: flex;
+  align-items: center;
   gap: 6px;
   padding: 12px 24px;
   overflow-x: auto;
@@ -165,13 +166,26 @@ const CategoryTabs = styled.div`
 `;
 
 const CategoryTab = styled.button`
-  padding: 6px 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: 56px;
+  height: 32px;
+  margin: 0;
+  padding: 0 14px;
   border-radius: 20px;
   border: 1px solid ${props => props.$active ? 'rgba(99, 102, 241, 0.3)' : 'rgba(0, 0, 0, 0.06)'};
   background: ${props => props.$active ? 'rgba(99, 102, 241, 0.08)' : 'transparent'};
   color: ${props => props.$active ? '#6366f1' : '#64748b'};
+  appearance: none;
+  box-sizing: border-box;
+  font-family: inherit;
   font-size: 13px;
   font-weight: 500;
+  line-height: 1;
+  text-align: center;
+  vertical-align: middle;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.2s;

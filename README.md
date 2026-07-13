@@ -79,7 +79,7 @@ SQLITE_PATH=./emotional_chat_local.db
 
 完整选项见 [`config.env.example`](config.env.example)。请勿提交包含真实密钥的 `config.env`。
 
-### 3. 启动后端
+### 3. 安装依赖
 
 ```bash
 python -m venv .venv
@@ -91,21 +91,33 @@ source .venv/bin/activate
 .venv\Scripts\Activate.ps1
 
 pip install -r requirements.txt
-python run_backend.py
+cd frontend
+npm install
+cd ..
 ```
 
-启动脚本会检查依赖、初始化本地知识库并在 `http://localhost:8000` 提供服务。
+### 4. 同时启动前后端
+
+在项目根目录运行：
+
+```bash
+python main.py
+```
+
+该命令会在同一个终端中启动后端和前端。按 `Ctrl+C` 可同时停止两个服务。后端启动时会检查依赖并初始化本地知识库。
 
 - API 文档：<http://localhost:8000/docs>
 - 健康检查：<http://localhost:8000/health>
+- 前端页面：<http://localhost:3000>
 
-### 4. 启动前端
+若需要单独启动服务进行调试，可分别运行：
 
-打开另一个终端：
+```powershell
+# 后端
+python run_backend.py
 
-```bash
+# 前端（另一个终端）
 cd frontend
-npm install
 npm start
 ```
 
