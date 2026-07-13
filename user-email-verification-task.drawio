@@ -1,0 +1,85 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/27.0.9 Chrome/134.0.6998.205 Electron/35.4.0 Safari/537.36" version="27.0.9">
+  <diagram id="email-verification-task" name="Email Verification Task">
+    <mxGraphModel dx="1072" dy="822" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="analysis" value="分析" style="swimlane;whiteSpace=wrap;html=1;rounded=1;startSize=34;arcSize=10;swimlaneFillColor=none;fontSize=16;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="60" y="270" width="200" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="analysis-items" value="&lt;span style=&quot;color: rgb(22, 50, 79); font-size: 15px; font-weight: 700; text-align: center;&quot;&gt;为用户模块增加邮箱验证&lt;/span&gt;&lt;br style=&quot;color: rgb(22, 50, 79); font-size: 15px; font-weight: 700; text-align: center;&quot;&gt;&lt;span style=&quot;color: rgb(22, 50, 79); font-size: 15px; font-weight: 700; text-align: center;&quot;&gt;并补充测试&lt;/span&gt;&lt;br&gt;1. 定位用户模型&lt;br&gt;2. 定位路由与服务层&lt;br&gt;3. 查找测试结构&lt;br&gt;4. 确认错误返回约定" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=14;spacingLeft=10;spacingTop=8;" parent="analysis" vertex="1">
+          <mxGeometry x="12" y="44" width="188" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="plan" value="计划" style="swimlane;whiteSpace=wrap;html=1;rounded=1;startSize=34;arcSize=10;swimlaneFillColor=none;fontSize=16;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="280" y="270" width="180" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="plan-items" value="1. 加入邮箱验证状态&#xa;2. 新增发送验证逻辑&#xa;3. 新增确认验证逻辑&#xa;4. 覆盖正常与异常路径&#xa;5. 运行相关测试" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=14;spacingLeft=10;spacingTop=8;" parent="plan" vertex="1">
+          <mxGeometry x="12" y="44" width="168" height="106" as="geometry" />
+        </mxCell>
+        <mxCell id="execute" value="执行" style="swimlane;whiteSpace=wrap;html=1;rounded=1;startSize=34;arcSize=10;swimlaneFillColor=none;fontSize=16;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="480" y="270" width="140" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="execute-items" value="修改服务与路由&#xa;新增或更新测试&#xa;运行验证命令" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=14;spacingLeft=10;spacingTop=8;" parent="execute" vertex="1">
+          <mxGeometry x="12" y="44" width="118" height="86" as="geometry" />
+        </mxCell>
+        <mxCell id="result" value="结果" style="swimlane;whiteSpace=wrap;html=1;rounded=1;startSize=34;arcSize=10;swimlaneFillColor=none;fontSize=16;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="650" y="270" width="130" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="result-items" value="列出变更文件&#xa;列出通过的验证&#xa;说明剩余风险" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=14;spacingLeft=10;spacingTop=8;" parent="result" vertex="1">
+          <mxGeometry x="10" y="44" width="110" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="flow-main" value="实现闭环" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="230" y="470" width="280" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="flow-state" value="验证状态&#xa;未验证 / 已验证" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="165" y="550" width="115" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="flow-send" value="发送验证&#xa;生成令牌并投递邮件" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="310" y="550" width="140" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="flow-confirm" value="确认验证&#xa;校验令牌并更新状态" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="480" y="550" width="120" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="flow-tests" value="测试&#xa;正常路径 + 异常路径" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="630" y="550" width="130" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-plan-flow" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;" parent="1" source="plan" target="flow-main" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-flow-state" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeWidth=2;" parent="1" source="flow-main" target="flow-state" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-state-send" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeWidth=2;" parent="1" source="flow-state" target="flow-send" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-send-confirm" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeWidth=2;" parent="1" source="flow-send" target="flow-confirm" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-confirm-tests" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeWidth=2;" parent="1" source="flow-confirm" target="flow-tests" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-tests-result" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;" parent="1" source="flow-tests" target="result" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jmVQ_jHRoXjLIwXSk_p9-1" value="" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="analysis" target="plan">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="520" y="440" as="sourcePoint" />
+            <mxPoint x="570" y="390" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jmVQ_jHRoXjLIwXSk_p9-2" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.999;exitY=0.369;exitDx=0;exitDy=0;exitPerimeter=0;" edge="1" parent="1" source="plan-items">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="460" y="350" as="sourcePoint" />
+            <mxPoint x="480" y="353" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jmVQ_jHRoXjLIwXSk_p9-3" value="" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="execute" target="result">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="460" y="350" as="sourcePoint" />
+            <mxPoint x="480" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,37 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/27.0.9 Chrome/134.0.6998.205 Electron/35.4.0 Safari/537.36" version="27.0.9">
+  <diagram id="fig-12-2-review-triggers" name="图 12-2 Codex Review 三处触发点">
+    <mxGraphModel dx="1018" dy="781" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="620" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="EyvfpxZp5Z2vdOPwGlZm-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="a" target="d">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a" value="本地终端&lt;br&gt;提交前自查" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=18;fontColor=#111827;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="210" y="170" width="180" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="EyvfpxZp5Z2vdOPwGlZm-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="b" target="d">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="b" value="PR 创建 / 更新&lt;br&gt;自动评论" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=18;fontColor=#111827;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="210" y="260" width="180" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="EyvfpxZp5Z2vdOPwGlZm-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="c" target="d">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c" value="CI 检查&lt;br&gt;风险门禁" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=18;fontColor=#111827;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="210" y="350" width="180" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="d" value="Review Findings" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=18;fontColor=#111827;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="440" y="260" width="160" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="e" value="人类 reviewer 决策" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=18;fontColor=#111827;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="630" y="260" width="170" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="de" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" parent="1" source="d" target="e" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

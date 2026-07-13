@@ -3,7 +3,6 @@
 自动化评估引擎 - 使用大模型作为"裁判"对不同Prompt的输出进行评分
 评估维度：共情程度、自然度、安全性
 """
-import os
 import json
 import requests
 from typing import Dict, List, Optional, Any
@@ -11,15 +10,15 @@ from datetime import datetime
 
 # 导入 LangChain (Python 3.10+, langchain 0.2.x+)
 try:
-    from langchain_openai import ChatOpenAI
     from langchain_core.prompts import ChatPromptTemplate
     from langchain_core.output_parsers import StrOutputParser
     LANGCHAIN_AVAILABLE = True
 except ImportError:
     LANGCHAIN_AVAILABLE = False
-    ChatOpenAI = None
     ChatPromptTemplate = None
     StrOutputParser = None
+
+from backend.modules.llm.harness import resolve_llm_settings, try_create_chat_openai
 
 # 导入日志配置
 from backend.logging_config import get_logger
@@ -97,10 +96,11 @@ class EvaluationEngine:
     
     def __init__(self):
         """初始化评估引擎"""
-        # 初始化API配置
-        self.api_key = os.getenv("DASHSCOPE_API_KEY") or os.getenv("OPENAI_API_KEY")
-        self.api_base_url = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
-        self.model = os.getenv("EVALUATION_MODEL") or os.getenv("DEFAULT_MODEL", "qwen-plus")
+        # 初始化 API 配置（经 LLM Harness；评估模型可走 EVALUATION_MODEL）
+        _cfg = resolve_llm_settings(prefer_evaluation_model=True)
+        self.api_key = _cfg.api_key
+        self.api_base_url = _cfg.base_url
+        self.model = _cfg.model
         
         if not self.api_key:
             logger.warning("评估引擎: API_KEY 未设置，评估功能将不可用")
@@ -111,19 +111,17 @@ class EvaluationEngine:
         # 初始化 LangChain 组件
         if LANGCHAIN_AVAILABLE:
             try:
-                self.llm = ChatOpenAI(
-                    model=self.model,
-                    temperature=0.3,  # 降低温度以获得更一致的评估
-                    api_key=self.api_key,
-                    base_url=self.api_base_url
+                self.llm = try_create_chat_openai(
+                    temperature=0.3,
+                    prefer_evaluation_model=True,
                 )
-                
-                # 创建评估链
-                self.prompt = ChatPromptTemplate.from_template(EVALUATION_PROMPT_TEMPLATE)
-                self.output_parser = StrOutputParser()
-                self.chain = self.prompt | self.llm | self.output_parser
-                
-                logger.info("✓ 评估引擎初始化成功 (模型: {})".format(self.model))
+                if not self.llm:
+                    self.chain = None
+                else:
+                    self.prompt = ChatPromptTemplate.from_template(EVALUATION_PROMPT_TEMPLATE)
+                    self.output_parser = StrOutputParser()
+                    self.chain = self.prompt | self.llm | self.output_parser
+                    logger.info("✓ 评估引擎初始化成功 (模型: {})".format(self.model))
             except Exception as e:
                 logger.error("评估引擎初始化失败: {}".format(e))
                 self.llm = None

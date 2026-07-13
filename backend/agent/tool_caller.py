@@ -287,6 +287,31 @@ class ToolCaller:
             },
             category="communication"
         )
+
+        # ========== Hermes 风格工作区 / 联网 / 文档 / 图表（可选，见 config.env.example）==========
+        try:
+            from backend.hermes.dispatch import run_hermes_dispatch
+
+            self.registry.register(
+                name="hermes_dispatch",
+                description=(
+                    "在 HERMES_WORKSPACE_ROOT 内执行自动化：列出文件、读取/写入 txt/md/json、"
+                    "抓取 https 网页摘要、读取/替换/追加 .docx、读取或按 id 修改 draw.io 单元格、"
+                    "Figma 元数据、以及 shell: 单行 cmd（需 HERMES_SHELL_ENABLED，cwd=工作区）。"
+                    "路径不得越出工作区。"
+                ),
+                function=run_hermes_dispatch,
+                parameters={
+                    "instruction": {
+                        "type": "string",
+                        "required": True,
+                        "description": "用户的完整自然语言指令（可含 URL 与相对路径）",
+                    },
+                },
+                category="hermes",
+            )
+        except Exception as e:
+            print("提示: Hermes 工具注册跳过: {}".format(e))
     
     async def call(
         self, 

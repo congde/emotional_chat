@@ -1,0 +1,97 @@
+<svg width="1600" height="1000" viewBox="0 0 1600 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .bg { fill: #f7f8f3; }
+      .ink { fill: #17202a; }
+      .muted { fill: #5f6b75; }
+      .small { font: 24px "Microsoft YaHei", "PingFang SC", Arial, sans-serif; }
+      .body { font: 28px "Microsoft YaHei", "PingFang SC", Arial, sans-serif; }
+      .label { font: 30px "Microsoft YaHei", "PingFang SC", Arial, sans-serif; font-weight: 700; }
+      .title { font: 68px "Microsoft YaHei", "PingFang SC", Arial, sans-serif; font-weight: 800; letter-spacing: 0; }
+      .subtitle { font: 30px "Microsoft YaHei", "PingFang SC", Arial, sans-serif; }
+      .stage-title { font: 34px "Microsoft YaHei", "PingFang SC", Arial, sans-serif; font-weight: 800; }
+      .stage-num { font: 40px "Microsoft YaHei", "PingFang SC", Arial, sans-serif; font-weight: 800; }
+      .chapter { font: 22px "Microsoft YaHei", "PingFang SC", Arial, sans-serif; font-weight: 700; }
+      .check { font: 24px "Microsoft YaHei", "PingFang SC", Arial, sans-serif; }
+    </style>
+    <marker id="arrow" markerWidth="16" markerHeight="16" refX="12" refY="8" orient="auto" markerUnits="strokeWidth">
+      <path d="M2 2 L14 8 L2 14 Z" fill="#17202a"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1600" height="1000"/>
+  <rect x="42" y="42" width="1516" height="916" rx="24" fill="#ffffff" stroke="#dfe5dc" stroke-width="2"/>
+
+  <text x="90" y="135" class="title ink">Codex 学习地图</text>
+  <text x="92" y="185" class="subtitle muted">从会问 AI 到工程交付：认知迁移 -> Harness 工程 -> 高频实战 -> 团队落地</text>
+  <text x="1220" y="124" class="small muted">配套《Codex 快速入门》</text>
+  <text x="1220" y="162" class="small muted">一张图读懂学习路径</text>
+
+  <rect x="88" y="230" width="1424" height="108" rx="8" fill="#17202a"/>
+  <text x="132" y="277" class="label" fill="#ffffff">核心心智</text>
+  <text x="310" y="277" class="body" fill="#ffffff">Codex 不只是代码生成器，更是参与真实软件工程的智能交付工具。</text>
+  <text x="310" y="315" class="small" fill="#dce6ea">关键闭环：任务 -> 上下文 -> 执行 -> 验证 -> 审查 -> 沉淀</text>
+
+  <line x1="170" y1="505" x2="1428" y2="505" stroke="#17202a" stroke-width="5" marker-end="url(#arrow)"/>
+  <circle cx="210" cy="505" r="17" fill="#e85d4f"/>
+  <circle cx="565" cy="505" r="17" fill="#2f80ed"/>
+  <circle cx="930" cy="505" r="17" fill="#1f9d75"/>
+  <circle cx="1285" cy="505" r="17" fill="#f2a93b"/>
+
+  <g>
+    <rect x="88" y="384" width="300" height="300" rx="8" fill="#fff7f5" stroke="#f0b0a8" stroke-width="2"/>
+    <circle cx="126" cy="426" r="25" fill="#e85d4f"/>
+    <text x="113" y="440" class="stage-num" fill="#ffffff">1</text>
+    <text x="168" y="428" class="stage-title ink">认知迁移</text>
+    <text x="168" y="462" class="chapter" fill="#b54237">第 1-2 章</text>
+    <text x="116" y="552" class="body ink">从补全/问答</text>
+    <text x="116" y="591" class="body ink">转向工程委托</text>
+    <text x="116" y="636" class="check muted">检查点：能定义任务、</text>
+    <text x="116" y="670" class="check muted">上下文、边界和验收。</text>
+  </g>
+
+  <g>
+    <rect x="443" y="384" width="300" height="300" rx="8" fill="#f3f8ff" stroke="#a8c8f4" stroke-width="2"/>
+    <circle cx="481" cy="426" r="25" fill="#2f80ed"/>
+    <text x="468" y="440" class="stage-num" fill="#ffffff">2</text>
+    <text x="523" y="428" class="stage-title ink">个人工作流</text>
+    <text x="523" y="462" class="chapter" fill="#235ea8">第 3-8 章</text>
+    <text x="471" y="552" class="body ink">跑通第一次</text>
+    <text x="471" y="591" class="body ink">可验证任务闭环</text>
+    <text x="471" y="636" class="check muted">检查点：AGENTS.md、</text>
+    <text x="471" y="670" class="check muted">Rules、Skill 能复用。</text>
+  </g>
+
+  <g>
+    <rect x="808" y="384" width="300" height="300" rx="8" fill="#f1fbf6" stroke="#9bd9be" stroke-width="2"/>
+    <circle cx="846" cy="426" r="25" fill="#1f9d75"/>
+    <text x="833" y="440" class="stage-num" fill="#ffffff">3</text>
+    <text x="888" y="428" class="stage-title ink">高频实战</text>
+    <text x="888" y="462" class="chapter" fill="#137055">第 9-12 章</text>
+    <text x="836" y="552" class="body ink">陌生库、Bug、</text>
+    <text x="836" y="591" class="body ink">功能、PR 与 CI</text>
+    <text x="836" y="636" class="check muted">检查点：先理解、</text>
+    <text x="836" y="670" class="check muted">最小改、分层验证。</text>
+  </g>
+
+  <g>
+    <rect x="1163" y="384" width="300" height="300" rx="8" fill="#fff9ed" stroke="#efc47b" stroke-width="2"/>
+    <circle cx="1201" cy="426" r="25" fill="#f2a93b"/>
+    <text x="1188" y="440" class="stage-num" fill="#ffffff">4</text>
+    <text x="1243" y="428" class="stage-title ink">团队落地</text>
+    <text x="1243" y="462" class="chapter" fill="#a3660d">第 13-14 章</text>
+    <text x="1191" y="552" class="body ink">从个人提效</text>
+    <text x="1191" y="591" class="body ink">到组织能力</text>
+    <text x="1191" y="636" class="check muted">检查点：试点、规则、</text>
+    <text x="1191" y="670" class="check muted">权限、成本和治理。</text>
+  </g>
+
+  <rect x="88" y="740" width="1424" height="150" rx="8" fill="#f2f4f7" stroke="#d9dee6" stroke-width="2"/>
+  <text x="124" y="790" class="label ink">按角色怎么读</text>
+  <text x="126" y="840" class="check muted">开发者：第 1-3 章打底，重点读第 5-12 章</text>
+  <text x="126" y="876" class="check muted">技术负责人：第 6-8 章、第 12-14 章，看规则、权限、审查和团队化</text>
+  <text x="850" y="840" class="check muted">AI 编程探索者：第 3-8 章，把零散使用升级为稳定工作流</text>
+  <text x="850" y="876" class="check muted">非传统开发岗位：第 3、5、6、8 章，迁移「上下文 -> 任务 -> 验收」</text>
+
+  <text x="94" y="930" class="small muted">传播关键词：场景实战 / 交付闭环 / Harness 工程 / 可验证 / 可审查 / 可复用</text>
+</svg>

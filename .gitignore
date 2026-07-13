@@ -50,3 +50,6 @@ log/
 *.sqlite3
 chroma_db/
 
+# Local assets
+assets/
+

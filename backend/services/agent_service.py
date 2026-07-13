@@ -7,7 +7,7 @@ Agent Service - Agent服务层
 from typing import Dict, Any, Optional
 from datetime import datetime
 
-from backend.agent.agent_core import AgentCore, get_agent_core
+from backend.agent import AgentCore, get_agent_core
 
 
 class AgentService:

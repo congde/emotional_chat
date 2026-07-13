@@ -12,12 +12,11 @@ from ..core.langchain_compat import Document
 
 # 导入 LangChain (Python 3.10+, langchain 0.2.x+)
 from langchain.chains import RetrievalQA
-from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
 
 from ..core.knowledge_base import KnowledgeBaseManager
 from backend.logging_config import get_logger
-from config import Config
+from backend.modules.llm.harness import try_create_chat_openai
 
 logger = get_logger(__name__)
 
@@ -41,12 +40,9 @@ class RAGService:
                 logger.warning(f"加载向量存储失败，可能需要先初始化知识库: {e}")
         
         self.kb_manager = kb_manager
-        self.llm = ChatOpenAI(
-            api_key=Config.OPENAI_API_KEY,
-            base_url=Config.API_BASE_URL,
-            model=Config.DEFAULT_MODEL,
-            temperature=0.7
-        )
+        self.llm = try_create_chat_openai(temperature=0.7)
+        if self.llm is None:
+            logger.warning("RAG: LLM Harness 未能创建 ChatOpenAI，部分 RAG 能力不可用")
         
         # 心理健康专用prompt模板
         self.prompt_template = PromptTemplate(
@@ -81,6 +77,8 @@ class RAGService:
         Returns:
             QA链实例
         """
+        if self.llm is None:
+            raise RuntimeError("RAG 需要可用的 LLM，请在 config.env 中配置 LLM_API_KEY 与 LLM_BASE_URL")
         try:
             retriever = self.kb_manager.get_retriever(search_kwargs={"k": search_k})
             
@@ -200,6 +198,8 @@ class RAGService:
         Returns:
             包含答案和来源的字典
         """
+        if self.llm is None:
+            raise RuntimeError("RAG 需要可用的 LLM，请在 config.env 中配置 LLM_API_KEY 与 LLM_BASE_URL")
         try:
             logger.info(f"结合上下文回答问题: {question[:50]}...")
             

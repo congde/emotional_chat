@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { Plus, Clock, Settings, Moon, Sun, Trash2, FolderOpen } from 'lucide-react';
+import { Plus, Clock, Settings, Moon, Sun, Trash2, FolderOpen, Heart, Zap } from 'lucide-react';
 import { Sidebar as SidebarStyled } from '../styles/layout';
 import {
   SidebarHeader,
@@ -31,6 +31,7 @@ const Sidebar = ({
   onLoadSession,
   onDeleteSession,
   onOpenPersonalization,
+  onOpenSkills,
   onToggleTheme,
   theme,
   onOpenHistoryManagement
@@ -42,8 +43,8 @@ const Sidebar = ({
       transition={{ duration: 0.3 }}
     >
       <SidebarHeader>
-        <UserAvatar>🤖</UserAvatar>
-        <UserName>情感聊天</UserName>
+        <UserAvatar><Heart size={18} /></UserAvatar>
+        <UserName>心语</UserName>
       </SidebarHeader>
 
       <NewChatButton
@@ -62,6 +63,15 @@ const Sidebar = ({
       >
         <Settings size={16} />
         个性化配置
+      </SettingsButton>
+
+      <SettingsButton
+        onClick={onOpenSkills}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.99 }}
+      >
+        <Zap size={16} />
+        技能中心
       </SettingsButton>
 
       <SettingsButton
@@ -86,13 +96,14 @@ const Sidebar = ({
                 padding: '4px 8px',
                 fontSize: '12px',
                 background: 'transparent',
-                color: '#888',
+                color: '#94a3b8',
                 border: 'none',
-                borderRadius: '4px',
+                borderRadius: '6px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
+                transition: 'color 0.2s',
               }}
               title="管理对话记录"
             >
@@ -115,7 +126,7 @@ const Sidebar = ({
               {historySessions.map((session) => (
                 <HistoryItem
                   key={session.session_id}
-                  active={session.session_id === sessionId}
+                  $active={session.session_id === sessionId}
                   onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();

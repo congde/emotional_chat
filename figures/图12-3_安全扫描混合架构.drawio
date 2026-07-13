@@ -1,0 +1,52 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) draw.io/27.0.9" version="27.0.9">
+  <diagram id="fig-12-3-security-scan" name="图 12-3 安全扫描混合架构">
+    <mxGraphModel dx="1600" dy="760" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="620" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="a" value="代码变更" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=17;fontColor=#111827;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="70" y="260" width="130" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="b" value="SAST / CodeQL / Semgrep 初筛" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=17;fontColor=#111827;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="260" y="260" width="250" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="c" value="告警列表" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=17;fontColor=#111827;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="570" y="260" width="130" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="d" value="Codex 结合上下文精排" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=17;fontColor=#111827;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="760" y="260" width="220" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="e" value="真阳性 + 修复建议" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=17;fontColor=#111827;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="180" width="190" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="f" value="疑似误报 + 理由" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=17;fontColor=#111827;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="340" width="190" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="g" value="人工安全审查" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=2;fontSize=17;fontColor=#111827;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="260" width="160" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="ab" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" edge="1" parent="1" source="a" target="b">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bc" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" edge="1" parent="1" source="b" target="c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cd" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" edge="1" parent="1" source="c" target="d">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="de" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" edge="1" parent="1" source="d" target="e">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="df" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" edge="1" parent="1" source="d" target="f">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eg" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" edge="1" parent="1" source="e" target="g">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fg" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#111827;strokeWidth=2;" edge="1" parent="1" source="f" target="g">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

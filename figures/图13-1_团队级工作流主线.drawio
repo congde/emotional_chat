@@ -1,0 +1,61 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/27.0.9 Chrome/134.0.6998.205 Electron/35.4.0 Safari/537.36" version="27.0.9">
+  <diagram id="ch13-team-workflow" name="图 13-1 团队级工作流主线">
+    <mxGraphModel dx="1131" dy="868" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="520" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="a" value="Ticket / 需求入口" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fontSize=15;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="198" width="130" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="b" value="任务切分与&lt;br&gt;边界确认" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fontSize=15;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="190" y="198" width="110" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="c" value="Worktree 中&lt;br&gt;并行实现" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fontSize=15;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="320" y="198" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="d" value="最小验证与&lt;br&gt;风险说明" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fontSize=15;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="440" y="198" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="e" value="Review / 审批" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fontSize=15;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="435" y="258" width="110" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="f" value="合并与&lt;br&gt;发布准备" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fontSize=15;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="320" y="258" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="g" value="运行观察 /&lt;br&gt;值班接力" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fontSize=15;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="190" y="253" width="110" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="h" value="Handoff /&lt;br&gt;经验沉淀" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fontSize=15;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="70" y="253" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="ab" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;" parent="1" source="a" target="b" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bc" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;" parent="1" source="b" target="c" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cd" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;" parent="1" source="c" target="d" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="de" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;" parent="1" source="d" target="e" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ef" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;" parent="1" source="e" target="f" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fg" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;" parent="1" source="f" target="g" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="note2" value="需要明确 handoff" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=13;fontColor=#4B5563;" parent="1" vertex="1">
+          <mxGeometry x="70" y="293" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="hN6JKKxoQl3Ipi1EJtBG-2" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" target="h">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="190" y="273" as="sourcePoint" />
+            <mxPoint x="880" y="208" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -33,6 +33,7 @@ dependencies = [
     "langchain>=0.2.0,<0.3.0",
     "langchain-openai>=0.1.10,<0.2.0",
     "langchain-community>=0.0.1,<0.3.0",
+    "langchain-chroma>=0.1.0,<0.2.0",
     "pandas>=2.0.0",
     
     # 向量数据库

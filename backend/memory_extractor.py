@@ -8,19 +8,20 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 import json
 import re
-from openai import OpenAI
-from config import Config
+
+from backend.modules.llm.harness import resolve_llm_settings, try_create_openai_sync_client
 
 
 class MemoryExtractor:
     """记忆提取器 - 从对话中提取重要信息"""
     
     def __init__(self):
-        """初始化记忆提取器"""
-        self.client = OpenAI(
-            api_key=Config.OPENAI_API_KEY,
-            base_url=Config.API_BASE_URL
-        )
+        """初始化记忆提取器（OpenAI SDK 客户端经 LLM Harness 创建）"""
+        self.client = try_create_openai_sync_client()
+        if not self.client:
+            print(
+                "提示: 未设置 LLM_API_KEY / OPENAI_API_KEY，记忆提取仅使用规则引擎（不使用 LLM）"
+            )
         
         # 定义需要提取的记忆类型
         self.memory_types = {
@@ -155,6 +156,8 @@ class MemoryExtractor:
                        emotion: Optional[str] = None, 
                        intensity: Optional[float] = None) -> List[Dict[str, Any]]:
         """使用LLM提取记忆（用于复杂场景）"""
+        if not self.client:
+            return []
         try:
             prompt = f"""分析以下对话，提取值得记忆的关键信息。
 
@@ -189,7 +192,7 @@ class MemoryExtractor:
 如果没有值得记忆的信息，返回空数组。"""
 
             response = self.client.chat.completions.create(
-                model=Config.DEFAULT_MODEL,
+                model=resolve_llm_settings().model,
                 messages=[
                     {"role": "system", "content": "你是一个专业的记忆提取助手，善于识别对话中的关键信息。"},
                     {"role": "user", "content": prompt}

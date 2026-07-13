@@ -23,7 +23,7 @@ const HistoryModalContent = styled(ModalContent)`
 
 const HistoryModalHeader = styled(ModalHeader)`
   padding: 24px 30px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border);
   margin-bottom: 0;
   
   h3 {
@@ -34,21 +34,23 @@ const HistoryModalHeader = styled(ModalHeader)`
 
 const SearchContainer = styled.div`
   padding: 20px 30px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border);
 `;
 
 const SearchInput = styled.input`
   width: 100%;
   padding: 12px 16px 12px 44px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-strong);
   border-radius: 10px;
   font-size: 0.95rem;
   transition: all 0.2s;
+  background: var(--surface-elevated);
+  color: var(--ink);
   
   &:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
   }
 `;
 
@@ -102,21 +104,21 @@ const SessionTable = styled.table`
 `;
 
 const TableHeader = styled.thead`
-  background: #f8f9fa;
+  background: var(--teal-soft);
   position: sticky;
   top: 0;
   z-index: 10;
 `;
 
 const TableHeaderRow = styled.tr`
-  border-bottom: 2px solid #eee;
+  border-bottom: 2px solid var(--border);
 `;
 
 const TableHeaderCell = styled.th`
   padding: 16px 30px;
   text-align: left;
   font-weight: 600;
-  color: #333;
+  color: var(--ink);
   font-size: 0.9rem;
   
   &:first-child {
@@ -133,22 +135,22 @@ const TableHeaderCell = styled.th`
 const TableBody = styled.tbody``;
 
 const TableRow = styled(motion.tr)`
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border);
   cursor: pointer;
   transition: background 0.2s;
   
   &:hover {
-    background: #f8f9fa;
+    background: var(--teal-soft);
   }
   
   ${props => props.selected && `
-    background: rgba(102, 126, 234, 0.05);
+    background: var(--accent-soft);
   `}
 `;
 
 const TableCell = styled.td`
   padding: 16px 30px;
-  color: #333;
+  color: var(--ink);
   font-size: 0.95rem;
   
   &:first-child {
@@ -164,12 +166,12 @@ const Checkbox = styled.input`
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: #667eea;
+  accent-color: var(--accent);
 `;
 
 const SessionTitle = styled.div`
   font-weight: 500;
-  color: #333;
+  color: var(--ink);
   margin-bottom: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -201,11 +203,11 @@ const ActionButton = styled(motion.button)`
 
 const Footer = styled.div`
   padding: 20px 30px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #f8f9fa;
+  background: var(--teal-soft);
 `;
 
 const SelectAllContainer = styled.div`
@@ -215,7 +217,7 @@ const SelectAllContainer = styled.div`
   
   label {
     font-size: 0.95rem;
-    color: #333;
+    color: var(--ink);
     cursor: pointer;
     user-select: none;
   }
@@ -236,11 +238,11 @@ const FooterButton = styled(motion.button)`
   border: none;
   
   ${props => props.primary ? `
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: linear-gradient(135deg, var(--accent), #5a3630);
     color: white;
     
     &:hover:not(:disabled) {
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+      box-shadow: 0 8px 24px var(--accent-glow);
     }
     
     &:disabled {
@@ -248,13 +250,13 @@ const FooterButton = styled(motion.button)`
       cursor: not-allowed;
     }
   ` : `
-    background: white;
-    color: #666;
-    border: 1px solid #ddd;
+    background: var(--surface-elevated);
+    color: var(--ink-muted);
+    border: 1px solid var(--border-strong);
     
     &:hover {
-      background: #f8f9fa;
-      border-color: #ccc;
+      background: var(--accent-soft);
+      border-color: var(--border);
     }
   `}
 `;

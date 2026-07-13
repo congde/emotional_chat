@@ -1,601 +1,821 @@
 """
-Memory Hub - 记忆中枢
+Memory Hub — 六层记忆中枢
 
-统一的记忆管理接口，整合：
-- 短期记忆（工作记忆）
-- 长期记忆（情景记忆、语义记忆）
-- 用户画像
-- 行为日志
+参考 ai-buddy Phase 6.3 六层记忆架构设计，适配 emotional_chat 情感聊天场景。
+
+六层作用域：
+  L1 组织级  (organization)  — 全局知识库（如共情话术库），系统 prompt 注入，只读
+  L2 工作区级 (workspace)     — 跨用户活动日志，不暴露为工具，蒸馏管道消费
+  L3 用户级  (user)          — 长期用户偏好（兴趣、情绪基线），memory_* 工具可读写
+  L4 Agent实例级(agent_instance)— Agent 学习模式（情绪响应策略），memory_* 工具可读写
+  L5 会话级  (session)       — 当次对话工作记忆（当前话题、用户状态），memory_* 工具可读写
+  L6 当轮级  (turn)          — 对话上下文 window，不存储，虚拟层
+
+工具可寻址层：仅 L3 / L4 / L5。L1/L2 不通过工具暴露；L6 是 LLM context 本身。
+
+核心设计原则：
+  - 路径寻址：所有记忆通过 path 定位（如 "preferences/recent_topics"）
+  - 后台蒸馏：每轮结束后将 L2 活动日志浓缩到 L3/L4，无 LLM 调用，幂等
+  - 系统 Prompt 自动注入：L3/L4/L5 摘要自动注入每轮 system prompt
+  - 门控开关：全部功能通过 ModuleToggles 门控，默认关闭，可逐层灰度
 """
 
-import json
-from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta
-from pathlib import Path
+from __future__ import annotations
 
-from backend.memory_manager import MemoryManager
-from backend.database import get_db, User, ChatSession, ChatMessage
-from backend.vector_store import VectorStore
+import logging
+import time
+from typing import Any, Dict, List, Optional, Tuple
 
-# 为了兼容性，定义别名
-Message = ChatMessage
-Conversation = ChatSession
+from backend.agent.memory_store import (
+    InMemoryStore,
+    MemoryEntry,
+    Scope,
+    MAX_ENTRIES_PER_STORE,
+)
+from backend.agent.activity_distiller import (
+    TurnDigest,
+    distill_turn,
+    PREFS_TOPICS_PATH,
+    PREFS_EMOTION_PATH,
+    PATTERNS_EMOTION_RESPONSE_PATH,
+)
 
+# 惰性导入：MemoryManager 依赖 chromadb，数据库依赖 SQLAlchemy，允许缺失
+try:
+    from backend.memory_manager import MemoryManager
+except ImportError:
+    MemoryManager = None  # type: ignore
+
+try:
+    from backend.database import get_db, User, ChatSession, ChatMessage
+except ImportError:
+    get_db = None  # type: ignore
+    User = None  # type: ignore
+    ChatSession = None  # type: ignore
+    ChatMessage = None  # type: ignore
+
+logger = logging.getLogger(__name__)
+
+
+# ── ModuleToggles 门控 ────────────────────────────────────────────────────────
+
+class ModuleToggles:
+    """记忆系统功能开关，默认关闭，可逐层灰度开启"""
+
+    def __init__(self):
+        self.memory_tool_exposure: bool = False       # 向 Agent 暴露 memory_* 工具
+        self.memory_prompt_injection: bool = False     # L3/L4/L5 摘要注入 system prompt
+        self.activity_distillation: bool = False       # 后台 L2→L3/L4 蒸馏
+        self.vector_search: bool = True                # 向量语义检索（已有功能）
+
+    def is_enabled(self, name: str) -> bool:
+        return getattr(self, name, False)
+
+
+# ── MemoryHub ─────────────────────────────────────────────────────────────────
 
 class MemoryHub:
-    """记忆中枢 - Agent的记忆系统核心"""
-    
-    def __init__(self, memory_manager: Optional[MemoryManager] = None):
-        """
-        初始化记忆中枢
-        
-        Args:
-            memory_manager: 现有的记忆管理器（可选，用于复用）
-        """
-        # 复用现有记忆管理器
-        self.memory_manager = memory_manager or MemoryManager()
-        
-        # 短期记忆（内存缓存）
-        self.working_memory = {
-            "conversation": [],      # 当前对话上下文
-            "active_tasks": [],      # 激活的任务
-            "temp_variables": {}     # 临时变量
-        }
-        
-        # 记忆类型定义
-        self.memory_types = {
-            "episodic": "情景记忆",      # 事件、经历
-            "semantic": "语义记忆",      # 知识、概念
-            "procedural": "程序记忆",    # 技能、策略
-            "conversation": "对话记忆"   # 对话历史
-        }
-    
-    def encode(self, experience: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        编码：将新经验转换为记忆
-        
-        Args:
-            experience: 经验数据，包含content, emotion, context等
-            
-        Returns:
-            编码后的记忆对象
-        """
-        memory = {
-            "content": experience.get("content", ""),
-            "emotion": experience.get("emotion", {}),
-            "context": self.working_memory["conversation"][-5:],  # 最近5轮对话
-            "timestamp": datetime.now(),
-            "importance": self._calculate_importance(experience),
-            "memory_type": self._infer_memory_type(experience),
-            "user_id": experience.get("user_id"),
-            "metadata": experience.get("metadata", {})
-        }
-        
-        return memory
-    
-    def consolidate(self, memory: Dict[str, Any]) -> bool:
-        """
-        巩固：将工作记忆转移到长期记忆
-        
-        Args:
-            memory: 待巩固的记忆
-            
-        Returns:
-            是否成功巩固
-        """
-        try:
-            # 情景记忆：存储事件到向量数据库
-            if memory["memory_type"] == "episodic":
-                self.memory_manager.save_memory(
-                    user_id=memory["user_id"],
-                    content=memory["content"],
-                    emotion=memory["emotion"],
-                    importance=memory["importance"],
-                    metadata=memory.get("metadata", {})
-                )
-            
-            # 对话记忆：存储到数据库
-            elif memory["memory_type"] == "conversation":
-                self._save_conversation_memory(memory)
-            
-            # 语义记忆：提取知识并存储
-            elif memory["memory_type"] == "semantic" and memory["importance"] > 0.8:
-                knowledge = self._extract_knowledge(memory)
-                if knowledge:
-                    self.memory_manager.save_memory(
-                        user_id=memory["user_id"],
-                        content=knowledge,
-                        emotion=memory["emotion"],
-                        importance=memory["importance"],
-                        metadata={"type": "knowledge", **memory.get("metadata", {})}
-                    )
-            
-            return True
-            
-        except Exception as e:
-            print(f"记忆巩固失败: {str(e)}")
-            return False
-    
-    def retrieve(
-        self, 
-        query: str, 
-        user_id: str,
-        context: Optional[Dict[str, Any]] = None,
-        top_k: int = 5
-    ) -> List[Dict[str, Any]]:
-        """
-        检索：基于查询和上下文检索相关记忆
-        
-        Args:
-            query: 搜索查询
-            user_id: 用户ID
-            context: 上下文信息（情绪、时间等）
-            top_k: 返回Top-K记忆
-            
-        Returns:
-            相关记忆列表
-        """
-        context = context or {}
-        results = []
-        
-        # 1. 向量语义检索（相似度）
-        try:
-            semantic_results = self.memory_manager.search_memories(
-                user_id=user_id,
-                query=query,
-                top_k=top_k,
-                min_importance=0.3
-            )
-            results.extend(semantic_results)
-        except Exception as e:
-            print(f"语义检索失败: {str(e)}")
-        
-        # 2. 时间序列检索（近期优先）
-        if context.get("time_range"):
-            try:
-                temporal_results = self._search_recent(
-                    user_id=user_id,
-                    days=context.get("time_range", 7),
-                    limit=3
-                )
-                results.extend(temporal_results)
-            except Exception as e:
-                print(f"时间检索失败: {str(e)}")
-        
-        # 3. 情绪关联检索（情绪一致性）
-        if context.get("emotion"):
-            try:
-                emotion_results = self._search_by_emotion(
-                    user_id=user_id,
-                    emotion=context["emotion"],
-                    limit=2
-                )
-                results.extend(emotion_results)
-            except Exception as e:
-                print(f"情绪检索失败: {str(e)}")
-        
-        # 合并去重，按重要性和相似度排序
-        unique_results = self._merge_and_rank(results, top_k)
-        
-        return unique_results
-    
-    def update_working_memory(
-        self, 
-        conversation: Optional[List[Dict]] = None,
-        tasks: Optional[List[Dict]] = None,
-        variables: Optional[Dict] = None
+    """
+    六层记忆中枢 — Agent 的记忆系统核心。
+
+    职责：
+      1. 管理六个作用域的 MemoryStore 实例
+      2. 提供 6 个 memory_* 工具接口（L3/L4/L5 可寻址）
+      3. 协调短期记忆（L5/L6）与长期记忆（L3）的联动
+      4. 每轮结束后触发蒸馏管道（L2→L3/L4）
+      5. 构建 system prompt 记忆摘要片段
+
+    使用方式：
+      hub = MemoryHub(user_id="user_123", session_id="sess_456")
+      await hub.initialize()
+
+      # 每轮对话前
+      memory_prompt = hub.build_memory_prompt("今天心情不太好")
+
+      # 每轮对话后
+      await hub.on_turn_end(query="今天心情不太好", emotion="sad", intensity=7.0)
+    """
+
+    # 稳定路径常量
+    PATH_CURRENT_TASK = "context/current_task"
+    PATH_USER_STATE = "context/user_state"
+    PATH_SESSION_SUMMARY = "context/session_summary"
+
+    def __init__(
+        self,
+        user_id: str = "",
+        session_id: str = "",
+        agent_type: str = "xinyu",
+        memory_manager: Optional[MemoryManager] = None,
+        toggles: Optional[ModuleToggles] = None,
     ):
-        """
-        更新短期记忆（工作记忆）
-        
+        self._user_id = user_id
+        self._session_id = session_id
+        self._agent_type = agent_type
+        self._memory_manager = memory_manager  # 保留向量检索能力
+        self._toggles = toggles or ModuleToggles()
+
+        # 六层 Store 实例（惰性初始化）
+        self._stores: Dict[str, InMemoryStore] = {}
+
+        # L6 当轮上下文（虚拟层，不持久化）
+        self._turn_context: Dict[str, Any] = {}
+
+        # L2 活动日志缓冲（本轮累积，蒸馏后清空）
+        self._activity_log: List[Dict[str, Any]] = []
+
+    async def initialize(self) -> None:
+        """初始化所有 Store 实例"""
+        # L1 组织级 — 全局知识库，只读
+        self._stores["organization"] = InMemoryStore(
+            store_id=f"org_{self._agent_type}",
+            scope="organization",
+            target_id=self._agent_type,
+            description="组织级知识库：共情话术库、安全规范等",
+        )
+
+        # L2 工作区级 — 活动日志，不暴露
+        self._stores["workspace"] = InMemoryStore(
+            store_id=f"ws_default",
+            scope="workspace",
+            target_id="default",
+            description="工作区级活动日志",
+        )
+
+        # L3 用户级 — 长期偏好
+        if self._user_id:
+            self._stores["user"] = InMemoryStore(
+                store_id=f"user_{self._user_id}",
+                scope="user",
+                target_id=self._user_id,
+                description="用户级记忆：偏好、兴趣、情绪基线",
+            )
+
+        # L4 Agent 实例级 — Agent 学习模式
+        self._stores["agent_instance"] = InMemoryStore(
+            store_id=f"agent_{self._agent_type}_{self._user_id}",
+            scope="agent_instance",
+            target_id=self._agent_type,
+            description="Agent 实例级记忆：情绪响应策略、交互模式",
+        )
+
+        # L5 会话级 — 当次对话工作记忆
+        if self._session_id:
+            self._stores["session"] = InMemoryStore(
+                store_id=f"session_{self._session_id}",
+                scope="session",
+                target_id=self._session_id,
+                description="会话级工作记忆：当前话题、用户状态",
+            )
+
+        # 加载已有数据（L3/L4 从数据库恢复）
+        await self._load_persistent_data()
+
+        logger.info(
+            "MemoryHub initialized: user=%s, session=%s, stores=%s",
+            self._user_id[:8], self._session_id[:8], list(self._stores.keys()),
+        )
+
+    # ── 六层 Store 访问 ──────────────────────────────────────────────────
+
+    def get_store(self, scope: str) -> Optional[InMemoryStore]:
+        """获取指定作用域的 Store"""
+        return self._stores.get(scope)
+
+    @property
+    def user_store(self) -> Optional[InMemoryStore]:
+        """L3 用户级 Store"""
+        return self._stores.get("user")
+
+    @property
+    def agent_store(self) -> Optional[InMemoryStore]:
+        """L4 Agent 实例级 Store"""
+        return self._stores.get("agent_instance")
+
+    @property
+    def session_store(self) -> Optional[InMemoryStore]:
+        """L5 会话级 Store"""
+        return self._stores.get("session")
+
+    @property
+    def organization_store(self) -> Optional[InMemoryStore]:
+        """L1 组织级 Store（只读）"""
+        return self._stores.get("organization")
+
+    # ── 记忆工具接口（LLM 可见，6 个 memory_* 工具） ─────────────────────
+
+    def get_tool_schemas(self) -> List[dict]:
+        """返回 6 个 memory_* 工具的 schema（用于 LLM function calling）"""
+        if not self._toggles.is_enabled("memory_tool_exposure"):
+            return []
+
+        schemas = []
+        # L3/L4/L5 各自注册一套工具
+        for scope_name in ["user", "agent_instance", "session"]:
+            store = self._stores.get(scope_name)
+            if store is None:
+                continue
+            scope_label = {"user": "L3用户", "agent_instance": "L4Agent", "session": "L5会话"}
+
+            schemas.extend([
+                {
+                    "name": "memory_list",
+                    "description": f"列出{scope_label[scope_name]}记忆中的所有条目",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "scope": {"type": "string", "enum": [scope_name]},
+                            "path_prefix": {"type": "string", "description": "路径前缀过滤"},
+                        },
+                        "required": ["scope"],
+                    },
+                },
+                {
+                    "name": "memory_search",
+                    "description": f"在{scope_label[scope_name]}记忆中搜索关键词",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "scope": {"type": "string", "enum": [scope_name]},
+                            "query": {"type": "string", "description": "搜索关键词"},
+                        },
+                        "required": ["scope", "query"],
+                    },
+                },
+                {
+                    "name": "memory_read",
+                    "description": f"读取{scope_label[scope_name]}记忆中的指定条目",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "scope": {"type": "string", "enum": [scope_name]},
+                            "path": {"type": "string", "description": "条目路径"},
+                        },
+                        "required": ["scope", "path"],
+                    },
+                },
+                {
+                    "name": "memory_write",
+                    "description": f"写入{scope_label[scope_name]}记忆（创建或更新）",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "scope": {"type": "string", "enum": [scope_name]},
+                            "path": {"type": "string", "description": "条目路径"},
+                            "content": {"type": "string", "description": "条目内容"},
+                        },
+                        "required": ["scope", "path", "content"],
+                    },
+                },
+                {
+                    "name": "memory_edit",
+                    "description": f"局部编辑{scope_label[scope_name]}记忆（替换首次匹配）",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "scope": {"type": "string", "enum": [scope_name]},
+                            "path": {"type": "string", "description": "条目路径"},
+                            "old_text": {"type": "string", "description": "要替换的旧文本"},
+                            "new_text": {"type": "string", "description": "替换后的新文本"},
+                        },
+                        "required": ["scope", "path", "old_text", "new_text"],
+                    },
+                },
+                {
+                    "name": "memory_delete",
+                    "description": f"删除{scope_label[scope_name]}记忆中的条目（软删除）",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "scope": {"type": "string", "enum": [scope_name]},
+                            "path": {"type": "string", "description": "条目路径"},
+                        },
+                        "required": ["scope", "path"],
+                    },
+                },
+            ])
+        return schemas
+
+    async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """执行 memory_* 工具调用"""
+        scope = arguments.get("scope", "")
+
+        # L1/L2 不可通过工具寻址
+        if scope in ("organization", "workspace"):
+            return {"success": False, "error": f"scope '{scope}' 不可通过工具操作"}
+
+        store = self._stores.get(scope)
+        if store is None:
+            return {"success": False, "error": f"scope '{scope}' 对应的 store 不存在"}
+
+        try:
+            if tool_name == "memory_list":
+                entries = await store.list_entries(arguments.get("path_prefix", ""))
+                return {
+                    "success": True,
+                    "entries": [
+                        {"path": e.path, "version": e.version, "preview": (e.content or "")[:100]}
+                        for e in entries
+                    ],
+                }
+
+            elif tool_name == "memory_search":
+                entries = await store.search(arguments["query"])
+                return {
+                    "success": True,
+                    "results": [
+                        {"path": e.path, "version": e.version, "preview": (e.content or "")[:100]}
+                        for e in entries[:10]
+                    ],
+                }
+
+            elif tool_name == "memory_read":
+                entry = await store.read(arguments["path"])
+                if entry is None or entry.content is None:
+                    return {"success": False, "error": f"条目不存在: {arguments['path']}"}
+                return {
+                    "success": True,
+                    "path": entry.path,
+                    "content": entry.content,
+                    "version": entry.version,
+                }
+
+            elif tool_name == "memory_write":
+                entry = await store.write(arguments["path"], arguments["content"])
+                # 同时写入向量存储（如果可用）
+                await self._sync_to_vector_store(arguments["path"], arguments["content"])
+                return {"success": True, "path": entry.path, "version": entry.version}
+
+            elif tool_name == "memory_edit":
+                entry = await store.edit(
+                    arguments["path"], arguments["old_text"], arguments["new_text"]
+                )
+                return {"success": True, "path": entry.path, "version": entry.version}
+
+            elif tool_name == "memory_delete":
+                await store.delete(arguments["path"])
+                return {"success": True, "path": arguments["path"]}
+
+            else:
+                return {"success": False, "error": f"未知工具: {tool_name}"}
+
+        except Exception as e:
+            logger.warning("memory tool error: %s — %s", tool_name, e)
+            return {"success": False, "error": str(e)}
+
+    # ── 短期记忆管理（L5/L6） ───────────────────────────────────────────
+
+    async def update_session_context(
+        self,
+        current_task: Optional[str] = None,
+        user_state: Optional[Dict[str, Any]] = None,
+        session_summary: Optional[str] = None,
+    ) -> None:
+        """更新 L5 会话级工作记忆"""
+        store = self.session_store
+        if store is None:
+            return
+
+        if current_task is not None:
+            await store.write(self.PATH_CURRENT_TASK, current_task)
+        if user_state is not None:
+            import json
+            await store.write(self.PATH_USER_STATE, json.dumps(user_state, ensure_ascii=False))
+        if session_summary is not None:
+            await store.write(self.PATH_SESSION_SUMMARY, session_summary)
+
+    async def get_session_context(self) -> Dict[str, Any]:
+        """读取 L5 会话上下文"""
+        store = self.session_store
+        if store is None:
+            return {}
+
+        result = {}
+        for path, key in [
+            (self.PATH_CURRENT_TASK, "current_task"),
+            (self.PATH_USER_STATE, "user_state"),
+            (self.PATH_SESSION_SUMMARY, "session_summary"),
+        ]:
+            entry = await store.read(path)
+            if entry and entry.content:
+                if key == "user_state":
+                    try:
+                        import json
+                        result[key] = json.loads(entry.content)
+                    except json.JSONDecodeError:
+                        result[key] = entry.content
+                else:
+                    result[key] = entry.content
+        return result
+
+    def set_turn_context(self, **kwargs) -> None:
+        """更新 L6 当轮上下文（虚拟层，不持久化）"""
+        self._turn_context.update(kwargs)
+
+    def get_turn_context(self) -> Dict[str, Any]:
+        """获取 L6 当轮上下文"""
+        return self._turn_context.copy()
+
+    def clear_turn_context(self) -> None:
+        """清空 L6 当轮上下文"""
+        self._turn_context = {}
+
+    # ── 语义检索（兼容已有 VectorStore） ─────────────────────────────────
+
+    async def semantic_search(
+        self,
+        query: str,
+        top_k: int = 5,
+        min_importance: float = 0.3,
+    ) -> List[Dict[str, Any]]:
+        """向量语义检索（使用已有的 MemoryManager 向量能力）"""
+        if not self._memory_manager or not self._toggles.vector_search:
+            return []
+
+        try:
+            return self._memory_manager.retrieve_memories(
+                user_id=self._user_id,
+                query=query,
+                n_results=top_k,
+                min_importance=min_importance,
+            )
+        except Exception as e:
+            logger.warning("语义检索失败: %s", e)
+            return []
+
+    # ── 蒸馏管道（每轮结束后调用） ──────────────────────────────────────
+
+    async def on_turn_end(
+        self,
+        query: str,
+        emotion: str = "neutral",
+        emotion_intensity: float = 5.0,
+        bot_empathy_score: float = 0.0,
+        tool_calls: Optional[List[Dict[str, Any]]] = None,
+        final_status: str = "success",
+    ) -> Dict[str, bool]:
+        """每轮对话结束后调用：触发蒸馏管道。
+
         Args:
-            conversation: 对话历史
-            tasks: 任务列表
-            variables: 临时变量
+            query: 用户消息
+            emotion: 情绪标签
+            emotion_intensity: 情绪强度 (0-10)
+            bot_empathy_score: 共情评分 (0-1)
+            tool_calls: 本轮工具调用记录
+            final_status: 本轮状态
+
+        Returns:
+            蒸馏更新结果
         """
-        if conversation is not None:
-            # 只保留最近10轮对话
-            self.working_memory["conversation"] = conversation[-10:]
-        
-        if tasks is not None:
-            self.working_memory["active_tasks"] = tasks
-        
-        if variables is not None:
-            self.working_memory["temp_variables"].update(variables)
-    
+        if not self._toggles.is_enabled("activity_distillation"):
+            return {"topics_updated": False, "emotion_baseline_updated": False, "patterns_updated": False}
+
+        digest = TurnDigest(
+            session_id=self._session_id,
+            user_id=self._user_id,
+            query=query,
+            timestamp=time.time(),
+            emotion=emotion,
+            emotion_intensity=emotion_intensity,
+            bot_empathy_score=bot_empathy_score,
+            tool_calls=tool_calls or [],
+            final_status=final_status,
+        )
+
+        # 记录到 L2 活动日志
+        self._activity_log.append({
+            "query": query,
+            "emotion": emotion,
+            "intensity": emotion_intensity,
+            "timestamp": digest.timestamp,
+        })
+
+        result = await distill_turn(
+            digest,
+            user_store=self.user_store,
+            agent_instance_store=self.agent_store,
+        )
+
+        # 清空 L6 当轮上下文
+        self.clear_turn_context()
+
+        return result
+
+    # ── 系统 Prompt 注入 ────────────────────────────────────────────────
+
+    def build_memory_prompt(self, query: str = "") -> str:
+        """构建注入到 system prompt 的记忆摘要。
+
+        优先级：
+          1. L3 用户偏好（recent_topics + emotion_baseline）
+          2. L4 Agent 模式（emotion_response）
+          3. L5 会话上下文（current_task + user_state）
+          4. 向量语义检索结果（对 query 最相关的记忆）
+
+        Agent 在第一轮就能感知历史记忆，无需主动发起 memory_list。
+        """
+        if not self._toggles.is_enabled("memory_prompt_injection"):
+            return ""
+
+        parts: List[str] = ["## 记忆上下文"]
+
+        # L3 用户偏好
+        user_store = self.user_store
+        if user_store:
+            fragment = user_store.build_system_prompt_fragment()
+            if fragment:
+                parts.append(fragment)
+
+        # L4 Agent 模式
+        agent_store = self.agent_store
+        if agent_store:
+            fragment = agent_store.build_system_prompt_fragment()
+            if fragment:
+                parts.append(fragment)
+
+        # L5 会话上下文
+        session_store = self.session_store
+        if session_store:
+            fragment = session_store.build_system_prompt_fragment()
+            if fragment:
+                parts.append(fragment)
+
+        return "\n\n".join(parts) if len(parts) > 1 else ""
+
+    # ── 用户画像（兼容旧接口） ──────────────────────────────────────────
+
+    async def get_user_profile(self, user_id: Optional[str] = None) -> Dict[str, Any]:
+        """获取用户画像，综合 L3 记忆 + 数据库数据"""
+        uid = user_id or self._user_id
+        if not uid:
+            return {}
+
+        profile: Dict[str, Any] = {"user_id": uid}
+
+        # 从 L3 Store 读取偏好
+        user_store = self.user_store
+        if user_store:
+            # 话题偏好
+            topics_entry = await user_store.read(PREFS_TOPICS_PATH)
+            if topics_entry and topics_entry.content:
+                try:
+                    import json
+                    profile["recent_topics"] = json.loads(topics_entry.content)
+                except json.JSONDecodeError:
+                    pass
+
+            # 情绪基线
+            emotion_entry = await user_store.read(PREFS_EMOTION_PATH)
+            if emotion_entry and emotion_entry.content:
+                try:
+                    import json
+                    profile["emotion_baseline"] = json.loads(emotion_entry.content)
+                except json.JSONDecodeError:
+                    pass
+
+        # 从数据库补充基本信息
+        try:
+            if get_db is not None and User is not None:
+                db = next(get_db())
+                user = db.query(User).filter(User.user_id == uid).first()
+                if user:
+                    profile["username"] = user.username
+                    profile["created_at"] = user.created_at.isoformat() if user.created_at else None
+        except Exception as e:
+            logger.warning("数据库查询用户画像失败: %s", e)
+
+        return profile
+
+    # ── 行为日志（兼容旧接口） ──────────────────────────────────────────
+
+    async def get_action_log(
+        self,
+        user_id: Optional[str] = None,
+        days: int = 7,
+        limit: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """获取用户行为日志"""
+        uid = user_id or self._user_id
+        if not uid:
+            return []
+
+        try:
+            if get_db is None or ChatMessage is None:
+                return []
+            db = next(get_db())
+            from datetime import datetime, timedelta
+            since_date = datetime.now() - timedelta(days=days)
+
+            messages = db.query(ChatMessage).filter(
+                ChatMessage.user_id == uid,
+                ChatMessage.created_at >= since_date,
+            ).order_by(ChatMessage.created_at.desc()).limit(limit).all()
+
+            return [
+                {
+                    "action": "message",
+                    "content": msg.content[:100] if msg.content else "",
+                    "role": msg.role,
+                    "emotion": msg.emotion,
+                    "timestamp": msg.created_at.isoformat() if msg.created_at else None,
+                }
+                for msg in messages
+            ]
+        except Exception as e:
+            logger.warning("获取行为日志失败: %s", e)
+            return []
+
+    # ── 兼容旧接口 ────────────────────────────────────────────────────
+
+    def encode(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """兼容旧接口：编码记忆。
+
+        旧代码调用 memory_hub.encode({...})，现在映射到语义检索 + L3 写入。
+        """
+        content = data.get("content", "")
+        emotion = data.get("emotion", {})
+        user_id = data.get("user_id", self._user_id)
+        role = data.get("role", "user")
+
+        # 简化处理：直接返回结构化记忆
+        emotion_label = emotion.get("emotion", "neutral") if isinstance(emotion, dict) else str(emotion)
+        intensity = emotion.get("intensity", 5.0) if isinstance(emotion, dict) else 5.0
+
+        importance = min(1.0, intensity / 10.0)
+
+        return {
+            "memory_type": "episodic",
+            "content": content,
+            "emotion": emotion,
+            "importance": importance,
+            "user_id": user_id,
+            "role": role,
+        }
+
+    def retrieve(
+        self,
+        query: str,
+        user_id: Optional[str] = None,
+        context: Optional[Dict[str, Any]] = None,
+        top_k: int = 5,
+    ) -> List[Dict[str, Any]]:
+        """兼容旧接口：检索记忆（同步版本，优先使用 semantic_search）"""
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # 如果已在 async 上下文中，无法直接 await
+                # 回退到 InMemoryStore 的同步搜索
+                results = []
+                for scope_name in ["user", "agent_instance", "session"]:
+                    store = self._stores.get(scope_name)
+                    if store:
+                        try:
+                            entries = asyncio.ensure_future(store.search(query))
+                        except RuntimeError:
+                            continue
+                return results[:top_k]
+            else:
+                return loop.run_until_complete(self.semantic_search(query, top_k))
+        except RuntimeError:
+            # 没有事件循环，使用 InMemoryStore 同步搜索
+            results = []
+            for scope_name in ["user", "agent_instance", "session"]:
+                store = self._stores.get(scope_name)
+                if store:
+                    for path, entry in store._entries.items():
+                        if entry.content and query.lower() in entry.content.lower():
+                            results.append({
+                                "content": entry.content,
+                                "emotion": {},
+                                "timestamp": entry.updated_at,
+                                "importance": 0.5,
+                                "path": entry.path,
+                            })
+            return results[:top_k]
+
     def get_working_memory(self) -> Dict[str, Any]:
-        """获取当前工作记忆"""
-        return self.working_memory.copy()
-    
-    def clear_working_memory(self):
-        """清空工作记忆"""
-        self.working_memory = {
+        """兼容旧接口：获取工作记忆"""
+        result: Dict[str, Any] = {
             "conversation": [],
             "active_tasks": [],
-            "temp_variables": {}
+            "current_context": self._turn_context,
         }
-    
-    def get_user_profile(self, user_id: str) -> Dict[str, Any]:
-        """
-        获取用户画像
-        
-        Args:
-            user_id: 用户ID
-            
-        Returns:
-            用户画像数据
-        """
+
+        # 尝试从 L5 读取当前任务
+        session_store = self.session_store
+        if session_store:
+            entry = session_store._entries.get(self.PATH_CURRENT_TASK)
+            if entry and entry.content:
+                result["active_tasks"].append(entry.content)
+
+        return result
+
+    # ── 内部辅助方法 ────────────────────────────────────────────────────
+
+    async def _load_persistent_data(self) -> None:
+        """从数据库加载已有记忆数据到 L3/L4 Store"""
+        if not self._user_id:
+            return
+
         try:
+            if get_db is None or ChatMessage is None:
+                return
+            # 从数据库加载最近消息，重建 L3 偏好
             db = next(get_db())
-            user = db.query(User).filter(User.id == user_id).first()
-            
-            if not user:
-                return {}
-            
-            profile = {
-                "user_id": user.id,
-                "username": user.username,
-                "created_at": user.created_at.isoformat() if user.created_at else None,
-                "total_conversations": self._get_conversation_count(user_id),
-                "emotion_baseline": self._get_emotion_baseline(user_id),
-                "interests": self._extract_interests(user_id),
-                "personality_traits": self._extract_personality_traits(user_id)
-            }
-            
-            return profile
-            
+            from datetime import datetime, timedelta
+
+            since = datetime.now() - timedelta(days=30)
+            messages = db.query(ChatMessage).filter(
+                ChatMessage.user_id == self._user_id,
+                ChatMessage.created_at >= since,
+            ).order_by(ChatMessage.created_at.desc()).limit(100).all()
+
+            if messages and self.user_store:
+                # 重建话题偏好
+                import json
+                topics = []
+                seen = set()
+                for msg in messages:
+                    if msg.content and msg.role == "user":
+                        topic = msg.content[:50]
+                        if topic not in seen:
+                            seen.add(topic)
+                            topics.append({
+                                "topic": topic,
+                                "freq": 1,
+                                "last_seen": msg.created_at.timestamp() if msg.created_at else time.time(),
+                            })
+                if topics:
+                    await self.user_store.write(
+                        PREFS_TOPICS_PATH,
+                        json.dumps(topics[:20], ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+                    )
+
+                # 重建情绪基线
+                emotion_counts = {}
+                for msg in messages:
+                    if msg.emotion:
+                        emotion_counts[msg.emotion] = emotion_counts.get(msg.emotion, 0) + 1
+                if emotion_counts:
+                    dominant = max(emotion_counts.items(), key=lambda x: x[1])[0]
+                    baseline = {
+                        "dominant_emotion": dominant,
+                        "avg_intensity": 5.0,
+                        "distribution": emotion_counts,
+                    }
+                    await self.user_store.write(
+                        PREFS_EMOTION_PATH,
+                        json.dumps(baseline, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+                    )
+
         except Exception as e:
-            print(f"获取用户画像失败: {str(e)}")
-            return {}
-    
-    def get_action_log(
-        self, 
-        user_id: str, 
-        days: int = 7,
-        limit: int = 10
-    ) -> List[Dict[str, Any]]:
-        """
-        获取用户行为日志
-        
-        Args:
-            user_id: 用户ID
-            days: 查询天数
-            limit: 返回数量限制
-            
-        Returns:
-            行为日志列表
-        """
+            logger.warning("加载持久化记忆数据失败: %s", e)
+
+    async def _sync_to_vector_store(self, path: str, content: str) -> None:
+        """同步写入到向量数据库（用于语义检索）"""
+        if MemoryManager is None or not self._memory_manager:
+            return
+
         try:
-            db = next(get_db())
-            since_date = datetime.now() - timedelta(days=days)
-            
-            messages = db.query(Message).join(Conversation).filter(
-                Conversation.user_id == user_id,
-                Message.created_at >= since_date
-            ).order_by(Message.created_at.desc()).limit(limit).all()
-            
-            action_log = []
-            for msg in messages:
-                action_log.append({
-                    "action": "message",
-                    "content": msg.content[:100],  # 截断内容
-                    "role": msg.role,
-                    "emotion": msg.emotion_label,
-                    "timestamp": msg.created_at.isoformat() if msg.created_at else None
-                })
-            
-            return action_log
-            
+            self._memory_manager.store_memory(
+                user_id=self._user_id,
+                session_id=self._session_id,
+                memory={
+                    "content": content,
+                    "summary": content[:100],
+                    "type": "knowledge",
+                    "importance": 0.5,
+                    "timestamp": time.time(),
+                },
+            )
         except Exception as e:
-            print(f"获取行为日志失败: {str(e)}")
-            return []
-    
-    # ==================== 私有辅助方法 ====================
-    
-    def _calculate_importance(self, experience: Dict[str, Any]) -> float:
-        """
-        计算记忆重要性
-        
-        规则：
-        1. 情绪强度越高，重要性越高
-        2. 包含特定关键词（考试、面试等）提高重要性
-        3. 内容长度影响重要性
-        """
-        importance = 0.5  # 基础重要性
-        
-        # 情绪强度影响（0-1）
-        emotion = experience.get("emotion", {})
-        if isinstance(emotion, dict) and "intensity" in emotion:
-            intensity = emotion.get("intensity", 0)
-            importance += intensity * 0.3
-        
-        # 关键词影响
-        content = experience.get("content", "")
-        important_keywords = ["考试", "面试", "分手", "生病", "家人", "工作", "健康", "抑郁", "焦虑"]
-        if any(kw in content for kw in important_keywords):
-            importance += 0.2
-        
-        # 内容长度影响
-        if len(content) > 50:
-            importance += 0.1
-        
-        return min(importance, 1.0)
-    
-    def _infer_memory_type(self, experience: Dict[str, Any]) -> str:
-        """推断记忆类型"""
-        content = experience.get("content", "")
-        
-        # 事件关键词
-        event_keywords = ["今天", "昨天", "刚刚", "发生", "遇到", "经历"]
-        if any(kw in content for kw in event_keywords):
-            return "episodic"
-        
-        # 对话记忆
-        if experience.get("role") in ["user", "assistant"]:
-            return "conversation"
-        
-        # 默认为语义记忆
-        return "semantic"
-    
-    def _extract_knowledge(self, memory: Dict[str, Any]) -> Optional[str]:
-        """从记忆中提取知识"""
-        # 简化实现：如果包含"学到"、"发现"等关键词，提取知识
-        content = memory.get("content", "")
-        knowledge_keywords = ["学到", "发现", "了解到", "知道了", "明白了"]
-        
-        if any(kw in content for kw in knowledge_keywords):
-            return content
-        
-        return None
-    
-    def _save_conversation_memory(self, memory: Dict[str, Any]):
-        """保存对话记忆到数据库"""
-        try:
-            db = next(get_db())
-            
-            # 查找或创建对话
-            conversation = db.query(Conversation).filter(
-                Conversation.user_id == memory["user_id"]
-            ).order_by(Conversation.created_at.desc()).first()
-            
-            if conversation:
-                # 保存消息
-                message = Message(
-                    conversation_id=conversation.id,
-                    role=memory.get("role", "user"),
-                    content=memory["content"],
-                    emotion_label=memory.get("emotion", {}).get("emotion"),
-                    emotion_intensity=memory.get("emotion", {}).get("intensity")
-                )
-                db.add(message)
-                db.commit()
-        
-        except Exception as e:
-            print(f"保存对话记忆失败: {str(e)}")
-    
-    def _search_recent(
-        self, 
-        user_id: str, 
-        days: int = 7, 
-        limit: int = 5
-    ) -> List[Dict[str, Any]]:
-        """搜索近期记忆"""
-        try:
-            db = next(get_db())
-            since_date = datetime.now() - timedelta(days=days)
-            
-            messages = db.query(Message).join(Conversation).filter(
-                Conversation.user_id == user_id,
-                Message.created_at >= since_date,
-                Message.role == "user"
-            ).order_by(Message.created_at.desc()).limit(limit).all()
-            
-            results = []
-            for msg in messages:
-                results.append({
-                    "content": msg.content,
-                    "emotion": {
-                        "emotion": msg.emotion_label,
-                        "intensity": msg.emotion_intensity
-                    },
-                    "timestamp": msg.created_at,
-                    "importance": 0.7  # 近期记忆默认较重要
-                })
-            
-            return results
-            
-        except Exception as e:
-            print(f"近期记忆搜索失败: {str(e)}")
-            return []
-    
-    def _search_by_emotion(
-        self, 
-        user_id: str, 
-        emotion: str, 
-        limit: int = 3
-    ) -> List[Dict[str, Any]]:
-        """根据情绪搜索记忆"""
-        try:
-            db = next(get_db())
-            
-            messages = db.query(Message).join(Conversation).filter(
-                Conversation.user_id == user_id,
-                Message.emotion_label == emotion,
-                Message.role == "user"
-            ).order_by(Message.created_at.desc()).limit(limit).all()
-            
-            results = []
-            for msg in messages:
-                results.append({
-                    "content": msg.content,
-                    "emotion": {
-                        "emotion": msg.emotion_label,
-                        "intensity": msg.emotion_intensity
-                    },
-                    "timestamp": msg.created_at,
-                    "importance": 0.6
-                })
-            
-            return results
-            
-        except Exception as e:
-            print(f"情绪记忆搜索失败: {str(e)}")
-            return []
-    
-    def _merge_and_rank(
-        self, 
-        results: List[Dict[str, Any]], 
-        top_k: int
-    ) -> List[Dict[str, Any]]:
-        """合并去重并排序记忆"""
-        # 简单去重（基于内容）
-        seen_contents = set()
-        unique_results = []
-        
-        for result in results:
-            content = result.get("content", "")
-            if content and content not in seen_contents:
-                seen_contents.add(content)
-                unique_results.append(result)
-        
-        # 按重要性和时间排序
-        unique_results.sort(
-            key=lambda x: (
-                x.get("importance", 0.5),
-                x.get("timestamp", datetime.min)
-            ),
-            reverse=True
-        )
-        
-        return unique_results[:top_k]
-    
-    def _get_conversation_count(self, user_id: str) -> int:
-        """获取用户对话总数"""
-        try:
-            db = next(get_db())
-            count = db.query(Conversation).filter(
-                Conversation.user_id == user_id
-            ).count()
-            return count
-        except:
-            return 0
-    
-    def _get_emotion_baseline(self, user_id: str) -> Dict[str, Any]:
-        """获取用户情绪基线"""
-        try:
-            db = next(get_db())
-            
-            # 统计最近30天的情绪分布
-            since_date = datetime.now() - timedelta(days=30)
-            messages = db.query(Message).join(Conversation).filter(
-                Conversation.user_id == user_id,
-                Message.created_at >= since_date,
-                Message.emotion_label.isnot(None)
-            ).all()
-            
-            if not messages:
-                return {}
-            
-            emotions = {}
-            total_intensity = 0
-            
-            for msg in messages:
-                emotion = msg.emotion_label
-                intensity = msg.emotion_intensity or 0
-                
-                if emotion:
-                    emotions[emotion] = emotions.get(emotion, 0) + 1
-                    total_intensity += intensity
-            
-            dominant_emotion = max(emotions.items(), key=lambda x: x[1])[0] if emotions else "平静"
-            avg_intensity = total_intensity / len(messages) if messages else 0
-            
-            return {
-                "dominant_emotion": dominant_emotion,
-                "avg_intensity": round(avg_intensity, 2),
-                "emotion_distribution": emotions
-            }
-            
-        except Exception as e:
-            print(f"获取情绪基线失败: {str(e)}")
-            return {}
-    
-    def _extract_interests(self, user_id: str) -> List[str]:
-        """提取用户兴趣"""
-        # 简化实现：基于关键词统计
-        try:
-            db = next(get_db())
-            
-            messages = db.query(Message).join(Conversation).filter(
-                Conversation.user_id == user_id,
-                Message.role == "user"
-            ).limit(100).all()
-            
-            interest_keywords = {
-                "阅读": ["书", "读", "小说", "阅读"],
-                "音乐": ["音乐", "歌", "听歌", "演唱会"],
-                "运动": ["运动", "跑步", "健身", "游泳"],
-                "电影": ["电影", "影片", "看电影"],
-                "旅游": ["旅游", "旅行", "出游", "景点"]
-            }
-            
-            interest_counts = {interest: 0 for interest in interest_keywords}
-            
-            for msg in messages:
-                content = msg.content
-                for interest, keywords in interest_keywords.items():
-                    if any(kw in content for kw in keywords):
-                        interest_counts[interest] += 1
-            
-            # 返回提及次数>2的兴趣
-            interests = [k for k, v in interest_counts.items() if v > 2]
-            return interests
-            
-        except Exception as e:
-            print(f"提取兴趣失败: {str(e)}")
-            return []
-    
-    def _extract_personality_traits(self, user_id: str) -> List[str]:
-        """提取用户性格特征"""
-        # 简化实现：基于情绪和表达分析
-        try:
-            emotion_baseline = self._get_emotion_baseline(user_id)
-            
-            traits = []
-            
-            # 基于主导情绪推断性格
-            dominant_emotion = emotion_baseline.get("dominant_emotion", "")
-            emotion_map = {
-                "焦虑": "敏感型",
-                "开心": "乐观型",
-                "难过": "情绪化",
-                "平静": "稳重型"
-            }
-            
-            if dominant_emotion in emotion_map:
-                traits.append(emotion_map[dominant_emotion])
-            
-            # 基于情绪强度推断
-            avg_intensity = emotion_baseline.get("avg_intensity", 0)
-            if avg_intensity > 7:
-                traits.append("感性")
-            elif avg_intensity < 4:
-                traits.append("理性")
-            
-            return traits
-            
-        except Exception as e:
-            print(f"提取性格特征失败: {str(e)}")
-            return []
+            logger.warning("同步到向量存储失败: %s", e)
 
 
-# 单例模式
-_memory_hub_instance = None
+# ── 全局单例 ─────────────────────────────────────────────────────────────────
 
-def get_memory_hub() -> MemoryHub:
-    """获取全局MemoryHub实例"""
+_memory_hub_instance: Optional[MemoryHub] = None
+
+
+async def get_memory_hub(
+    user_id: str = "",
+    session_id: str = "",
+    agent_type: str = "xinyu",
+) -> MemoryHub:
+    """获取全局 MemoryHub 实例（惰性初始化）"""
     global _memory_hub_instance
     if _memory_hub_instance is None:
-        _memory_hub_instance = MemoryHub()
+        _memory_hub_instance = MemoryHub(
+            user_id=user_id,
+            session_id=session_id,
+            agent_type=agent_type,
+        )
+        await _memory_hub_instance.initialize()
     return _memory_hub_instance
 
+
+def reset_memory_hub() -> None:
+    """重置全局 MemoryHub 实例（用于测试或重新初始化）"""
+    global _memory_hub_instance
+    _memory_hub_instance = None

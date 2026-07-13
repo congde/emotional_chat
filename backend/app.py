@@ -17,6 +17,14 @@ from datetime import datetime
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
+# 尽早加载 config.env，保证 os.getenv 在路由/服务导入前可用（含 uvicorn 直接启动）
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(Path(project_root) / "config.env")
+except ImportError:
+    pass
+
 # 导入路由
 from backend.routers import (
     chat_router,
@@ -62,6 +70,13 @@ except ImportError:
     AGENT_ENABLED = False
     agent_router = None
 
+try:
+    from backend.routers.hermes import router as hermes_router
+    HERMES_ROUTER_ENABLED = True
+except ImportError:
+    HERMES_ROUTER_ENABLED = False
+    hermes_router = None
+
 # 导入日志配置
 from backend.logging_config import get_logger
 
@@ -84,11 +99,27 @@ def create_app() -> FastAPI:
         redoc_url="/redoc"
     )
     
-    # 配置CORS
+    # CORS：浏览器不允许 allow_origins=["*"] 与 allow_credentials=True 同时使用
+    _cors_all = os.getenv("CORS_ALLOW_ALL", "").strip().lower() in ("1", "true", "yes")
+    if _cors_all:
+        _origins = ["*"]
+        _creds = False
+    else:
+        _extra = os.getenv("FRONTEND_ORIGINS", "")
+        _origins = [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ]
+        if _extra:
+            _origins.extend([o.strip() for o in _extra.split(",") if o.strip()])
+        _origins = list(dict.fromkeys(_origins))
+        _creds = True
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # 生产环境中应该设置具体的域名
-        allow_credentials=True,
+        allow_origins=_origins,
+        allow_credentials=_creds,
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -116,6 +147,10 @@ def create_app() -> FastAPI:
     if AGENT_ENABLED and agent_router:
         app.include_router(agent_router)
         logger.info("Agent模块已启用")
+
+    if HERMES_ROUTER_ENABLED and hermes_router:
+        app.include_router(hermes_router)
+        logger.info("Hermes 工作区路由已注册 (/hermes)")
     
     # 注册意图识别路由（如果可用）
     if INTENT_ENABLED and intent_router:
@@ -163,6 +198,8 @@ def create_app() -> FastAPI:
         # 如果Agent模块启用，添加到功能列表
         if AGENT_ENABLED:
             features.append("Agent智能核心")
+        if HERMES_ROUTER_ENABLED:
+            features.append("Hermes工作区自动化")
         
         # 如果意图识别模块启用，添加到功能列表
         if INTENT_ENABLED:

@@ -5,6 +5,7 @@ import ChatContainer from './components/ChatContainer';
 import FeedbackModal from './components/FeedbackModal';
 import PersonalizationPanel from './components/PersonalizationPanel';
 import HistoryManagementModal from './components/HistoryManagementModal';
+import SkillsPanel from './components/SkillsPanel';
 import { useTheme } from './contexts/ThemeContext';
 import { useChat, useFileUpload, useKeyboard, useSession, useFeedback, useURLDetection } from './hooks';
 
@@ -24,6 +25,7 @@ function App() {
   const [inputValue, setInputValue] = useState('');
   const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
   const [showHistoryManagement, setShowHistoryManagement] = useState(false);
+  const [showSkillsPanel, setShowSkillsPanel] = useState(false);
   const [deepThinkActive, setDeepThinkActive] = useState(false);
   
   // 主题管理
@@ -64,6 +66,7 @@ function App() {
     setAttachments,
     fileInputRef,
     handleFileUpload,
+    addFiles,
     removeAttachment
   } = useFileUpload();
 
@@ -97,6 +100,10 @@ function App() {
   const sendMessage = useCallback(async () => {
     await sendMessageHook(inputValue, attachments, setInputValue, setAttachments, setDetectedURLs, deepThinkActive);
     loadHistorySessions(); // 刷新历史会话列表
+    // Reset textarea height after sending
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+    }
     setTimeout(() => inputRef.current?.focus(), 100);
   }, [inputValue, attachments, sendMessageHook, setInputValue, setAttachments, setDetectedURLs, loadHistorySessions, deepThinkActive]);
 
@@ -148,6 +155,11 @@ function App() {
     const value = e.target.value;
     setInputValue(value);
     debouncedDetectURLs(value);
+
+    // Auto-resize textarea
+    const textarea = e.target;
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
   }, [debouncedDetectURLs]);
 
   // 快捷建议点击
@@ -176,6 +188,7 @@ function App() {
         onLoadSession={handleLoadSession}
         onDeleteSession={handleDeleteSession}
         onOpenPersonalization={() => setShowPersonalizationPanel(true)}
+        onOpenSkills={() => setShowSkillsPanel(true)}
         onToggleTheme={toggleTheme}
         theme={theme}
         onOpenHistoryManagement={() => setShowHistoryManagement(true)}
@@ -199,6 +212,7 @@ function App() {
         onSendMessage={sendMessage}
         onFileUpload={handleFileUpload}
         onRemoveAttachment={removeAttachment}
+        onPasteFiles={addFiles}
         onSuggestionClick={handleSuggestionClick}
         onOpenFeedbackModal={openFeedbackModal}
         deepThinkActive={deepThinkActive}
@@ -229,6 +243,16 @@ function App() {
         userId={currentUserId}
         onSessionSelect={handleHistorySessionSelect}
         onSessionsDeleted={handleSessionsDeleted}
+      />
+
+      <SkillsPanel
+        isOpen={showSkillsPanel}
+        onClose={() => setShowSkillsPanel(false)}
+        onSelectSkill={(skill) => {
+          const skillPrompt = `/${skill.name}`;
+          setInputValue(skillPrompt);
+          inputRef.current?.focus();
+        }}
       />
     </AppContainer>
   );

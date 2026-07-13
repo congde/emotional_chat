@@ -4,14 +4,15 @@ import { emotionColors } from '../constants/emotions';
 
 // 顶部对话标题栏
 export const ChatHeader = styled.div`
-  padding: 16px 60px;
-  border-bottom: 1px solid #f0f0f0;
-  background: #fff;
+  padding: 16px 40px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
   transition: background 0.3s ease, border-color 0.3s ease;
   
   body[data-theme='dark'] & {
-    background: #1a1a2e;
-    border-bottom-color: #2a2a3e;
+    background: rgba(20, 20, 34, 0.8);
+    border-bottom-color: rgba(255, 255, 255, 0.04);
   }
   
   @media (max-width: 768px) {
@@ -21,24 +22,25 @@ export const ChatHeader = styled.div`
 
 export const ChatTitle = styled.h2`
   font-size: 16px;
-  font-weight: 500;
-  color: #1a1a1a;
+  font-weight: 600;
+  color: #1a1a2e;
   margin: 0 0 4px 0;
+  letter-spacing: -0.3px;
   transition: color 0.3s ease;
 
   body[data-theme='dark'] & {
-    color: #e0e0e0;
+    color: #f1f5f9;
   }
 `;
 
 export const ChatSubtitle = styled.p`
   font-size: 12px;
-  color: #bbb;
+  color: #94a3b8;
   margin: 0;
   transition: color 0.3s ease;
 
   body[data-theme='dark'] & {
-    color: #666;
+    color: #475569;
   }
 `;
 
@@ -58,58 +60,75 @@ export const Subtitle = styled.p`
 export const MessageBubble = styled(motion.div)`
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  max-width: 900px;
+  gap: 14px;
+  max-width: 820px;
   margin: 0 auto;
   width: 100%;
   ${props => props.isUser ? 'flex-direction: row-reverse;' : ''}
 `;
 
 export const Avatar = styled.div`
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: ${props => props.isUser ? '#6366f1' : '#f5f5f5'};
-  color: ${props => props.isUser ? 'white' : '#666'};
+  background: ${props => props.isUser
+    ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
+    : 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)'
+  };
+  color: ${props => props.isUser ? 'white' : '#64748b'};
   flex-shrink: 0;
-  font-size: 14px;
+  font-size: 15px;
   transition: background 0.3s ease, color 0.3s ease;
+  box-shadow: ${props => props.isUser
+    ? '0 2px 8px rgba(99, 102, 241, 0.25)'
+    : '0 1px 4px rgba(0, 0, 0, 0.06)'
+  };
 
   body[data-theme='dark'] & {
-    background: ${props => props.isUser ? '#6366f1' : '#2a2a3e'};
-    color: ${props => props.isUser ? 'white' : '#b0b0b0'};
+    background: ${props => props.isUser
+      ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
+      : 'linear-gradient(135deg, #1e293b 0%, #334155 100%)'
+    };
+    color: ${props => props.isUser ? 'white' : '#94a3b8'};
   }
 `;
 
 export const MessageWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  max-width: calc(100% - 50px);
+  max-width: calc(100% - 54px);
 `;
 
 export const MessageContent = styled.div`
-  padding: 12px 16px;
-  border-radius: ${props => props.isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px'};
-  background: ${props => props.isUser ? '#f5f5f5' : 'transparent'};
-  color: #1a1a1a;
+  padding: 14px 18px;
+  border-radius: ${props => props.isUser ? '18px 18px 6px 18px' : '18px 18px 18px 6px'};
+  background: ${props => props.isUser
+    ? 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)'
+    : '#ffffff'
+  };
+  color: ${props => props.isUser ? '#ffffff' : '#334155'};
   line-height: 1.7;
   word-wrap: break-word;
-  font-size: 15px;
-  transition: background 0.3s ease, color 0.3s ease;
-  
-  ${props => props.isUser && `
-    background: #f5f5f5;
-  `}
+  font-size: 14.5px;
+  transition: background 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: ${props => props.isUser
+    ? '0 2px 12px rgba(99, 102, 241, 0.2)'
+    : '0 1px 6px rgba(0, 0, 0, 0.04)'
+  };
   
   body[data-theme='dark'] & {
-    color: #e0e0e0;
-    
-    ${props => props.isUser && `
-      background: #2a2a4e;
-    `}
+    color: ${props => props.isUser ? '#ffffff' : '#e2e8f0'};
+    background: ${props => props.isUser
+      ? 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)'
+      : '#1e293b'
+    };
+    box-shadow: ${props => props.isUser
+      ? '0 2px 12px rgba(99, 102, 241, 0.3)'
+      : '0 1px 4px rgba(0, 0, 0, 0.2)'
+    };
   }
   
   ${props => !props.isUser && props.emotion && props.emotion !== 'neutral' && `
@@ -124,11 +143,11 @@ export const ThinkingStatus = styled.div`
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: #fff;
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
   font-size: 13px;
-  color: #666;
+  color: #64748b;
   margin-bottom: 12px;
   transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
   
@@ -137,9 +156,9 @@ export const ThinkingStatus = styled.div`
   }
 
   body[data-theme='dark'] & {
-    background: #2a2a3e;
-    border-color: #3a3a4e;
-    color: #b0b0b0;
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.06);
+    color: #94a3b8;
   }
 `;
 
@@ -157,31 +176,31 @@ export const FeedbackButtons = styled.div`
 
 export const FeedbackButton = styled(motion.button)`
   background: transparent;
-  border: 1px solid #e5e5e5;
-  border-radius: 6px;
-  padding: 4px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  padding: 4px 12px;
   font-size: 12px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 4px;
-  color: #888;
+  color: #94a3b8;
   transition: all 0.15s;
   
   &:hover {
-    background: #f5f5f5;
-    border-color: #ddd;
-    color: #666;
+    background: rgba(99, 102, 241, 0.06);
+    border-color: rgba(99, 102, 241, 0.2);
+    color: #6366f1;
   }
 
   body[data-theme='dark'] & {
-    border-color: #3a3a4e;
-    color: #999;
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #64748b;
     
     &:hover {
-      background: #2a2a3e;
-      border-color: #4a4a5e;
-      color: #b0b0b0;
+      background: rgba(99, 102, 241, 0.1);
+      border-color: rgba(99, 102, 241, 0.3);
+      color: #818cf8;
     }
   }
 `;
@@ -190,22 +209,23 @@ export const EmotionTag = styled.span`
   display: inline-block;
   background: ${props => emotionColors[props.emotion] || emotionColors.neutral};
   color: white;
-  padding: 2px 8px;
-  border-radius: 10px;
+  padding: 2px 10px;
+  border-radius: 12px;
   font-size: 11px;
   margin-left: 8px;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.3px;
 `;
 
 export const MessageTimestamp = styled.div`
   font-size: 11px;
-  color: #bbb;
+  color: #cbd5e1;
   margin-top: 6px;
   text-align: ${props => props.isUser ? 'right' : 'left'};
   transition: color 0.3s ease;
 
   body[data-theme='dark'] & {
-    color: #666;
+    color: #475569;
   }
 `;
 
@@ -214,36 +234,41 @@ export const Suggestions = styled.div`
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 16px;
-  max-width: 900px;
+  max-width: 820px;
   margin-left: auto;
   margin-right: auto;
 `;
 
 export const SuggestionChip = styled(motion.button)`
-  background: #fff;
-  border: 1px solid #e5e5e5;
-  color: #666;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #475569;
   padding: 8px 16px;
-  border-radius: 20px;
+  border-radius: 24px;
   font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   
   &:hover {
-    background: #f5f5f5;
-    border-color: #6366f1;
+    background: rgba(99, 102, 241, 0.06);
+    border-color: rgba(99, 102, 241, 0.3);
     color: #6366f1;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
+    transform: translateY(-1px);
   }
 
   body[data-theme='dark'] & {
-    background: #2a2a3e;
-    border-color: #3a3a4e;
-    color: #b0b0b0;
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.06);
+    color: #94a3b8;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     
     &:hover {
-      background: #3a3a4e;
-      border-color: #6366f1;
-      color: #6366f1;
+      background: rgba(99, 102, 241, 0.1);
+      border-color: rgba(99, 102, 241, 0.3);
+      color: #818cf8;
     }
   }
 `;
@@ -258,28 +283,29 @@ export const WelcomeMessage = styled(motion.div)`
   padding: 60px 20px;
   
   h3 {
-    font-size: 28px;
-    font-weight: 600;
-    color: #1a1a1a;
-    margin-bottom: 16px;
+    font-size: 32px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
     transition: color 0.3s ease;
   }
   
   p {
-    font-size: 14px;
-    color: #999;
+    font-size: 15px;
+    color: #94a3b8;
     line-height: 1.8;
-    max-width: 360px;
+    max-width: 420px;
     transition: color 0.3s ease;
   }
 
   body[data-theme='dark'] & {
     h3 {
-      color: #e0e0e0;
+      color: #f1f5f9;
     }
     
     p {
-      color: #888;
+      color: #64748b;
     }
   }
 `;
@@ -288,20 +314,21 @@ export const LoadingIndicator = styled(motion.div)`
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #666;
+  color: #64748b;
   font-size: 13px;
-  padding: 8px 16px;
-  background: #fff;
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
-  max-width: 900px;
+  padding: 10px 18px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 14px;
+  max-width: 820px;
   margin: 0 auto;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 
   body[data-theme='dark'] & {
-    background: #2a2a3e;
-    border-color: #3a3a4e;
-    color: #b0b0b0;
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.06);
+    color: #94a3b8;
   }
   
   .spinner {
