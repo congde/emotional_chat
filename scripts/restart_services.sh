@@ -1,5 +1,8 @@
 #!/bin/bash
 
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
 # 停止旧进程
 pkill -f "python3.*run_backend.py" 2>/dev/null
 pkill -f "python3.10.*run_backend.py" 2>/dev/null
@@ -9,7 +12,8 @@ pkill -f "react-scripts start" 2>/dev/null
 sleep 3
 
 # 启动后端（使用 Python 3.10）
-cd /home/workSpace/emotional_chat
+cd "$PROJECT_ROOT"
+mkdir -p log
 nohup python3.10 run_backend.py > log/backend.log 2>&1 &
 echo "后端启动中..."
 
@@ -17,7 +21,7 @@ echo "后端启动中..."
 sleep 5
 
 # 启动前端
-cd /home/workSpace/emotional_chat/frontend
+cd "$PROJECT_ROOT/frontend"
 nohup npm start > ../log/frontend.log 2>&1 &
 echo "前端启动中..."
 

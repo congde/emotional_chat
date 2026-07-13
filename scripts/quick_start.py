@@ -31,9 +31,7 @@ import subprocess
 import time
 from pathlib import Path
 
-# 获取项目根目录
-project_root = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, project_root)
+# 项目根目录已在上方根据 scripts/ 的父目录解析。
 
 from config import Config
 
@@ -68,7 +66,7 @@ def check_dependencies():
         print("💡 运行: pip install -r requirements.txt")
         response = input("是否现在安装依赖? (y/n): ")
         if response.lower() == 'y':
-            subprocess.run(["pip", "install", "-r", "requirements.txt"])
+            subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], cwd=project_root)
         else:
             print("⚠️  继续启动，但可能遇到错误")
     
@@ -82,7 +80,7 @@ def init_database():
     try:
         print("→ 检查数据库连接...")
         result = subprocess.run(
-            ["python", "db_manager.py", "check"],
+            [sys.executable, os.path.join(project_root, "scripts", "db_manager.py"), "check"],
             cwd=project_root,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
@@ -95,7 +93,7 @@ def init_database():
         
         print("→ 升级数据库到最新版本...")
         result = subprocess.run(
-            ["python", "db_manager.py", "upgrade"],
+            [sys.executable, os.path.join(project_root, "scripts", "db_manager.py"), "upgrade"],
             cwd=project_root
         )
         

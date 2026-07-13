@@ -128,12 +128,6 @@ REACT_APP_API_URL=http://your-backend-host:8000
 ```
 
 ## 常用命令
-
-前端 V2 规划文档：
-
-- [Codex 风格前端升级计划](docs/前端-Codex-风格升级计划.md)
-- [Codex 风格情感陪伴工作台 PRD](docs/PRD-Codex-风格情感陪伴工作台.md)
-
 一次性初始化、数据库维护、演示和兼容启动工具统一放在 [`scripts/`](scripts/)；安装与平台说明统一放在 [`docs/`](docs/)。项目根目录只保留正式入口、配置和部署文件。
 
 在安装了 GNU Make 的环境中，可以使用：

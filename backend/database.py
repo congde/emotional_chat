@@ -399,7 +399,7 @@ def create_tables():
     创建数据库表（不推荐直接使用）
     
     警告：请使用 Alembic 迁移系统来管理数据库结构变更
-    使用命令：python db_manager.py init
+    使用命令：python scripts/db_manager.py init
     
     仅在特殊情况下（如测试环境快速建表）才直接调用此函数
     
