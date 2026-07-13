@@ -10,7 +10,7 @@ import json
 import uuid
 
 from ..exceptions import EmotionalChatException
-from .interfaces import EmotionResult
+from ..interfaces import EmotionResult
 
 
 def format_response(
@@ -107,7 +107,7 @@ def format_chat_message(
     metadata: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """格式化聊天消息"""
-    message = {
+    message: Dict[str, Any] = {
         "id": str(uuid.uuid4()),
         "role": role,
         "content": content,

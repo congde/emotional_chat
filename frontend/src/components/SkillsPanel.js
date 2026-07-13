@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, Search, Brain, Heart, Calendar, BarChart3, Music, Shield, Zap, Plus, Upload, Trash2 } from 'lucide-react';
 import styled from 'styled-components';
@@ -627,14 +627,7 @@ const SkillsPanel = ({ isOpen, onClose, onSelectSkill, initialCategory = 'all' }
   const [formData, setFormData] = useState({ name: '', description: '', category: 'emotion' });
   const fileInputRef = useRef(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      setActiveCategory(initialCategory);
-      loadSkills();
-    }
-  }, [isOpen, initialCategory]);
-
-  const loadSkills = async () => {
+  const loadSkills = useCallback(async () => {
     setLoading(true);
     try {
       const data = await ChatAPI.getAvailableSkills();
@@ -650,7 +643,14 @@ const SkillsPanel = ({ isOpen, onClose, onSelectSkill, initialCategory = 'all' }
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveCategory(initialCategory);
+      loadSkills();
+    }
+  }, [isOpen, initialCategory, loadSkills]);
 
   const getDefaultSkills = () => [
     { name: 'search_memory', category: 'memory', description: '搜索历史记忆和对话' },

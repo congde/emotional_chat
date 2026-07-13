@@ -18,7 +18,7 @@ EMAIL_PATTERN = re.compile(
 )
 
 PHONE_PATTERN = re.compile(
-    r'^(\+?86)?1[3-9]\d{9}$|^(\+\d{1,3})?\d{10,15}$'
+    r'^(?:\+?86)?1[3-9]\d{9}$'
 )
 
 USER_ID_PATTERN = re.compile(r'^[a-zA-Z0-9_-]{3,50}$')

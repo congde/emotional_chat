@@ -6,7 +6,6 @@
 
 import os
 from typing import Optional, Dict, Any
-from functools import lru_cache
 from pathlib import Path
 from dataclasses import dataclass, field
 from enum import Enum
@@ -199,8 +198,10 @@ class Config:
     
     def _validate_config(self):
         """验证配置"""
+        # 配置对象也用于测试、健康检查和不调用模型的管理命令，
+        # 因此不能在构造阶段强制要求模型密钥。真正发起模型请求时再校验。
         if not self.openai.api_key:
-            raise ValueError("OpenAI API key is required")
+            print("Warning: Model API key is not set")
         
         if self.database.password is None:
             print("Warning: Database password is not set")
@@ -260,9 +261,8 @@ class Config:
         return self.environment == Environment.TESTING
 
 
-@lru_cache()
 def get_config() -> Config:
-    """获取配置实例（单例模式）"""
+    """获取当前环境对应的配置实例。"""
     # 加载环境变量
     env_file = Path(".env")
     if env_file.exists():
@@ -278,5 +278,4 @@ def get_config() -> Config:
 
 def reload_config() -> Config:
     """重新加载配置"""
-    get_config.cache_clear()
     return get_config()

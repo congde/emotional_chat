@@ -201,7 +201,7 @@ def reset():
 def main():
     """主函数"""
     if len(sys.argv) < 2:
-        print("用法: python db_manager.py <command> [args...]")
+        print("用法: python scripts/db_manager.py <command> [args...]")
         print("\n可用命令:")
         print("  init       - 初始化数据库（创建所有表）")
         print("  upgrade    - 升级数据库到最新版本")
@@ -235,7 +235,7 @@ def main():
         success = reset()
     else:
         print(f"❌ 未知命令: {command}")
-        print("使用 'python db_manager.py' 查看帮助")
+        print("使用 'python scripts/db_manager.py' 查看帮助")
         sys.exit(1)
     
     sys.exit(0 if success else 1)
