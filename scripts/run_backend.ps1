@@ -4,9 +4,9 @@
 
 Write-Host "🚀 启动情感聊天机器人后端服务..." -ForegroundColor Green
 
-# Get the script directory (project root)
-$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-Set-Location $scriptDir
+# Resolve the project root from scripts/.
+$projectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+Set-Location $projectRoot
 
 # Run the backend
 python run_backend.py

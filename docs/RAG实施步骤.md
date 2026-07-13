@@ -1,4 +1,4 @@
-# 心语机器人 - RAG系统实施步骤
+﻿# 心语机器人 - RAG系统实施步骤
 
 ## 概述
 
@@ -191,7 +191,7 @@ class KnowledgeBaseManager:
 
 ```bash
 # 方法1: 使用命令行脚本
-python init_rag_knowledge.py
+python scripts/init_rag_knowledge.py
 
 # 方法2: 通过API
 curl -X POST http://localhost:8000/api/rag/init/sample
@@ -652,7 +652,7 @@ pip install -r requirements.txt
 
 ```bash
 # 1. 初始化知识库
-python init_rag_knowledge.py
+python scripts/init_rag_knowledge.py
 
 # 2. 验证系统
 python test_rag_system.py

@@ -7,7 +7,7 @@ An open-source AI conversation application for emotional-support scenarios. It c
 > [!IMPORTANT]
 > This project is intended for technical research and emotional support. It does not provide medical diagnoses or professional therapy. If someone is in immediate danger or at risk of self-harm, contact local emergency services, a crisis hotline, or a trusted person immediately.
 
-![Home screen](image/首页界面.png)
+![Home screen](docs/images/首页界面.png)
 
 ## Highlights
 
@@ -74,7 +74,7 @@ To use SQLite instead of a local MySQL server:
 
 ```dotenv
 USE_SQLITE=1
-SQLITE_PATH=./emotional_chat_local.db
+SQLITE_PATH=./data/emotional_chat_local.db
 ```
 
 See [`config.env.example`](config.env.example) for every option. Never commit a `config.env` file containing real credentials.

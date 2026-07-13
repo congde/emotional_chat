@@ -1,4 +1,4 @@
-# Windows 运行指南
+﻿# Windows 运行指南
 
 本文档介绍如何在 Windows 系统上运行心语情感陪伴机器人项目。
 
@@ -131,7 +131,7 @@ alembic upgrade head
 #### 4.3 初始化 RAG 知识库（可选但推荐）
 
 ```powershell
-python init_rag_knowledge.py
+python scripts/init_rag_knowledge.py
 ```
 
 ### 5. 启动服务

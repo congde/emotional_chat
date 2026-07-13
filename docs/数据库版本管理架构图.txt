@@ -1,4 +1,4 @@
-╔═══════════════════════════════════════════════════════════════════════════════╗
+﻿╔═══════════════════════════════════════════════════════════════════════════════╗
 ║                      数据库版本管理系统架构图                                  ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 
@@ -113,7 +113,7 @@
                       ▼
         ┌───────────────────────────────────────┐
         │  2. 生成迁移脚本                      │
-        │     python db_manager.py revision     │
+        │     python scripts/db_manager.py revision     │
         │     -m "描述变更"                     │
         └─────────────┬─────────────────────────┘
                       │
@@ -126,7 +126,7 @@
                       ▼
         ┌───────────────────────────────────────┐
         │  4. 应用迁移                          │
-        │     python db_manager.py upgrade      │
+        │     python scripts/db_manager.py upgrade      │
         └─────────────┬─────────────────────────┘
                       │
                       ▼
@@ -153,7 +153,7 @@
     ┌───────────────────────┐
     │  make db-init         │────────┐
     │  或                    │        │
-    │  python db_manager.py │        │
+    │  python scripts/db_manager.py │        │
     │  init                 │        │
     └───────────────────────┘        │
                                      ▼
@@ -269,12 +269,12 @@ docs/
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 
 常用命令：
-  ▶ python db_manager.py init           # 初始化数据库
-  ▶ python db_manager.py check          # 检查数据库连接
-  ▶ python db_manager.py current        # 查看当前版本
-  ▶ python db_manager.py upgrade        # 升级到最新版本
-  ▶ python db_manager.py history        # 查看迁移历史
-  ▶ python db_manager.py revision -m "msg"  # 创建新迁移
+  ▶ python scripts/db_manager.py init           # 初始化数据库
+  ▶ python scripts/db_manager.py check          # 检查数据库连接
+  ▶ python scripts/db_manager.py current        # 查看当前版本
+  ▶ python scripts/db_manager.py upgrade        # 升级到最新版本
+  ▶ python scripts/db_manager.py history        # 查看迁移历史
+  ▶ python scripts/db_manager.py revision -m "msg"  # 创建新迁移
 
 Makefile 快捷方式：
   ▶ make db-init                        # 初始化数据库

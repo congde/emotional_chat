@@ -4,9 +4,10 @@
 
 set -e  # 遇到错误立即退出
 
-# 获取脚本所在目录（项目根目录）
+# 从 scripts/ 解析项目根目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR" || exit 1
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_ROOT" || exit 1
 
 # 颜色输出
 RED='\033[0;31m'

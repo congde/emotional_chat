@@ -9,7 +9,7 @@ Response Generation Module Examples
 
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from backend.modules.intent.core.response_generator import ResponseGenerator
 from backend.modules.intent.core.enhanced_input_processor import EnhancedInputProcessor

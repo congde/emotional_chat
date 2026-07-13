@@ -29,6 +29,7 @@ wheels/
 *.egg
 
 # IDE
+.DS_Store
 .vscode/
 .idea/
 *.swp
@@ -48,6 +49,10 @@ log/
 # Database
 *.db
 *.sqlite3
+data/
+!data/
+data/*
+!data/.gitkeep
 chroma_db/
 
 # Local assets

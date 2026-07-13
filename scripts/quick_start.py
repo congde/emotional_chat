@@ -7,8 +7,12 @@
 # 使用 SQLite3 兼容性模块（处理 Mac Python 3.10 兼容性问题）
 import sys
 import os
+
+if os.name == "nt" and hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
 # 添加项目根目录到 Python 路径
-project_root = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
 try:

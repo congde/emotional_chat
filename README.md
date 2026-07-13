@@ -7,7 +7,7 @@
 > [!IMPORTANT]
 > 本项目用于技术研究与情感支持，不提供医疗诊断或专业心理治疗。遇到紧急危险或自伤风险时，请立即联系当地急救机构、危机干预热线或可信赖的人。
 
-![首页界面](image/首页界面.png)
+![首页界面](docs/images/首页界面.png)
 
 ## 功能概览
 
@@ -74,7 +74,7 @@ DEFAULT_MODEL=qwen-plus
 
 ```dotenv
 USE_SQLITE=1
-SQLITE_PATH=./emotional_chat_local.db
+SQLITE_PATH=./data/emotional_chat_local.db
 ```
 
 完整选项见 [`config.env.example`](config.env.example)。请勿提交包含真实密钥的 `config.env`。
@@ -133,6 +133,8 @@ REACT_APP_API_URL=http://your-backend-host:8000
 
 - [Codex 风格前端升级计划](docs/前端-Codex-风格升级计划.md)
 - [Codex 风格情感陪伴工作台 PRD](docs/PRD-Codex-风格情感陪伴工作台.md)
+
+一次性初始化、数据库维护、演示和兼容启动工具统一放在 [`scripts/`](scripts/)；安装与平台说明统一放在 [`docs/`](docs/)。项目根目录只保留正式入口、配置和部署文件。
 
 在安装了 GNU Make 的环境中，可以使用：
 

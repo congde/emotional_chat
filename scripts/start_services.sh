@@ -3,7 +3,8 @@
 
 # 获取脚本所在目录
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "$SCRIPT_DIR"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_ROOT"
 
 # 设置环境变量（可根据实际情况修改）
 export REACT_APP_API_URL=${REACT_APP_API_URL:-http://localhost:8000}
@@ -61,4 +62,4 @@ echo ""
 echo "停止服务:"
 echo "  后端: kill $BACKEND_PID"
 echo "  前端: kill $FRONTEND_PID"
-echo "  或使用: ./restart_services.sh"
+echo "  或使用: ./scripts/restart_services.sh"

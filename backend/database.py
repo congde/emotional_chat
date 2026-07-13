@@ -31,7 +31,7 @@ def _resolve_database_url() -> str:
     - 否则默认 MySQL（MYSQL_* / 默认 localhost）。
     """
     if _truthy_env("USE_SQLITE"):
-        filename = os.getenv("SQLITE_PATH", os.path.join(_project_root(), "emotional_chat_local.db"))
+        filename = os.getenv("SQLITE_PATH", os.path.join(_project_root(), "data", "emotional_chat_local.db"))
         parent = os.path.dirname(filename)
         if parent:
             os.makedirs(parent, exist_ok=True)
@@ -57,7 +57,7 @@ def _resolve_database_url() -> str:
 #   5. 默认自动检测（MySQL 不可用时回退 SQLite）
 
 if _truthy_env("USE_SQLITE"):
-    filename = os.getenv("SQLITE_PATH", os.path.join(_project_root(), "emotional_chat_local.db"))
+    filename = os.getenv("SQLITE_PATH", os.path.join(_project_root(), "data", "emotional_chat_local.db"))
     parent = os.path.dirname(filename)
     if parent:
         os.makedirs(parent, exist_ok=True)
@@ -76,7 +76,7 @@ else:
     )
 
     if DB_TYPE == "sqlite":
-        _sqlite_path = os.path.join(_project_root(), "emotional_chat.db")
+        _sqlite_path = os.path.join(_project_root(), "data", "emotional_chat.db")
         DATABASE_URL = _sqlite_url_from_path(_sqlite_path)
         print(f"✓ 使用 SQLite 数据库: {_sqlite_path}")
     elif DB_TYPE == "mysql":
@@ -95,7 +95,7 @@ else:
             DATABASE_URL = _default_mysql_url
             print("✓ 使用 MySQL 数据库")
         except Exception:
-            _sqlite_path = os.path.join(_project_root(), "emotional_chat.db")
+            _sqlite_path = os.path.join(_project_root(), "data", "emotional_chat.db")
             DATABASE_URL = _sqlite_url_from_path(_sqlite_path)
             print(f"⚠ MySQL 不可用，自动回退到 SQLite 数据库: {_sqlite_path}")
 
@@ -404,7 +404,7 @@ def create_tables():
     仅在特殊情况下（如测试环境快速建表）才直接调用此函数
     
     当 MySQL 未启动导致连接被拒绝时，若 USE_SQLITE_FALLBACK 为真（默认开启），
-    会自动切换到项目根目录下的 emotional_chat_local.db（SQLite）。
+    会自动切换到项目 data/ 目录下的 emotional_chat_local.db（SQLite）。
     生产环境请设置 USE_SQLITE_FALLBACK=0 并保证 MySQL 可用。
     """
     global engine, SessionLocal, DATABASE_URL
@@ -428,7 +428,7 @@ def create_tables():
             or not _truthy_env("USE_SQLITE_FALLBACK", default="1")
         ):
             raise
-        sqlite_path = os.path.join(_project_root(), "emotional_chat_local.db")
+        sqlite_path = os.path.join(_project_root(), "data", "emotional_chat_local.db")
         sqlite_url = _sqlite_url_from_path(sqlite_path)
         print(
             "警告: 无法连接 MySQL，已自动改用 SQLite: "

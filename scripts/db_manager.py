@@ -9,8 +9,12 @@ import os
 import subprocess
 from pathlib import Path
 
+if os.name == "nt" and hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+
 # 添加项目根目录到Python路径
-project_root = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
 from config import Config
@@ -27,7 +31,7 @@ def run_alembic_command(command: str, *args):
     """
     try:
         # 构建完整的alembic命令
-        cmd = ["alembic", command] + list(args)
+        cmd = [sys.executable, "-m", "alembic", command] + list(args)
         
         print(f"🔧 执行命令: {' '.join(cmd)}")
         print("-" * 60)

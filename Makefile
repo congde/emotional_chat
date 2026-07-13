@@ -74,34 +74,34 @@ uv-lock:
 	cd $(ROOT_DIR) && uv lock
 
 db-init:
-	cd $(ROOT_DIR) && python db_manager.py init
+	cd $(ROOT_DIR) && python scripts/db_manager.py init
 
 db-upgrade:
-	cd $(ROOT_DIR) && python db_manager.py upgrade
+	cd $(ROOT_DIR) && python scripts/db_manager.py upgrade
 
 db-downgrade:
-	cd $(ROOT_DIR) && python db_manager.py downgrade
+	cd $(ROOT_DIR) && python scripts/db_manager.py downgrade
 
 db-check:
-	cd $(ROOT_DIR) && python db_manager.py check
+	cd $(ROOT_DIR) && python scripts/db_manager.py check
 
 db-current:
-	cd $(ROOT_DIR) && python db_manager.py current
+	cd $(ROOT_DIR) && python scripts/db_manager.py current
 
 db-history:
-	cd $(ROOT_DIR) && python db_manager.py history
+	cd $(ROOT_DIR) && python scripts/db_manager.py history
 
 db-reset:
-	cd $(ROOT_DIR) && python db_manager.py reset
+	cd $(ROOT_DIR) && python scripts/db_manager.py reset
 
 run:
 	cd $(ROOT_DIR) && python run_backend.py
 
 quick-start:
-	cd $(ROOT_DIR) && python quick_start.py
+	cd $(ROOT_DIR) && python scripts/quick_start.py
 
 rag-init:
-	cd $(ROOT_DIR) && python init_rag_knowledge.py
+	cd $(ROOT_DIR) && python scripts/init_rag_knowledge.py
 
 rag-test:
 	@echo "测试RAG系统..."
