@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
@@ -22,6 +22,12 @@ class ChatRequest(BaseModel):
     user_id: Optional[str] = None
     context: Optional[Dict[str, Any]] = None
     deep_thinking: Optional[bool] = False  # 深度思考模式
+
+    @validator("message")
+    def message_must_not_be_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("消息内容不能为空")
+        return value
 
 class ChatResponse(BaseModel):
     response: str
